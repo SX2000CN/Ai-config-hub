@@ -1,6 +1,8 @@
-# 同步流程
+﻿# 同步流程
 
-推荐流程：
+本文记录全局规则和 skills 的本机同步流程。所有同步脚本默认先 dry-run，只有显式 `-Apply` 才写入真实全局目录。
+
+## 全局规则
 
 1. 修改源文件：
    - `rules/shared/core.md`
@@ -19,10 +21,10 @@
 .\scripts\check.ps1
 ```
 
-4. 预览同步目标：
+4. 预览同步目标；不传 `-Apply` 时只 dry-run：
 
 ```powershell
-.\scripts\sync.ps1 -WhatIf
+.\scripts\sync.ps1
 ```
 
 5. 确认无误后应用：
@@ -41,3 +43,56 @@
 - 不要直接编辑 rendered 文件作为长期源头；应修改 `rules/` 下的源文件。
 - 如果手动改过真实全局文件，应先把差异同步回本项目源文件，再重新渲染。
 - v1 不自动修改 `C:\Users\sx200\.codex\config.toml`。
+
+## Skills
+
+1. 修改源文件：
+   - `skills/shared/project-ai-config-hub/`
+   - `skills/claude-code/project-ai-config-hub/SKILL.md`
+   - `skills/codex/project-ai-config-hub/SKILL.md`
+
+2. 渲染输出：
+
+```powershell
+.\scripts\render-skills.ps1
+```
+
+3. 检查生成结果：
+
+```powershell
+.\scripts\check-skills.ps1
+```
+
+4. 预览同步目标：
+
+```powershell
+.\scripts\sync-skills.ps1
+```
+
+5. 确认无误后应用：
+
+```powershell
+.\scripts\sync-skills.ps1 -Apply
+```
+
+如需同时写入历史 Codex 兼容目录：
+
+```powershell
+.\scripts\sync-skills.ps1 -Apply -IncludeCodexLegacy
+```
+
+默认同步目标：
+
+- `skills/rendered/claude-code/project-ai-config-hub/` → `C:\Users\sx200\.claude\skills\project-ai-config-hub\`
+- `skills/rendered/codex/project-ai-config-hub/` → `C:\Users\sx200\.agents\skills\project-ai-config-hub\`
+
+可选历史兼容目标：
+
+- `skills/rendered/codex-legacy/project-ai-config-hub/` → `C:\Users\sx200\.codex\skills\project-ai-config-hub\`
+
+注意事项：
+
+- 不要直接编辑 `skills/rendered/` 作为长期源头；应修改 `skills/shared/` 或工具专属入口源。
+- `.codex\skills` 不是新 Codex skill 的默认目标，只在兼容已有环境时使用。
+- 当前渲染产物会带有 `<!-- ai-config-hub-managed: project-ai-config-hub -->` 标记。
+- `sync-skills.ps1 -Apply` 会优先把带该标记的目录视为托管产物；历史安装如果仍保留 `name: project-ai-config-hub` 也会被接管，但不匹配这两种标记的目录会拒绝覆盖。
