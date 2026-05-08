@@ -1,0 +1,11 @@
+# Example only. Do not store real provider URLs, tokens, private models, or trusted project paths here.
+
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+[features]
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
+disable_on_external_context = false

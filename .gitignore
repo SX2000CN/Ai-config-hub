@@ -1,0 +1,13 @@
+/private/*
+!/private/README.md
+
+*.local.*
+*.secret.*
+*.secrets.*
+.env
+.env.*
+*.bak
+*.backup
+
+local/
+state/
