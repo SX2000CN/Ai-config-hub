@@ -60,6 +60,18 @@ skills/rendered/codex-legacy/project-ai-config-hub/
 C:\Users\sx200\.codex\skills\project-ai-config-hub\
 ```
 
+### 当前工作状态
+
+```text
+docs/ai/CURRENT.md
+        ↓
+AI 接手入口和多任务状态总览
+        ↓
+docs/ai/tasks/*.md
+        ↓
+单个任务的无损接手卡；archive/ 仅作为可选长期整理目录
+```
+
 ## 设计原则
 
 - 共享规则只写一份，避免 Claude Code 和 Codex 长期漂移。
@@ -69,5 +81,6 @@ C:\Users\sx200\.codex\skills\project-ai-config-hub\
 - Codex 真实 `config.toml` 暂不自动管理，只提供安全示例模板。
 - skills 使用 `skills/shared/` 作为事实源，工具目录只放入口源文件。
 - skill rendered 包通过 `render-skills.ps1` 生成，不应手工作为长期事实源编辑。
+- `docs/ai/CURRENT.md` 是项目级 AI 接手入口和多任务状态总览，不是完整日志或完成记录；具体任务事实保存在 `docs/ai/tasks/*.md`，未确认或有风险的任务不得直接丢弃。
 - `project-ai-config-hub` 的 rendered skill 包会带托管标记，便于 `sync-skills.ps1` 区分历史安装和本仓库产物。
 - `.codex\skills` 只作为历史兼容目标，Codex 当前官方路径优先使用 `.agents\skills`。

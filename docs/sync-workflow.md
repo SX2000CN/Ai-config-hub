@@ -9,6 +9,8 @@
    - `rules/tools/claude-code.md`
    - `rules/tools/codex.md`
 
+   当前工作状态约定属于共享规则，维护在 `rules/shared/core.md`。
+
 2. 渲染输出：
 
 ```powershell
@@ -48,6 +50,10 @@
 
 1. 修改源文件：
    - `skills/shared/project-ai-config-hub/`
+   - `skills/shared/project-ai-config-hub/templates/current-state.md.tpl`
+   - `skills/shared/project-ai-config-hub/templates/work-task.md.tpl`
+   - `skills/shared/project-ai-config-hub/templates/state-archive.md.tpl`
+   - `skills/shared/project-ai-config-hub/templates/checklists.md.tpl`
    - `skills/claude-code/project-ai-config-hub/SKILL.md`
    - `skills/codex/project-ai-config-hub/SKILL.md`
 

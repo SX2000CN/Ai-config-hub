@@ -33,6 +33,10 @@
 - `references/`
 - `templates/`
 
+## 工作状态
+
+开始非简单任务前，先读取 `docs/ai/CURRENT.md`。如果存在相关任务卡，应继续读取 `docs/ai/tasks/*.md` 中对应文件，避免覆盖旧任务现场。
+
 ## 限制
 
 - {{limitation_1}}

@@ -64,6 +64,10 @@ foreach ($rootPath in $SkillRoots) {
         'templates\ai-readme.md.tpl',
         'templates\project-readme.md.tpl',
         'templates\skills-registry.md.tpl',
+        'templates\current-state.md.tpl',
+        'templates\work-task.md.tpl',
+        'templates\state-archive.md.tpl',
+        'templates\checklists.md.tpl',
         'templates\claude-skill.md.tpl',
         'templates\codex-skill.md.tpl',
         'templates\codex-legacy-skill.md.tpl'
@@ -75,6 +79,7 @@ foreach ($rootPath in $SkillRoots) {
     }
 }
 
+$SharedRoot = Join-Path $Root "skills\shared\$SkillName"
 $SkillScanRoot = Join-Path $Root 'skills'
 $SecretScanRoots = @(
     (Join-Path $Root 'skills'),
@@ -99,6 +104,81 @@ foreach ($file in $SkillScanFiles) {
 
     if ($content -match '\{\{[^}]+\}\}' -and $file.FullName -notlike '*.tpl') {
         Fail "Unresolved template placeholder outside template file: $($file.FullName)"
+    }
+}
+
+foreach ($templateName in @('checklists.md')) {
+    $templateReferenceFound = $false
+
+    foreach ($templateFile in Get-ChildItem -Path (Join-Path $SharedRoot 'templates') -Filter '*.tpl' -File -ErrorAction SilentlyContinue) {
+        $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $templateFile.FullName
+
+        if ($content.Contains($templateName)) {
+            $templateReferenceFound = $true
+        }
+    }
+
+    $expectedTemplate = Join-Path (Join-Path $SharedRoot 'templates') "$templateName.tpl"
+    if ($templateReferenceFound -and -not (Test-Path -LiteralPath $expectedTemplate)) {
+        Fail "Template references $templateName but missing corresponding template: $expectedTemplate"
+    }
+}
+
+function Get-RelativeFileHash($BasePath, $Path) {
+    $base = (Resolve-Path -LiteralPath $BasePath).Path.TrimEnd('\') + '\'
+    $full = (Resolve-Path -LiteralPath $Path).Path
+    $relative = $full.Substring($base.Length)
+    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash
+    return "$relative=$hash"
+}
+
+foreach ($rootPath in $SkillRoots) {
+    foreach ($relativePath in @('README.md', 'workflow.md', 'references', 'templates')) {
+        $sharedPath = Join-Path $SharedRoot $relativePath
+        $renderedPath = Join-Path $rootPath $relativePath
+
+        if (-not (Test-Path -LiteralPath $sharedPath) -or -not (Test-Path -LiteralPath $renderedPath)) {
+            continue
+        }
+
+        if ((Get-Item -LiteralPath $sharedPath) -is [System.IO.FileInfo]) {
+            $sharedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $sharedPath).Hash
+            $renderedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $renderedPath).Hash
+
+            if ($sharedHash -ne $renderedHash) {
+                Fail "Rendered shared payload is out of sync: $renderedPath"
+            }
+
+            continue
+        }
+
+        $sharedItems = Get-ChildItem -LiteralPath $sharedPath -Recurse -File | ForEach-Object {
+            Get-RelativeFileHash $sharedPath $_.FullName
+        } | Sort-Object
+
+        $renderedItems = Get-ChildItem -LiteralPath $renderedPath -Recurse -File | ForEach-Object {
+            Get-RelativeFileHash $renderedPath $_.FullName
+        } | Sort-Object
+
+        if (($sharedItems -join "`n") -ne ($renderedItems -join "`n")) {
+            Fail "Rendered shared payload is out of sync: $renderedPath"
+        }
+    }
+}
+
+$ForbiddenPhrases = @(
+    '只保存一个当前主题',
+    '每次任务完成都必须归档',
+    'README.md 是固定的 agent 接手入口'
+)
+
+foreach ($file in $SkillScanFiles) {
+    $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $file.FullName
+
+    foreach ($phrase in $ForbiddenPhrases) {
+        if ($content.Contains($phrase)) {
+            Fail "Forbidden v1 work-state phrase '$phrase' in $($file.FullName)"
+        }
     }
 }
 

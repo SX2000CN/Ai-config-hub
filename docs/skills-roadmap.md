@@ -20,8 +20,13 @@
 
 ## 已实现
 
+- 当前工作状态文档
+  - 设计文档：[work-state-design.md](work-state-design.md)
+  - 定位：项目级 AI 接手入口、多任务状态总览和任务无损接手卡，用于中断、隔天继续、切换任务或切换 AI 编程工具时恢复当前工作现场。
+  - 当前实现：已接入 `rules/shared/core.md`、`project-ai-config-hub` 流程和模板；核心形态是项目内极简 Markdown 状态文件和任务卡，不以 hook 或 skill 作为核心机制。
+
 - `project-ai-config-hub`
-  - 定位：`ai-config-hub` 的项目级分身，用于在目标项目中创建 `docs/ai/` 中枢和多端项目 skills。
+  - 定位：`ai-config-hub` 的项目级分身，用于在目标项目中创建和升级 `docs/ai/` 中枢、多任务工作状态机制和多端项目 skills。
   - 共享源：`skills/shared/project-ai-config-hub/`
   - Claude Code 入口源：`skills/claude-code/project-ai-config-hub/SKILL.md`
   - Codex 入口源：`skills/codex/project-ai-config-hub/SKILL.md`
