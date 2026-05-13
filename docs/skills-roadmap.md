@@ -1,6 +1,6 @@
 ﻿# Skills 路线图
 
-`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub` 的 v1 源码化、渲染、检查和 dry-run 同步流程。
+`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub` 和 `global-frontend-design` 的源码化、渲染、检查和 dry-run 同步流程。
 
 `project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
 
@@ -32,6 +32,14 @@
   - Codex 入口源：`skills/codex/project-ai-config-hub/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 脚本：`scripts/render-skills.ps1`、`scripts/check-skills.ps1`、`scripts/sync-skills.ps1`
+
+- `global-frontend-design`
+  - 定位：全局前端设计 skill，用于创建、重设计或 review 前端界面，强调鲜明视觉方向、产品 UI 工程、可访问性、响应式、状态覆盖和验证。
+  - 共享源：`skills/shared/global-frontend-design/`
+  - Claude Code 入口源：`skills/claude-code/global-frontend-design/SKILL.md`
+  - Codex 入口源：`skills/codex/global-frontend-design/SKILL.md`
+  - rendered 包：`skills/rendered/`
+  - 来源归档：`docs/ai/archive/global-frontend-design-sources/`
 
 ## 迭代原则
 

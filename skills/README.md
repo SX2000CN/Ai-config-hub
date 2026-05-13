@@ -12,6 +12,7 @@
 当前已实现：
 
 - `project-ai-config-hub`：`ai-config-hub` 的项目级分身，用于在目标项目中创建 `docs/ai/` AI 配置中枢，并创建、迁移、审计和修复多端项目 skills。
+- `global-frontend-design`：全局前端设计 skill，用于创建、重设计或 review 前端界面，先建立鲜明视觉方向，再落地生产级 UI 工程约束。
 
 维护流程：
 

@@ -49,13 +49,11 @@
 ## Skills
 
 1. 修改源文件：
-   - `skills/shared/project-ai-config-hub/`
-   - `skills/shared/project-ai-config-hub/templates/current-state.md.tpl`
-   - `skills/shared/project-ai-config-hub/templates/work-task.md.tpl`
-   - `skills/shared/project-ai-config-hub/templates/state-archive.md.tpl`
-   - `skills/shared/project-ai-config-hub/templates/checklists.md.tpl`
-   - `skills/claude-code/project-ai-config-hub/SKILL.md`
-   - `skills/codex/project-ai-config-hub/SKILL.md`
+   - `skills/shared/<skill-name>/`
+   - `skills/claude-code/<skill-name>/SKILL.md`
+   - `skills/codex/<skill-name>/SKILL.md`
+
+   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`。
 
 2. 渲染输出：
 
@@ -89,16 +87,17 @@
 
 默认同步目标：
 
-- `skills/rendered/claude-code/project-ai-config-hub/` → `C:\Users\sx200\.claude\skills\project-ai-config-hub\`
-- `skills/rendered/codex/project-ai-config-hub/` → `C:\Users\sx200\.agents\skills\project-ai-config-hub\`
+- `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`
+- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`
 
 可选历史兼容目标：
 
-- `skills/rendered/codex-legacy/project-ai-config-hub/` → `C:\Users\sx200\.codex\skills\project-ai-config-hub\`
+- `skills/rendered/codex-legacy/<skill-name>/` → `C:\Users\sx200\.codex\skills\<skill-name>\`
 
 注意事项：
 
 - 不要直接编辑 `skills/rendered/` 作为长期源头；应修改 `skills/shared/` 或工具专属入口源。
 - `.codex\skills` 不是新 Codex skill 的默认目标，只在兼容已有环境时使用。
-- 当前渲染产物会带有 `<!-- ai-config-hub-managed: project-ai-config-hub -->` 标记。
-- `sync-skills.ps1 -Apply` 会优先把带该标记的目录视为托管产物；历史安装如果仍保留 `name: project-ai-config-hub` 也会被接管，但不匹配这两种标记的目录会拒绝覆盖。
+- 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
+- `sync-skills.ps1 -Apply` 会优先把带对应标记的目录视为托管产物；历史安装如果仍保留匹配的 `name: <skill-name>` 也会被接管，但不匹配这两种标记的目录会拒绝覆盖。
+- `sync-skills.ps1 -Apply` 的备份目录位于 skills 发现目录外：`C:\Users\sx200\.claude\ai-config-hub-skill-backups\` 和 `C:\Users\sx200\.agents\ai-config-hub-skill-backups\`，避免备份被工具误识别为可用 skill。

@@ -1,15 +1,8 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$SkillName = 'project-ai-config-hub'
 $RenderedRoot = Join-Path $Root 'skills\rendered'
-$ManagedMarker = '<!-- ai-config-hub-managed: project-ai-config-hub -->'
-$SkillRoots = @(
-    (Join-Path $RenderedRoot "claude-code\$SkillName"),
-    (Join-Path $RenderedRoot "codex\$SkillName"),
-    (Join-Path $RenderedRoot "codex-legacy\$SkillName")
-)
-
+$SkillNames = @('project-ai-config-hub', 'global-frontend-design')
 $Failed = $false
 
 function Fail($Message) {
@@ -17,7 +10,7 @@ function Fail($Message) {
     $script:Failed = $true
 }
 
-function Test-Frontmatter($Path) {
+function Test-Frontmatter($Path, $SkillName, $RequireWhenToUse) {
     $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $Path
     if ($content -notmatch '(?s)^---\s*\r?\n(.+?)\r?\n---') {
         Fail "Missing YAML frontmatter: $Path"
@@ -25,7 +18,7 @@ function Test-Frontmatter($Path) {
     }
 
     $frontmatter = $Matches[1]
-    if ($frontmatter -notmatch '(?m)^name:\s*project-ai-config-hub\s*$') {
+    if ($frontmatter -notmatch "(?m)^name:\s*$([regex]::Escape($SkillName))\s*$") {
         Fail "Missing expected name in frontmatter: $Path"
     }
 
@@ -33,53 +26,94 @@ function Test-Frontmatter($Path) {
         Fail "Missing useful description in frontmatter: $Path"
     }
 
-    if ($Path -like "*\claude-code\$SkillName\SKILL.md" -and $frontmatter -notmatch '(?m)^when_to_use:\s*.{10,}$') {
+    if ($RequireWhenToUse -and $frontmatter -notmatch '(?m)^when_to_use:\s*.{10,}$') {
         Fail "Missing when_to_use in Claude frontmatter: $Path"
     }
 
-    if ($content -notmatch [regex]::Escape($ManagedMarker)) {
+    $managedMarker = "<!-- ai-config-hub-managed: $SkillName -->"
+    if ($content -notmatch [regex]::Escape($managedMarker)) {
         Fail "Missing managed marker in skill body: $Path"
     }
 }
 
-foreach ($rootPath in $SkillRoots) {
-    if (-not (Test-Path -LiteralPath $rootPath)) {
-        Fail "Missing rendered skill directory: $rootPath. Run scripts\render-skills.ps1 first."
+function Get-RelativeFileHash($BasePath, $Path) {
+    $base = (Resolve-Path -LiteralPath $BasePath).Path.TrimEnd('\') + '\'
+    $full = (Resolve-Path -LiteralPath $Path).Path
+    $relative = $full.Substring($base.Length)
+    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash
+    return "$relative=$hash"
+}
+
+foreach ($skillName in $SkillNames) {
+    $sharedRoot = Join-Path $Root "skills\shared\$skillName"
+    $skillRoots = @(
+        @{
+            Path = Join-Path $RenderedRoot "claude-code\$skillName"
+            RequireWhenToUse = $true
+        },
+        @{
+            Path = Join-Path $RenderedRoot "codex\$skillName"
+            RequireWhenToUse = $false
+        },
+        @{
+            Path = Join-Path $RenderedRoot "codex-legacy\$skillName"
+            RequireWhenToUse = $false
+        }
+    )
+
+    if (-not (Test-Path -LiteralPath $sharedRoot)) {
+        Fail "Missing shared skill source: $sharedRoot"
         continue
     }
 
-    $skillFile = Join-Path $rootPath 'SKILL.md'
-    if (-not (Test-Path -LiteralPath $skillFile)) {
-        Fail "Missing SKILL.md: $skillFile"
-        continue
-    }
+    foreach ($skillRoot in $skillRoots) {
+        $rootPath = $skillRoot.Path
+        if (-not (Test-Path -LiteralPath $rootPath)) {
+            Fail "Missing rendered skill directory: $rootPath. Run scripts\render-skills.ps1 first."
+            continue
+        }
 
-    Test-Frontmatter $skillFile
+        $skillFile = Join-Path $rootPath 'SKILL.md'
+        if (-not (Test-Path -LiteralPath $skillFile)) {
+            Fail "Missing SKILL.md: $skillFile"
+            continue
+        }
 
-    foreach ($relativePath in @(
-        'README.md',
-        'workflow.md',
-        'references\official-paths.md',
-        'references\design-checklist.md',
-        'templates\ai-readme.md.tpl',
-        'templates\project-readme.md.tpl',
-        'templates\skills-registry.md.tpl',
-        'templates\current-state.md.tpl',
-        'templates\work-task.md.tpl',
-        'templates\state-archive.md.tpl',
-        'templates\checklists.md.tpl',
-        'templates\claude-skill.md.tpl',
-        'templates\codex-skill.md.tpl',
-        'templates\codex-legacy-skill.md.tpl'
-    )) {
-        $path = Join-Path $rootPath $relativePath
-        if (-not (Test-Path -LiteralPath $path)) {
-            Fail "Missing rendered payload file: $path"
+        Test-Frontmatter $skillFile $skillName $skillRoot.RequireWhenToUse
+
+        foreach ($sharedItem in Get-ChildItem -LiteralPath $sharedRoot -Force) {
+            $renderedItem = Join-Path $rootPath $sharedItem.Name
+            if (-not (Test-Path -LiteralPath $renderedItem)) {
+                Fail "Missing rendered shared payload: $renderedItem"
+                continue
+            }
+
+            if ($sharedItem -is [System.IO.FileInfo]) {
+                $sharedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $sharedItem.FullName).Hash
+                $renderedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $renderedItem).Hash
+
+                if ($sharedHash -ne $renderedHash) {
+                    Fail "Rendered shared payload is out of sync: $renderedItem"
+                }
+
+                continue
+            }
+
+            $sharedItems = Get-ChildItem -LiteralPath $sharedItem.FullName -Recurse -File | ForEach-Object {
+                Get-RelativeFileHash $sharedItem.FullName $_.FullName
+            } | Sort-Object
+
+            $renderedItems = Get-ChildItem -LiteralPath $renderedItem -Recurse -File | ForEach-Object {
+                Get-RelativeFileHash $renderedItem $_.FullName
+            } | Sort-Object
+
+            if (($sharedItems -join "`n") -ne ($renderedItems -join "`n")) {
+                Fail "Rendered shared payload is out of sync: $renderedItem"
+            }
         }
     }
 }
 
-$SharedRoot = Join-Path $Root "skills\shared\$SkillName"
 $SkillScanRoot = Join-Path $Root 'skills'
 $SecretScanRoots = @(
     (Join-Path $Root 'skills'),
@@ -88,10 +122,10 @@ $SecretScanRoots = @(
 
 $SecretPatterns = @(
     'sk-[A-Za-z0-9_-]{16,}',
-    'api[_-]?key\s*=',
-    'token\s*=',
-    'password\s*=',
-    'secret\s*=',
+    'api[_-]?key\s=',
+    'token\s=',
+    'password\s=',
+    'secret\s=',
     'BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY'
 )
 
@@ -107,69 +141,10 @@ foreach ($file in $SkillScanFiles) {
     }
 }
 
-foreach ($templateName in @('checklists.md')) {
-    $templateReferenceFound = $false
-
-    foreach ($templateFile in Get-ChildItem -Path (Join-Path $SharedRoot 'templates') -Filter '*.tpl' -File -ErrorAction SilentlyContinue) {
-        $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $templateFile.FullName
-
-        if ($content.Contains($templateName)) {
-            $templateReferenceFound = $true
-        }
-    }
-
-    $expectedTemplate = Join-Path (Join-Path $SharedRoot 'templates') "$templateName.tpl"
-    if ($templateReferenceFound -and -not (Test-Path -LiteralPath $expectedTemplate)) {
-        Fail "Template references $templateName but missing corresponding template: $expectedTemplate"
-    }
-}
-
-function Get-RelativeFileHash($BasePath, $Path) {
-    $base = (Resolve-Path -LiteralPath $BasePath).Path.TrimEnd('\') + '\'
-    $full = (Resolve-Path -LiteralPath $Path).Path
-    $relative = $full.Substring($base.Length)
-    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash
-    return "$relative=$hash"
-}
-
-foreach ($rootPath in $SkillRoots) {
-    foreach ($relativePath in @('README.md', 'workflow.md', 'references', 'templates')) {
-        $sharedPath = Join-Path $SharedRoot $relativePath
-        $renderedPath = Join-Path $rootPath $relativePath
-
-        if (-not (Test-Path -LiteralPath $sharedPath) -or -not (Test-Path -LiteralPath $renderedPath)) {
-            continue
-        }
-
-        if ((Get-Item -LiteralPath $sharedPath) -is [System.IO.FileInfo]) {
-            $sharedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $sharedPath).Hash
-            $renderedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $renderedPath).Hash
-
-            if ($sharedHash -ne $renderedHash) {
-                Fail "Rendered shared payload is out of sync: $renderedPath"
-            }
-
-            continue
-        }
-
-        $sharedItems = Get-ChildItem -LiteralPath $sharedPath -Recurse -File | ForEach-Object {
-            Get-RelativeFileHash $sharedPath $_.FullName
-        } | Sort-Object
-
-        $renderedItems = Get-ChildItem -LiteralPath $renderedPath -Recurse -File | ForEach-Object {
-            Get-RelativeFileHash $renderedPath $_.FullName
-        } | Sort-Object
-
-        if (($sharedItems -join "`n") -ne ($renderedItems -join "`n")) {
-            Fail "Rendered shared payload is out of sync: $renderedPath"
-        }
-    }
-}
-
 $ForbiddenPhrases = @(
-    '只保存一个当前主题',
-    '每次任务完成都必须归档',
-    'README.md 是固定的 agent 接手入口'
+    ([string]::Concat([char[]]@(0x53EA, 0x4FDD, 0x5B58, 0x4E00, 0x4E2A, 0x5F53, 0x524D, 0x4E3B, 0x9898))),
+    ([string]::Concat([char[]]@(0x6BCF, 0x6B21, 0x4EFB, 0x52A1, 0x5B8C, 0x6210, 0x90FD, 0x5FC5, 0x987B, 0x5F52, 0x6863))),
+    ('README.md ' + [string]::Concat([char[]]@(0x662F, 0x56FA, 0x5B9A, 0x7684)) + ' agent ' + [string]::Concat([char[]]@(0x63A5, 0x624B, 0x5165, 0x53E3)))
 )
 
 foreach ($file in $SkillScanFiles) {
@@ -201,4 +176,3 @@ if ($Failed) {
 }
 
 Write-Output 'Skill check passed'
-

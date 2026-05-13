@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [switch]$Apply,
     [switch]$IncludeCodexLegacy
@@ -7,25 +7,29 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$SkillName = 'project-ai-config-hub'
 $RenderedRoot = Join-Path $Root 'skills\rendered'
-$ManagedMarker = '<!-- ai-config-hub-managed: project-ai-config-hub -->'
+$SkillNames = @('project-ai-config-hub', 'global-frontend-design')
+$UserHome = [Environment]::GetFolderPath('UserProfile')
 
-$Targets = @(
-    @{
-        Source = Join-Path $RenderedRoot "claude-code\$SkillName"
-        Target = 'C:\Users\sx200\.claude\skills\project-ai-config-hub'
-    },
-    @{
-        Source = Join-Path $RenderedRoot "codex\$SkillName"
-        Target = 'C:\Users\sx200\.agents\skills\project-ai-config-hub'
-    }
-)
-
-if ($IncludeCodexLegacy) {
+$Targets = @()
+foreach ($skillName in $SkillNames) {
     $Targets += @{
-        Source = Join-Path $RenderedRoot "codex-legacy\$SkillName"
-        Target = 'C:\Users\sx200\.codex\skills\project-ai-config-hub'
+        SkillName = $skillName
+        Source = Join-Path $RenderedRoot "claude-code\$skillName"
+        Target = Join-Path $UserHome ".claude\skills\$skillName"
+    }
+    $Targets += @{
+        SkillName = $skillName
+        Source = Join-Path $RenderedRoot "codex\$skillName"
+        Target = Join-Path $UserHome ".agents\skills\$skillName"
+    }
+
+    if ($IncludeCodexLegacy) {
+        $Targets += @{
+            SkillName = $skillName
+            Source = Join-Path $RenderedRoot "codex-legacy\$skillName"
+            Target = Join-Path $UserHome ".codex\skills\$skillName"
+        }
     }
 }
 
@@ -50,18 +54,19 @@ function Get-DirectoryFingerprint($Path) {
     return ($parts -join "`n")
 }
 
-function Test-ManagedTarget($Path) {
+function Test-ManagedTarget($Path, $SkillName) {
     $skillFile = Join-Path $Path 'SKILL.md'
     if (-not (Test-Path -LiteralPath $skillFile)) {
         return $false
     }
 
     $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $skillFile
-    if ($content.Contains($ManagedMarker)) {
+    $managedMarker = "<!-- ai-config-hub-managed: $SkillName -->"
+    if ($content.Contains($managedMarker)) {
         return $true
     }
 
-    return $content -match '(?m)^name:\s*project-ai-config-hub\s*$'
+    return $content -match "(?m)^name:\s*$([regex]::Escape($SkillName))\s*$"
 }
 
 if (-not $Apply) {
@@ -72,7 +77,7 @@ if (-not $Apply) {
         $targetFingerprint = if ($targetExists) { Get-DirectoryFingerprint $item.Target } else { '' }
         $status = if (-not $targetExists) {
             'missing target'
-        } elseif (-not (Test-ManagedTarget $item.Target)) {
+        } elseif (-not (Test-ManagedTarget $item.Target $item.SkillName)) {
             'would stop: existing unmanaged target'
         } elseif ($sourceFingerprint -eq $targetFingerprint) {
             'unchanged'
@@ -94,11 +99,17 @@ foreach ($item in $Targets) {
     }
 
     if (Test-Path -LiteralPath $target) {
-        if (-not (Test-ManagedTarget $target)) {
+        if (-not (Test-ManagedTarget $target $item.SkillName)) {
             throw "Refusing to overwrite unmanaged existing skill target: $target"
         }
 
-        $backup = "$target.$timestamp.bak"
+        $backupBase = Split-Path -Parent $targetParent
+        $backupRoot = Join-Path $backupBase 'ai-config-hub-skill-backups'
+        if (-not (Test-Path -LiteralPath $backupRoot)) {
+            New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
+        }
+
+        $backup = Join-Path $backupRoot "$($item.SkillName).$timestamp.bak"
         Copy-Item -LiteralPath $target -Destination $backup -Recurse -Force
         Write-Output "Backup created: $backup"
     }
@@ -110,4 +121,3 @@ foreach ($item in $Targets) {
     Copy-Item -LiteralPath $item.Source -Destination $target -Recurse -Force
     Write-Output "Synced: $($item.Source) -> $target"
 }
-
