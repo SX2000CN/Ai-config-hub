@@ -2,8 +2,8 @@
 
 任务 ID：2026-05-13-global-frontend-design
 创建时间：2026-05-13 19:00
-更新时间：2026-05-13 23:35
-状态：待用户确认
+更新时间：2026-05-14
+状态：已关闭
 当前活动：否
 
 ## 目标
@@ -38,12 +38,11 @@
 
 ## 当前卡点
 
-等待用户审核全局正式入口安装结果。
+无。
 
 ## 下一步最小动作
 
-1. 用户确认 `global-frontend-design` 已能作为全局 skill 被 Claude Code / Codex 发现和调用。
-2. 若确认无误，可关闭本任务；若要兼容旧 Codex 路径，再运行 `scripts/sync-skills.ps1 -Apply -IncludeCodexLegacy`。
+无。本任务已关闭；若后续需要兼容旧 Codex 路径，再单独运行并确认 `scripts/sync-skills.ps1 -Apply -IncludeCodexLegacy`。
 
 ## 验证状态
 
@@ -56,7 +55,7 @@
 
 ## 残留风险
 
-- 仍需要用户确认实际工具侧能正常触发 `global-frontend-design`。
+- 用户已确认本机全局配置为最新；本轮已核验仓库 rendered 包与本机 Claude Code / Codex 全局 skill 目录一致。
 - 公开分发前仍需重新联网核验 Anthropic `frontend-design` 的完整许可证和条款。
 - 根目录 `global-frontend-design/` 已不再作为事实源；全局 skill 事实源统一为 `skills/shared/global-frontend-design/`。
 
@@ -80,4 +79,4 @@
 
 ## 关闭依据 / 最终结果
 
-已确认达到本机全局 skill 完全体：共享事实源、Claude Code / Codex 入口、rendered 包、同步脚本、registry、文档和任务状态均已一致；用户级全局目录已同步且 dry-run 为 `unchanged`。仍需用户在实际工具侧确认触发效果，并在公开分发前重新核验 Anthropic 上游完整许可证。
+已确认达到本机全局 skill 完全体：共享事实源、Claude Code / Codex 入口、rendered 包、同步脚本、registry、文档和任务状态均已一致；用户级全局目录已同步且 dry-run 为 `unchanged`，本轮 rendered/global 文件哈希对比也一致。公开分发前仍需重新核验 Anthropic 上游完整许可证。
