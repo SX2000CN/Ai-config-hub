@@ -53,7 +53,7 @@
    - `skills/claude-code/<skill-name>/SKILL.md`
    - `skills/codex/<skill-name>/SKILL.md`
 
-   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`。
+   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`。
 
 2. 渲染输出：
 

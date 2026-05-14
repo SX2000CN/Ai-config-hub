@@ -6,6 +6,7 @@
 |---|---|---|---|---|---|
 | project-ai-config-hub | active | `skills/shared/project-ai-config-hub/` | `skills/claude-code/project-ai-config-hub/SKILL.md` | `skills/codex/project-ai-config-hub/SKILL.md` | 本仓库维护并渲染到用户级目录的全局 skill；不是 `docs/ai/skills/` 下的新项目入口。 |
 | global-frontend-design | active | `skills/shared/global-frontend-design/` | `skills/claude-code/global-frontend-design/SKILL.md` | `skills/codex/global-frontend-design/SKILL.md` | 本仓库维护并渲染到用户级目录的全局前端设计 skill；来源归档见 `docs/ai/archive/global-frontend-design-sources/`。 |
+| global-thinking-partner | active | `skills/shared/global-thinking-partner/` | `skills/claude-code/global-thinking-partner/SKILL.md` | `skills/codex/global-thinking-partner/SKILL.md` | 本仓库维护并渲染到用户级目录的低副作用思维扩展 skill；默认只读、手动触发优先。 |
 
 ## 状态说明
 

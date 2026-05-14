@@ -58,6 +58,7 @@ C:\Users\sx200\.agents\skills\<skill-name>\
 
 - `project-ai-config-hub`
 - `global-frontend-design`
+- `global-thinking-partner`
 
 可选历史兼容目标：
 

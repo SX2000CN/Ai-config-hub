@@ -1,6 +1,6 @@
 # 当前工作状态
 
-更新时间：2026-05-13
+更新时间：2026-05-14
 当前活动任务：无
 
 ## 接手导航
@@ -21,6 +21,7 @@
 
 - `docs/ai/tasks/2026-05-13-work-state-v2.md`：多任务智能工作状态机制 v2 已完成实现和审计问题修复，文档、规则、模板、入口、检查脚本和 rendered 产物已更新，等待用户审核。
 - `docs/ai/tasks/2026-05-13-global-frontend-design.md`：`global-frontend-design` 已达到本机全局 skill 完全体，Claude Code / Codex 用户级目录已同步且 dry-run 为 unchanged，等待用户实际触发确认。
+- `docs/ai/tasks/2026-05-14-thinking-partner-research.md`：`global-thinking-partner` 已完成实现、渲染、检查和本机同步，等待用户实际触发确认。
 
 ## 暂停 / 阻塞
 

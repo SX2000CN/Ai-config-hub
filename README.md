@@ -8,7 +8,7 @@
 - 用 `rules/tools/` 维护 Claude Code / Codex 专属补充。
 - 用模板渲染出 `rules/rendered/CLAUDE.md` 和 `rules/rendered/AGENTS.md`。
 - 用脚本检查、预览并安全同步到真实全局配置文件。
-- 用 `skills/` 维护全局 skills，包括 `project-ai-config-hub` 和 `global-frontend-design`。
+- 用 `skills/` 维护全局 skills，包括 `project-ai-config-hub`、`global-frontend-design` 和 `global-thinking-partner`。
 - 用 `docs/ai/CURRENT.md` 和 `docs/ai/tasks/` 维护 AI 接手入口、多任务状态总览和任务无损接手卡。
 
 ## 目录结构
@@ -57,8 +57,9 @@ skills 管理流程：
 
 - 已支持 Claude Code 和 Codex 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
-- 已实现 `project-ai-config-hub` 和 `global-frontend-design` 的全局 skill 源码化、渲染、检查和 dry-run 同步流程。
+- 已实现 `project-ai-config-hub`、`global-frontend-design` 和 `global-thinking-partner` 的全局 skill 源码化、渲染、检查和 dry-run 同步流程。
 - 已设计并接入 `docs/ai/CURRENT.md` + `docs/ai/tasks/` 多任务工作状态机制，用于中断、隔天继续、切换任务或切换 AI 编程工具时恢复工作现场。
 - `project-ai-config-hub` 的定位是本项目的项目级分身，用来在目标项目中创建和升级 `docs/ai/` AI 配置中枢、工作状态机制和多端项目 skills。
 - `global-frontend-design` 的定位是全局前端设计 skill，用来在前端 UI 工作中先建立鲜明视觉方向，再落地可维护、可访问、响应式且状态完整的界面。
+- `global-thinking-partner` 的定位是低副作用思维扩展 skill，用来在复杂 coding 决策前扩展方案、挑战假设、识别失败模式并寻找更简单路径。
 - Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。

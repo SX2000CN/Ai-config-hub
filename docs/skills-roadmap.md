@@ -1,6 +1,6 @@
 ﻿# Skills 路线图
 
-`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub` 和 `global-frontend-design` 的源码化、渲染、检查和 dry-run 同步流程。
+`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub`、`global-frontend-design` 和 `global-thinking-partner` 的源码化、渲染、检查和 dry-run 同步流程。
 
 `project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
 
@@ -40,6 +40,14 @@
   - Codex 入口源：`skills/codex/global-frontend-design/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 来源归档：`docs/ai/archive/global-frontend-design-sources/`
+
+- `global-thinking-partner`
+  - 定位：低副作用思维扩展 skill，用于复杂 coding 决策前的方案发散、失败模式、简化路径和维护者视角检查。
+  - 共享源：`skills/shared/global-thinking-partner/`
+  - Claude Code 入口源：`skills/claude-code/global-thinking-partner/SKILL.md`
+  - Codex 入口源：`skills/codex/global-thinking-partner/SKILL.md`
+  - rendered 包：`skills/rendered/`
+  - 约束：默认只读、手动触发优先，不负责写代码、同步、提交或推送。
 
 ## 迭代原则
 
