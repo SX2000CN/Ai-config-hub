@@ -1,4 +1,5 @@
 # Example only. Do not store real provider URLs, tokens, private models, or trusted project paths here.
+# Managed MCP fragments live under tool-configs/mcp/; do not commit a full user config.toml.
 
 project_doc_fallback_filenames = ["CLAUDE.md"]
 

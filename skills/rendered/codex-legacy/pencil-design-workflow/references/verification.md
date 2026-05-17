@@ -1,0 +1,90 @@
+# Pencil 验证和审查边界
+
+Pencil 能验证设计画布和导出图，不能替代真实浏览器验证。
+
+## Pencil 阶段验证
+
+可验证：
+
+- `.pen` 文件已生成或更新。
+- PNG、JPEG、WEBP 或 PDF 已导出。
+- 画布截图或导出图可展示给用户。
+- 结构层面是否有明显裁切、重叠、层级异常。
+- 视觉层面是否有明显字体崩坏、文字重叠、按钮文字未居中、颜色层级不清、元素遮挡。
+- 变量、主题、颜色、字体、间距是否与设计意图一致。
+
+常用证据：
+
+- `snapshot_layout`：结构、bounds、裁切和布局问题。
+- `get_screenshot`：画布视觉截图。
+- `export_nodes`：节点导出图。
+- `get_variables` / `set_variables`：变量和主题。
+- CLI 导出的 PNG/PDF：headless 设计结果。
+
+## Claude Code 审查场景
+
+### 设计稿审查
+
+读取 Pencil MCP 截图或导出图，检查：
+
+- 字体渲染是否异常。
+- 文本是否重叠、裁切或溢出。
+- 信息层级是否清楚。
+- 视觉方向是否真实可见。
+- 颜色、间距、圆角、阴影和表面是否一致。
+- 状态覆盖和响应式设计意图是否足够。
+
+### 设计到代码审查
+
+对照 Pencil 导出图、设计说明和前端实现 diff，检查：
+
+- 实现是否偏离已确认设计。
+- token、颜色、字体、间距是否不一致。
+- loading、empty、error、disabled、hover、focus、长内容等状态是否缺失。
+- 响应式行为是否只在设计里存在，代码中未落实。
+- 是否缺少真实浏览器验证。
+
+### PR / UI diff 审查
+
+如果 PR 涉及 `.pen`、导出图或设计先行产物，应把 Pencil 截图作为审查证据。
+
+如果 PR 只涉及真实网页代码或框架组件，不强行使用 Pencil；优先按 `global-frontend-design` 的 review 流程和项目验证命令处理。
+
+审查报告必须列出证据来源，区分：
+
+- Pencil `snapshot_layout`
+- Pencil `get_screenshot`
+- 导出 PNG/PDF
+- 代码 diff
+- 浏览器截图或 Playwright 结果
+
+## 代码实现阶段验证
+
+Pencil 不能证明：
+
+- 真实 DOM 和 CSS 渲染正确。
+- Web font 在浏览器中加载成功。
+- 响应式断点在真实 viewport 中正确。
+- 交互、focus、hover、键盘导航正确。
+- 浏览器控制台没有错误。
+- 可访问性语义正确。
+
+真实网页视觉验证需要：
+
+- Playwright。
+- 浏览器 MCP / Chrome DevTools MCP。
+- 项目已有截图测试。
+- 或人工浏览器检查。
+
+当前 Claude Code 要稳定完成真实网页自动截图、自检和多轮修复，需要补 Playwright/浏览器 MCP。
+
+## 汇报要求
+
+最终汇报必须区分：
+
+- Pencil 画布验证。
+- 导出图检查。
+- Claude Code 审查。
+- 真实浏览器验证。
+
+如果只做了 Pencil 验证，不要说“网页已验证”。如果缺少浏览器自动化工具，应明确说明真实网页视觉验证未完成。

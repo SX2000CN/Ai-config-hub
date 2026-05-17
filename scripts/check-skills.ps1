@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
 $RenderedRoot = Join-Path $Root 'skills\rendered'
-$SkillNames = @('project-ai-config-hub', 'global-frontend-design', 'global-thinking-partner')
+$SkillNames = @('project-ai-config-hub', 'global-frontend-design', 'global-thinking-partner', 'pencil-design-workflow')
 $Failed = $false
 
 function Fail($Message) {

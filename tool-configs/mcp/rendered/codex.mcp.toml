@@ -1,0 +1,21 @@
+﻿# >>> ai-config-hub managed mcp: browser-visual
+
+[mcp_servers.chrome-devtools]
+command = "cmd"
+args = ["/c", "npx", "-y", "chrome-devtools-mcp@latest"]
+startup_timeout_ms = 20000
+
+[mcp_servers.chrome-devtools.env]
+SystemRoot = "C:\\Windows"
+PROGRAMFILES = "C:\\Program Files"
+
+[mcp_servers.playwright]
+command = "cmd"
+args = ["/c", "npx", "-y", "@playwright/mcp@latest"]
+startup_timeout_ms = 20000
+
+[mcp_servers.playwright.env]
+SystemRoot = "C:\\Windows"
+PROGRAMFILES = "C:\\Program Files"
+
+# <<< ai-config-hub managed mcp: browser-visual

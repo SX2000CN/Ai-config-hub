@@ -1,6 +1,6 @@
 # 当前工作状态
 
-更新时间：2026-05-14
+更新时间：2026-05-18
 当前活动任务：无
 
 ## 接手导航
@@ -27,6 +27,8 @@
 
 ## 最近关闭
 
+- `pencil-design-workflow` 全局 skill：已同步到本机 Claude Code / Codex 用户级 skill 目录，未同步历史 `.codex\skills`，同步后 dry-run 全部 unchanged。
+- 浏览器视觉验证 MCP：已同步 `chrome-devtools` / `playwright` 到本机 Claude Code / Codex 用户级配置，保留既有 Pencil MCP，同步后检查通过。
 - `project-ai-config-hub` 自身更新语义优化：已同步到本机 Claude Code / Codex 全局 skill 目录，同步后 dry-run 全部 unchanged。
 - 多任务智能工作状态机制 v2：仓库 rendered 规则与本机全局规则一致，默认 skill rendered 包与本机 Claude Code / Codex 全局 skill 目录一致，任务已确认完成。
 - `global-frontend-design` 全局 skill：仓库 rendered 包与本机 Claude Code / Codex 全局 skill 目录一致，任务已确认完成。

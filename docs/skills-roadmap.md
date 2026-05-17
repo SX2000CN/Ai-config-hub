@@ -1,6 +1,6 @@
 ﻿# Skills 路线图
 
-`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub`、`global-frontend-design` 和 `global-thinking-partner` 的源码化、渲染、检查和 dry-run 同步流程。
+`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner` 和 `pencil-design-workflow` 的源码化、渲染、检查和 dry-run 同步流程。
 
 `project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
 
@@ -48,6 +48,14 @@
   - Codex 入口源：`skills/codex/global-thinking-partner/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 约束：默认只读、手动触发优先，不负责写代码、同步、提交或推送。
+
+- `pencil-design-workflow`
+  - 定位：Pencil / `.pen` / pencli 设计先行路由 skill，用于用户需要先生成或确认设计图时选择 Desktop/MCP、VS 插件谨慎模式或 CLI/headless 工作流。
+  - 共享源：`skills/shared/pencil-design-workflow/`
+  - Claude Code 入口源：`skills/claude-code/pencil-design-workflow/SKILL.md`
+  - Codex 入口源：`skills/codex/pencil-design-workflow/SKILL.md`
+  - rendered 包：`skills/rendered/`
+  - 约束：不抢局部 UI bugfix；确认进入真实前端实现后衔接 `global-frontend-design`。
 
 ## 迭代原则
 

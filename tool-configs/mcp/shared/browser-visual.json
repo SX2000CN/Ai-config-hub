@@ -1,0 +1,16 @@
+{
+  "servers": {
+    "chrome-devtools": {
+      "package": "chrome-devtools-mcp@latest",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "startup_timeout_ms": 20000
+    },
+    "playwright": {
+      "package": "@playwright/mcp@latest",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "startup_timeout_ms": 20000
+    }
+  }
+}

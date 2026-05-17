@@ -1,6 +1,16 @@
 ﻿# 同步流程
 
-本文记录全局规则和 skills 的本机同步流程。所有同步脚本默认先 dry-run，只有显式 `-Apply` 才写入真实全局目录。
+本文记录全局规则、skills 和 MCP 配置片段的本机同步流程。所有同步脚本默认先 dry-run，只有显式 `-Apply` 才写入真实全局目录。
+
+## 全局同步前总检查
+
+同步任一真实用户级配置前，优先运行：
+
+```powershell
+.\scripts\check-all.ps1
+```
+
+该脚本会依次执行规则、skills、MCP 配置片段的 render、check 和 dry-run。若只检查单个管线，也应至少运行对应的 render、check、sync dry-run，并确认输出中的 `would update` / `missing target` 与本次预期一致。
 
 ## 全局规则
 
@@ -44,7 +54,7 @@
 
 - 不要直接编辑 rendered 文件作为长期源头；应修改 `rules/` 下的源文件。
 - 如果手动改过真实全局文件，应先把差异同步回本项目源文件，再重新渲染。
-- v1 不自动修改 `C:\Users\sx200\.codex\config.toml`。
+- 完整 `C:\Users\sx200\.codex\config.toml` 不作为仓库事实源；只有 MCP 配置片段流程会合并明确托管的 server section。
 
 ## Skills
 
@@ -53,7 +63,7 @@
    - `skills/claude-code/<skill-name>/SKILL.md`
    - `skills/codex/<skill-name>/SKILL.md`
 
-   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`。
+   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`pencil-design-workflow`。
 
 2. 渲染输出：
 
@@ -101,3 +111,61 @@
 - 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
 - `sync-skills.ps1 -Apply` 会优先把带对应标记的目录视为托管产物；历史安装如果仍保留匹配的 `name: <skill-name>` 也会被接管，但不匹配这两种标记的目录会拒绝覆盖。
 - `sync-skills.ps1 -Apply` 的备份目录位于 skills 发现目录外：`C:\Users\sx200\.claude\ai-config-hub-skill-backups\` 和 `C:\Users\sx200\.agents\ai-config-hub-skill-backups\`，避免备份被工具误识别为可用 skill。
+
+## MCP / 工具配置片段
+
+MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完整用户配置。
+
+1. 修改源文件：
+   - `tool-configs/mcp/shared/browser-visual.json`
+
+2. 渲染输出：
+
+```powershell
+.\scripts\render-mcp.ps1
+```
+
+3. 检查生成结果：
+
+```powershell
+.\scripts\check-mcp.ps1
+```
+
+4. 预览同步目标：
+
+```powershell
+.\scripts\sync-mcp.ps1
+```
+
+也可以只预览单个工具：
+
+```powershell
+.\scripts\sync-mcp.ps1 -ClaudeCode
+.\scripts\sync-mcp.ps1 -Codex
+```
+
+5. 确认无误后应用：
+
+```powershell
+.\scripts\sync-mcp.ps1 -Apply
+```
+
+或分工具应用：
+
+```powershell
+.\scripts\sync-mcp.ps1 -Apply -ClaudeCode
+.\scripts\sync-mcp.ps1 -Apply -Codex
+```
+
+当前托管目标：
+
+- `tool-configs/mcp/rendered/claude-code.mcp.json` → 合并 `mcpServers.chrome-devtools` / `mcpServers.playwright` 到 `C:\Users\sx200\.claude.json`
+- `tool-configs/mcp/rendered/codex.mcp.toml` → 合并托管 block 到 `C:\Users\sx200\.codex\config.toml`
+
+注意事项：
+
+- 不要提交完整 `C:\Users\sx200\.claude.json` 或 `C:\Users\sx200\.codex\config.toml`。
+- `sync-mcp.ps1` 默认 dry-run；只有显式 `-Apply` 才写真实用户配置。
+- Claude Code 同步只新增或替换托管 server，保留 `pencil` 和未知 MCP server。
+- Codex 同步使用 `# >>> ai-config-hub managed mcp: browser-visual` marker block，只替换托管 block 或同名 server section，保留 `[mcp_servers.pencil]` 和其他私有配置。
+- `sync-mcp.ps1 -Apply` 会先备份到 `C:\Users\sx200\.claude\ai-config-hub-config-backups\` 或 `C:\Users\sx200\.codex\ai-config-hub-config-backups\`。
