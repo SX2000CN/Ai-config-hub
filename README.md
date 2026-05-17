@@ -10,6 +10,7 @@
 - 用脚本检查、预览并安全同步到真实全局配置文件。
 - 用 `skills/` 维护全局 skills，包括 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner` 和 `pencil-design-workflow`。
 - 用 `tool-configs/` 维护可分发的工具配置片段，当前用于浏览器视觉验证 MCP。
+- 用 `designs/pencil/` 和 `docs/visual-validation/` 保存设计先行与真实浏览器视觉验证产物。
 - 用 `docs/ai/CURRENT.md` 和 `docs/ai/tasks/` 维护 AI 接手入口、多任务状态总览和任务无损接手卡。
 
 ## 目录结构
@@ -20,9 +21,10 @@ rules/tools/        工具专属补充
 rules/rendered/     渲染后的全局规则文件
 templates/          渲染模板和安全示例配置
 scripts/            规则、skills 和 MCP 配置的渲染、检查、同步脚本
-docs/               架构、同步、安全和 skills 设计文档
+docs/               架构、同步、安全、skills 设计文档和视觉验证页面
 skills/             skills 共享源、工具入口和 rendered 包
 tool-configs/       工具配置片段源文件和 rendered 产物
+designs/            Pencil 设计先行产物和导出图
 private/            本机私有草稿目录，除 README 外默认忽略
 ```
 
@@ -75,6 +77,7 @@ MCP 配置片段管理流程：
 - 已支持 Claude Code 和 Codex 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
 - 已支持浏览器视觉验证 MCP 的源码化片段、渲染、检查和 dry-run 安全合并同步流程；真实用户级配置需执行 `sync-mcp.ps1 -Apply`。
+- 已用 `docs/visual-validation/current-project-structure.html` 和 `designs/pencil/current-project-structure/` 验证 Pencil 设计先行与真实浏览器 MCP 截图检查链路。
 - 已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner` 和 `pencil-design-workflow` 的全局 skill 源码化、渲染、检查和 dry-run 同步流程；新增或变更的用户级安装需执行 `sync-skills.ps1 -Apply`。
 - 已设计并接入 `docs/ai/CURRENT.md` + `docs/ai/tasks/` 多任务工作状态机制，用于中断、隔天继续、切换任务或切换 AI 编程工具时恢复工作现场。
 - `project-ai-config-hub` 的定位是本项目的项目级分身，用来在目标项目中创建和升级 `docs/ai/` AI 配置中枢、工作状态机制和多端项目 skills。

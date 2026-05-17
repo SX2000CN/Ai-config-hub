@@ -50,8 +50,10 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
         throw "Rendered Claude MCP fragment is missing mcpServers."
     }
 
-    if (Test-Path -LiteralPath $TargetPath) {
-        $target = Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath | ConvertFrom-Json
+    $targetExists = Test-Path -LiteralPath $TargetPath
+    $targetContent = if ($targetExists) { Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath } else { '' }
+    if ($targetExists) {
+        $target = $targetContent | ConvertFrom-Json
     }
     else {
         $target = [pscustomobject]@{}
@@ -61,6 +63,7 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
         $target | Add-Member -MemberType NoteProperty -Name 'mcpServers' -Value ([pscustomobject]@{})
     }
 
+    $managedChanged = $false
     $actions = New-Object System.Collections.Generic.List[string]
     $existingNames = Get-PropertyNames $target.mcpServers
     foreach ($serverName in $existingNames) {
@@ -84,6 +87,10 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
                 $action = 'unchanged'
             }
         }
+
+        if ($action -ne 'unchanged') {
+            $managedChanged = $true
+        }
         $actions.Add("$action mcpServers.$serverName")
 
         if ($existingNames -contains $serverName) {
@@ -93,8 +100,9 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
     }
 
     return [pscustomobject]@{
-        Content = ConvertTo-StableJson $target
+        Content = if ($managedChanged -or -not $targetExists) { ConvertTo-StableJson $target } else { $targetContent }
         Actions = @($actions)
+        Changed = $managedChanged -or -not $targetExists
     }
 }
 
@@ -128,9 +136,11 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     if ($markerMatches.Count -eq 1) {
         $actions.Add('replace managed browser-visual MCP block')
         $merged = [regex]::Replace($targetContent, $markerPattern, $sourceBlock, 1)
+        $content = $merged.TrimEnd() + "`n"
         return [pscustomobject]@{
-            Content = $merged.TrimEnd() + "`n"
+            Content = $content
             Actions = @($actions)
+            Changed = $content -ne $targetContent
         }
     }
 
@@ -158,19 +168,30 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
         $mergedContent = $mergedContent + "`n`n" + $sourceBlock.TrimEnd()
     }
 
+    $content = $mergedContent + "`n"
     return [pscustomobject]@{
-        Content = $mergedContent + "`n"
+        Content = $content
         Actions = @($actions)
+        Changed = $content -ne $targetContent
     }
 }
 
 function Sync-File($Name, $TargetPath, $Merged) {
     $targetExists = Test-Path -LiteralPath $TargetPath
     $targetContent = if ($targetExists) { Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath } else { '' }
-    $status = if (-not $targetExists) { 'missing target' } elseif ($targetContent -eq $Merged.Content) { 'unchanged' } else { 'would update' }
+    $hasSemanticChange = if ($null -ne $Merged.PSObject.Properties['Changed']) { [bool]$Merged.Changed } else { $targetContent -ne $Merged.Content }
+    $status = if (-not $targetExists) { 'missing target' } elseif (-not $hasSemanticChange) { 'unchanged' } else { 'would update' }
 
     if (-not $Apply) {
         Write-Output "$status`t$Name`t$TargetPath"
+        foreach ($action in $Merged.Actions) {
+            Write-Output "  - $action"
+        }
+        return
+    }
+
+    if ($targetExists -and -not $hasSemanticChange) {
+        Write-Output "Unchanged: $Name`t$TargetPath"
         foreach ($action in $Merged.Actions) {
             Write-Output "  - $action"
         }

@@ -105,6 +105,26 @@ docs/ai/tasks/*.md
 单个任务的无损接手卡；archive/ 仅作为可选长期整理目录
 ```
 
+### 视觉验证产物
+
+```text
+designs/pencil/<slug>/
+        ↓
+Pencil .pen 设计文件和导出图
+```
+
+```text
+docs/visual-validation/<page>.html
+        ↓
+无构建依赖的静态验证页面
+        ↓
+docs/visual-validation/exports/
+        ↓
+真实浏览器 MCP 截图证据
+```
+
+`Pencil` 导出图只证明设计产物可视化结果，不能替代真实浏览器截图、console、DOM 或可访问性检查。
+
 ## 设计原则
 
 - 共享规则只写一份，避免 Claude Code 和 Codex 长期漂移。

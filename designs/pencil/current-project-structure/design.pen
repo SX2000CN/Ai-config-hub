@@ -1,0 +1,1405 @@
+{
+  "version": "2.11",
+  "children": [
+    {
+      "type": "frame",
+      "id": "s7n9OT",
+      "x": 0,
+      "y": 0,
+      "name": "ai-config-hub documentation dashboard",
+      "width": 1440,
+      "fill": "$bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        32,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "bRsLL",
+          "name": "Header",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "J4BM7",
+              "name": "Title block",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "v1zLh",
+                  "name": "eyebrow",
+                  "fill": "$accent-blue",
+                  "content": "LOCAL AI PROGRAMMING TOOL CONFIGURATION HUB",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "600",
+                  "letterSpacing": 1.2
+                },
+                {
+                  "type": "text",
+                  "id": "Ti1uq",
+                  "name": "title",
+                  "fill": "$text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "ai-config-hub current project structure",
+                  "lineHeight": 1.08,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 40,
+                  "fontWeight": "760"
+                },
+                {
+                  "type": "text",
+                  "id": "Unh6i",
+                  "name": "subtitle",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A static documentation dashboard for coordinating rules, project skills, MCP tool configuration, and AI work-status docs without exposing private configuration values.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 16
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LMw4B",
+              "name": "Safe metadata panel",
+              "width": 360,
+              "fill": "$panel",
+              "cornerRadius": 16,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border"
+              },
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EURGE",
+                  "name": "metaTitle",
+                  "fill": "$accent-green",
+                  "content": "safe view",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 12,
+                  "fontWeight": "700",
+                  "letterSpacing": 1.1
+                },
+                {
+                  "type": "text",
+                  "id": "B2KWLN",
+                  "name": "meta1",
+                  "fill": "$text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "No tokens, provider URLs, trusted project paths, credentials, or private config values are displayed.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "IMAzi",
+                  "name": "meta2",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Only public-facing structure, generated artifacts, and validation boundaries are represented.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "z0e2xP",
+          "name": "Sync badges",
+          "width": "fill_container",
+          "gap": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "qmb36",
+              "name": "Global skills synced badge",
+              "width": "fill_container",
+              "fill": "#0F2D25",
+              "cornerRadius": 999,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#1D6B55"
+              },
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "aE1Eu",
+                  "fill": "$accent-green",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "cxeph",
+                  "fill": "$text",
+                  "content": "global skills synced",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "nT5cH",
+              "name": "Browser MCP synced badge",
+              "width": "fill_container",
+              "fill": "#10233F",
+              "cornerRadius": 999,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#315A8C"
+              },
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "z90mYp",
+                  "fill": "$accent-blue",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "xY2lv",
+                  "fill": "$text",
+                  "content": "browser MCP synced",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n5Jey",
+              "name": "docs ai idle badge",
+              "width": "fill_container",
+              "fill": "#33270F",
+              "cornerRadius": 999,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#775E1A"
+              },
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "i0wM3",
+                  "fill": "$accent-amber",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "nt0l3",
+                  "fill": "$text",
+                  "content": "docs/ai idle",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "t5FAK",
+              "name": "legacy codex avoided badge",
+              "width": "fill_container",
+              "fill": "#2D173F",
+              "cornerRadius": 999,
+              "stroke": {
+                "thickness": 1,
+                "fill": "#68458F"
+              },
+              "gap": 10,
+              "padding": [
+                12,
+                14
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "FUj7C",
+                  "fill": "$accent-purple",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "b8eZe3",
+                  "fill": "$text",
+                  "content": "legacy .codex/skills avoided",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dl1sV",
+          "name": "Workflow section",
+          "width": "fill_container",
+          "fill": "$panel",
+          "cornerRadius": 22,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 22,
+          "children": [
+            {
+              "type": "frame",
+              "id": "EaX72",
+              "name": "workflowHead",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sZ4Te",
+                  "fill": "$text",
+                  "content": "controlled update workflow",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 20,
+                  "fontWeight": "720"
+                },
+                {
+                  "type": "text",
+                  "id": "Xao9e",
+                  "fill": "$muted",
+                  "content": "source → render → check → dry-run → apply",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dCruP",
+              "name": "Workflow pipeline",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "NmmYS",
+                  "name": "Source step",
+                  "width": "fill_container",
+                  "height": 132,
+                  "fill": "$panel-2",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v9MPY9",
+                      "fill": "$accent-blue",
+                      "content": "01 SOURCE",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DXpxX",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Read canonical project files and public docs only.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "HPk5S",
+                      "fill": "$muted",
+                      "content": "inputs sanitized",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ZdjEr",
+                  "name": "Render step",
+                  "width": "fill_container",
+                  "height": 132,
+                  "fill": "$panel-2",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ln2PY",
+                      "fill": "$accent-purple",
+                      "content": "02 RENDER",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "OuXOD",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Generate static docs and design exports from the shared structure.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "AnYlY",
+                      "fill": "$muted",
+                      "content": "local artifacts",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "CbwK0",
+                  "name": "Check step",
+                  "width": "fill_container",
+                  "height": 132,
+                  "fill": "$panel-2",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "seDFn",
+                      "fill": "$accent-amber",
+                      "content": "03 CHECK",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WRb7f",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Review changed docs, generated screens, and visible validation states.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "l97qNM",
+                      "fill": "$muted",
+                      "content": "human-readable diff",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kFQyg",
+                  "name": "Dry run step",
+                  "width": "fill_container",
+                  "height": 132,
+                  "fill": "$panel-2",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YpzuM",
+                      "fill": "$accent-green",
+                      "content": "04 DRY-RUN",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "v6Rz7",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Run scripts in non-mutating mode before touching shared config surfaces.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zWpFv",
+                      "fill": "$muted",
+                      "content": "no writes expected",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gvxOP",
+                  "name": "Apply step",
+                  "width": "fill_container",
+                  "height": 132,
+                  "fill": "#172033",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#3A4A66"
+                  },
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r4hmv",
+                      "fill": "$text",
+                      "content": "05 APPLY",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "JlV06",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Commit intended public configuration and documentation updates only.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LPYI9",
+                      "fill": "$muted",
+                      "content": "explicit scope",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "yD3fk",
+          "name": "Four lanes section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "V6Koc",
+              "name": "lanesHead",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "r8PrJ",
+                  "fill": "$text",
+                  "content": "configuration lanes",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 22,
+                  "fontWeight": "740"
+                },
+                {
+                  "type": "text",
+                  "id": "XZJlx",
+                  "fill": "$muted",
+                  "content": "single-page map of what moves through the hub",
+                  "fontFamily": "$font-mono",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iB11R",
+              "name": "Four lanes",
+              "width": "fill_container",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "orl8a",
+                  "name": "Rules lane",
+                  "width": "fill_container",
+                  "height": 420,
+                  "fill": "$panel",
+                  "cornerRadius": 20,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "nxMlS",
+                      "fill": "$text",
+                      "content": "Rules",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 22,
+                      "fontWeight": "760"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jehQH",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "CLAUDE.md / AGENTS.md / repository guidance",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lZg8M",
+                      "name": "rulesList",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "k5SVF",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• keep code, config, and docs aligned",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "U1MvFj",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• prefer explicit validation over assumptions",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QAKfX",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• record handoff state without secrets",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P3Xoj",
+                      "name": "rulesMetric",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$panel-3",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 14,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WP2ej",
+                          "fill": "$accent-blue",
+                          "content": "guardrail",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "OWmQM",
+                          "fill": "$text",
+                          "content": "public structure only",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hJaGR",
+                  "name": "Skills lane",
+                  "width": "fill_container",
+                  "height": 420,
+                  "fill": "$panel",
+                  "cornerRadius": 20,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "y3DpRQ",
+                      "fill": "$text",
+                      "content": "Skills",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 22,
+                      "fontWeight": "760"
+                    },
+                    {
+                      "type": "text",
+                      "id": "uKONe",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "project-level and global skill routing",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mbGVF",
+                      "name": "skillsList",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BNxzQ",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• sync global skills into the project view",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "B12QH",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• route design-first work to Pencil",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "XmJvz",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• avoid legacy .codex/skills fallback",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gw5V9",
+                      "name": "skillsMetric",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "#171B32",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 14,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "aGhyd",
+                          "fill": "$accent-green",
+                          "content": "sync state",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Z4ECe",
+                          "fill": "$text",
+                          "content": "global skills synced",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "awuhF",
+                  "name": "MCP configs lane",
+                  "width": "fill_container",
+                  "height": 420,
+                  "fill": "$panel",
+                  "cornerRadius": 20,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "N1oTY",
+                      "fill": "$text",
+                      "content": "MCP tool configs",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 22,
+                      "fontWeight": "760"
+                    },
+                    {
+                      "type": "text",
+                      "id": "A4qHmt",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "browser, Pencil, and local tool surfaces",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J5AB4g",
+                      "name": "mcpList",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IdRAD",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• browser MCP screenshot validation",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Okelx",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• Pencil design and export checks",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "EJgBp",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• private endpoints are intentionally redacted",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c88oCI",
+                      "name": "mcpMetric",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "#10233F",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 14,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fD24h",
+                          "fill": "$accent-blue",
+                          "content": "visible capability",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "PzNxz",
+                          "fill": "$text",
+                          "content": "browser MCP synced",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lgN5G",
+                  "name": "AI status docs lane",
+                  "width": "fill_container",
+                  "height": 420,
+                  "fill": "$panel",
+                  "cornerRadius": 20,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XAzRN",
+                      "fill": "$text",
+                      "content": "AI status docs",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 22,
+                      "fontWeight": "760"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ipDRi",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "docs/ai/CURRENT.md and task cards",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iSSbl",
+                      "name": "statusList",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tLXzr",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• show current task owner-neutral state",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zfxsb",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• mark idle when no handoff is active",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "PDJAb",
+                          "fill": "$text",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "• retain validation results and residual risk",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P5iIw",
+                      "name": "statusMetric",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "#33270F",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 14,
+                      "justifyContent": "end",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "s5nna",
+                          "fill": "$accent-amber",
+                          "content": "handoff",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "alrwp",
+                          "fill": "$text",
+                          "content": "docs/ai idle",
+                          "fontFamily": "$font-sans",
+                          "fontSize": 18,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "PVGeM",
+          "name": "Validation boundaries",
+          "width": "fill_container",
+          "fill": "$panel",
+          "cornerRadius": 22,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 22,
+          "children": [
+            {
+              "type": "frame",
+              "id": "aYMbY",
+              "name": "valHead",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "b8vMQJ",
+                  "fill": "$text",
+                  "content": "validation boundaries",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 22,
+                  "fontWeight": "740"
+                },
+                {
+                  "type": "text",
+                  "id": "VPdC5",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Each check proves a different layer. Passing one layer does not imply the others passed.",
+                  "lineHeight": 1.4,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DAM4Y",
+              "name": "valRow",
+              "width": "fill_container",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wk4zD",
+                  "name": "Pencil validation boundary",
+                  "width": "fill_container",
+                  "height": 220,
+                  "fill": "$panel-2",
+                  "cornerRadius": 18,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "U9fyA",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Pencil design/export validation",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 18,
+                      "fontWeight": "720"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ibhH7",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Confirms the .pen scene, layout structure, export surfaces, and visual composition inside Pencil.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "v17nOf",
+                      "fill": "$accent-amber",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Does not prove real browser CSS or runtime behavior.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "r0xl1",
+                  "name": "Browser validation boundary",
+                  "width": "fill_container",
+                  "height": 220,
+                  "fill": "$panel-2",
+                  "cornerRadius": 18,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "R5H0we",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Real browser MCP screenshot validation",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 18,
+                      "fontWeight": "720"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Xmexf",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Confirms rendered UI in an actual browser viewport, including spacing, responsive behavior, and visible regressions.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "nG2QF",
+                      "fill": "$accent-amber",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Does not prove generation scripts are safe to apply.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Llna2",
+                  "name": "Script dry run validation boundary",
+                  "width": "fill_container",
+                  "height": 220,
+                  "fill": "$panel-2",
+                  "cornerRadius": 18,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$border"
+                  },
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "qUJpi",
+                      "fill": "$text",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Script dry-run validation",
+                      "fontFamily": "$font-sans",
+                      "fontSize": 18,
+                      "fontWeight": "720"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gtfEw",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Confirms planned file operations, generated paths, and intended diffs before mutating repo configuration.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "UfUC2",
+                      "fill": "$accent-amber",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Does not prove visual quality without screenshot review.",
+                      "lineHeight": 1.35,
+                      "fontFamily": "$font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Ms4yk",
+          "name": "Footer safety row",
+          "width": "fill_container",
+          "fill": "$panel-3",
+          "cornerRadius": 18,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border"
+          },
+          "gap": 16,
+          "padding": 18,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Z8DqL",
+              "fill": "$accent-red",
+              "content": "redaction policy",
+              "fontFamily": "$font-mono",
+              "fontSize": 12,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "GeV7V",
+              "fill": "$muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "This dashboard intentionally omits tokens, provider URLs, trusted project lists, credentials, private config values, and machine-specific secrets.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "accent-amber": {
+      "type": "color",
+      "value": "#FBBF24"
+    },
+    "accent-blue": {
+      "type": "color",
+      "value": "#60A5FA"
+    },
+    "accent-green": {
+      "type": "color",
+      "value": "#34D399"
+    },
+    "accent-purple": {
+      "type": "color",
+      "value": "#A78BFA"
+    },
+    "accent-red": {
+      "type": "color",
+      "value": "#FB7185"
+    },
+    "bg": {
+      "type": "color",
+      "value": "#0B1020"
+    },
+    "border": {
+      "type": "color",
+      "value": "#273247"
+    },
+    "chip-bg": {
+      "type": "color",
+      "value": "#1E293B"
+    },
+    "font-mono": {
+      "type": "string",
+      "value": "IBM Plex Mono"
+    },
+    "font-sans": {
+      "type": "string",
+      "value": "Inter"
+    },
+    "muted": {
+      "type": "color",
+      "value": "#94A3B8"
+    },
+    "panel": {
+      "type": "color",
+      "value": "#11182C"
+    },
+    "panel-2": {
+      "type": "color",
+      "value": "#151F36"
+    },
+    "panel-3": {
+      "type": "color",
+      "value": "#0F172A"
+    },
+    "subtle": {
+      "type": "color",
+      "value": "#64748B"
+    },
+    "text": {
+      "type": "color",
+      "value": "#E5E7EB"
+    }
+  }
+}

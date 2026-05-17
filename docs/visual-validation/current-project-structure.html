@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Static visual validation fixture for ai-config-hub project structure, Pencil design workflow, and browser MCP screenshot checks.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f7cff'/%3E%3Cpath d='M8 17h16M8 11h16M8 23h10' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>ai-config-hub Current Project Structure</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f0e8;
+      --panel: #fffaf0;
+      --panel-strong: #17212f;
+      --ink: #1a2433;
+      --muted: #657187;
+      --line: #ded5c6;
+      --accent: #4f7cff;
+      --accent-2: #19a974;
+      --accent-3: #c36b2c;
+      --accent-soft: #e6edff;
+      --shadow: 0 24px 60px rgba(23, 33, 47, 0.14);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(79, 124, 255, 0.2), transparent 32rem),
+        radial-gradient(circle at 85% 10%, rgba(25, 169, 116, 0.16), transparent 28rem),
+        var(--bg);
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-card,
+    .panel,
+    .status-card {
+      border: 1px solid rgba(222, 213, 198, 0.9);
+      background: rgba(255, 250, 240, 0.86);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      border-radius: 28px;
+    }
+
+    .hero-card {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -130px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 999px;
+      background: rgba(79, 124, 255, 0.18);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      color: #274a86;
+      background: var(--accent-soft);
+      border: 1px solid rgba(79, 124, 255, 0.24);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      margin: 18px 0 14px;
+      max-width: 760px;
+      font-size: clamp(36px, 6vw, 68px);
+      line-height: 0.92;
+      letter-spacing: -0.06em;
+    }
+
+    .hero p {
+      max-width: 720px;
+      margin: 0;
+      color: #536078;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    .status-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 260px;
+      background: linear-gradient(160deg, #17212f, #273a56);
+      color: #f8fbff;
+    }
+
+    .status-card h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .sync-meter {
+      display: grid;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .meter-row {
+      display: grid;
+      grid-template-columns: 110px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: rgba(248, 251, 255, 0.78);
+    }
+
+    .bar {
+      height: 8px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 99px;
+    }
+
+    .bar span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #79a0ff, #61e0ad);
+      border-radius: inherit;
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .chip {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255, 250, 240, 0.78);
+      border-radius: 20px;
+    }
+
+    .chip strong {
+      font-size: 14px;
+    }
+
+    .chip span {
+      color: #536078;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel h2 {
+      margin: 0 0 16px;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .map {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .node {
+      min-height: 178px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: #fffdf7;
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .node::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: var(--node-color, var(--accent));
+    }
+
+    .node h3 {
+      margin: 8px 0 14px;
+      font-size: 18px;
+    }
+
+    .path-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: #536078;
+      font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .step {
+      min-height: 86px;
+      padding: 14px;
+      border-radius: 18px;
+      background: #f7f2e9;
+      border: 1px solid var(--line);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .step span {
+      display: block;
+      margin-top: 8px;
+      color: #536078;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .validation-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .validation-item {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: #fffdf7;
+      border-radius: 20px;
+    }
+
+    .badge {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      color: white;
+      background: var(--badge-color, var(--accent));
+      font-weight: 900;
+    }
+
+    .validation-item h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .validation-item p {
+      margin: 0;
+      color: #536078;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .note {
+      margin-top: 16px;
+      padding: 16px;
+      color: #5c3b18;
+      background: #fff1d7;
+      border: 1px solid #ebc98d;
+      border-radius: 20px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    footer {
+      margin-top: 24px;
+      color: #536078;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .grid,
+      .status-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .map,
+      .workflow {
+        grid-template-columns: 1fr;
+      }
+
+      .page {
+        width: min(100% - 20px, 720px);
+        padding: 20px 0 36px;
+      }
+
+      .hero-card,
+      .panel,
+      .status-card {
+        border-radius: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-card">
+        <span class="eyebrow">visual validation fixture</span>
+        <h1 id="page-title">ai-config-hub Current Project Structure</h1>
+        <p>一个用于验证设计先行、浏览器截图和项目配置状态闭环的静态页面。它展示当前仓库如何维护 rules、skills、MCP 工具配置和 docs/ai 工作状态。</p>
+      </div>
+      <aside class="status-card" aria-label="同步状态摘要">
+        <div>
+          <h2>Configuration sync state</h2>
+          <div class="sync-meter">
+            <div class="meter-row"><span>Rules</span><div class="bar"><span></span></div><b>synced</b></div>
+            <div class="meter-row"><span>Skills</span><div class="bar"><span></span></div><b>synced</b></div>
+            <div class="meter-row"><span>MCP</span><div class="bar"><span></span></div><b>synced</b></div>
+          </div>
+        </div>
+        <p>Full user configs remain private; only managed fragments are distributed.</p>
+      </aside>
+    </section>
+
+    <section class="status-strip" aria-label="关键状态">
+      <div class="chip"><strong>global skills synced</strong><span>Claude Code 和 Codex 用户级 skill 目录已同步。</span></div>
+      <div class="chip"><strong>browser MCP synced</strong><span>Chrome DevTools 与 Playwright MCP 已纳入托管片段。</span></div>
+      <div class="chip"><strong>docs/ai idle</strong><span>当前工作状态由 CURRENT.md 和任务卡接手。</span></div>
+      <div class="chip"><strong>legacy .codex/skills avoided</strong><span>历史兼容目录不作为默认目标。</span></div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Project architecture map</h2>
+        <div class="map">
+          <article class="node" style="--node-color:#4f7cff">
+            <h3>Rules</h3>
+            <ul class="path-list">
+              <li>rules/shared/core.md</li>
+              <li>rules/tools/claude-code.md</li>
+              <li>rules/tools/codex.md</li>
+              <li>rules/rendered/</li>
+            </ul>
+          </article>
+          <article class="node" style="--node-color:#19a974">
+            <h3>Skills</h3>
+            <ul class="path-list">
+              <li>skills/shared/&lt;skill&gt;/</li>
+              <li>skills/claude-code/&lt;skill&gt;/</li>
+              <li>skills/codex/&lt;skill&gt;/</li>
+              <li>skills/rendered/</li>
+            </ul>
+          </article>
+          <article class="node" style="--node-color:#c36b2c">
+            <h3>MCP tool configs</h3>
+            <ul class="path-list">
+              <li>tool-configs/mcp/shared/</li>
+              <li>tool-configs/mcp/rendered/</li>
+              <li>scripts/render-mcp.ps1</li>
+              <li>scripts/sync-mcp.ps1</li>
+            </ul>
+          </article>
+          <article class="node" style="--node-color:#7b61ff">
+            <h3>AI status docs</h3>
+            <ul class="path-list">
+              <li>docs/ai/CURRENT.md</li>
+              <li>docs/ai/tasks/</li>
+              <li>docs/ai/skills-registry.md</li>
+              <li>docs/ai/archive/</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="workflow" aria-label="同步流水线">
+          <div class="step">source<span>Maintain editable truth.</span></div>
+          <div class="step">render<span>Generate reviewable output.</span></div>
+          <div class="step">check<span>Validate structure and safety.</span></div>
+          <div class="step">dry-run<span>Preview target changes.</span></div>
+          <div class="step">apply<span>Write only after confirmation.</span></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <h2>Validation boundaries</h2>
+        <div class="validation-list">
+          <article class="validation-item">
+            <div class="badge" style="--badge-color:#4f7cff">P</div>
+            <div>
+              <h3>Pencil design/export validation</h3>
+              <p>检查设计方向、信息层级和导出图；不声明真实网页渲染已经通过。</p>
+            </div>
+          </article>
+          <article class="validation-item">
+            <div class="badge" style="--badge-color:#19a974">B</div>
+            <div>
+              <h3>Browser MCP screenshot validation</h3>
+              <p>打开真实 HTML，检查桌面和移动截图、DOM 快照和 console errors。</p>
+            </div>
+          </article>
+          <article class="validation-item">
+            <div class="badge" style="--badge-color:#c36b2c">S</div>
+            <div>
+              <h3>Script dry-run validation</h3>
+              <p>通过 check-all、skills dry-run 和 MCP dry-run 确认配置链路仍闭环。</p>
+            </div>
+          </article>
+        </div>
+        <div class="note">本页面是工具链验证夹具，不是正式产品前端；页面不包含 token、provider URL、trusted project 或其他私有配置。</div>
+      </aside>
+    </section>
+
+    <footer>Static fixture: docs/visual-validation/current-project-structure.html</footer>
+  </main>
+</body>
+</html>

@@ -27,6 +27,7 @@
 
 ## 最近关闭
 
+- 当前项目结构页面验证：已确认无需新增项目级 skill 入口；已用 Pencil 生成设计产物，并用浏览器 MCP 对真实 HTTP 页面完成桌面/移动截图、console 检查和 Lighthouse snapshot；后续已修正 Pencil 工作流，默认可视化设计过程，并要求区分设计稿还原与独立验证夹具；修正后的 skills 已同步到本机 `.claude/skills` 和 `.agents/skills`。随后补充 Pencil Desktop 正确启动顺序：先正常启动 Desktop 并等待 MCP 连接，再用 `open_document` 打开 `.pen`，不要用 `Pencil.exe <file.pen>` 直接传参；仓库 skill 已渲染检查通过，并已按用户确认再次同步到本机用户级 skill，dry-run 全部 `unchanged`。
 - `pencil-design-workflow` 全局 skill：已同步到本机 Claude Code / Codex 用户级 skill 目录，未同步历史 `.codex\skills`，同步后 dry-run 全部 unchanged。
 - 浏览器视觉验证 MCP：已同步 `chrome-devtools` / `playwright` 到本机 Claude Code / Codex 用户级配置，保留既有 Pencil MCP，同步后检查通过。
 - `project-ai-config-hub` 自身更新语义优化：已同步到本机 Claude Code / Codex 全局 skill 目录，同步后 dry-run 全部 unchanged。
