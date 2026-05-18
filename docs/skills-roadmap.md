@@ -50,12 +50,12 @@
   - 约束：默认只读、手动触发优先，不负责写代码、同步、提交或推送。
 
 - `pencil-design-workflow`
-  - 定位：Pencil / `.pen` / pencli 设计先行路由 skill，用于用户需要先生成或确认设计图时选择 Desktop/MCP、VS 插件谨慎模式或 CLI/headless 工作流。
+  - 定位：Pencil / `.pen` / pencli 设计先行轻量闸门 skill；设计请求默认必须走 Desktop/MCP 可视化流程，只有用户明确要求后台、无头、批量、自动化或不看过程时才按需读取 CLI/headless 细节。
   - 共享源：`skills/shared/pencil-design-workflow/`
   - Claude Code 入口源：`skills/claude-code/pencil-design-workflow/SKILL.md`
   - Codex 入口源：`skills/codex/pencil-design-workflow/SKILL.md`
   - rendered 包：`skills/rendered/`
-  - 约束：不抢局部 UI bugfix；确认进入真实前端实现后衔接 `global-frontend-design`。
+  - 约束：默认只读短 workflow；不抢局部 UI bugfix；Desktop/MCP 不可用时必须停下说明，不得静默降级到 CLI 或直接写前端；确认后携带 `.pen` 和导出图证据进入真实前端实现流程。
 
 ## 迭代原则
 

@@ -5,6 +5,8 @@
 - 轻量化全局 AI 规则：把默认工作方式改为按风险升级，减少小任务中的文档、任务卡、计划和验证仪式感。
 - 调整 `project-ai-config-hub`：目标项目按需启用 `docs/ai/CURRENT.md`、任务卡、registry 和项目级 skill 入口，不再把完整中枢作为所有项目的默认负担。
 - 更新工作状态设计与项目文档，明确任务卡只用于跨会话、多任务、等待确认、阻塞或有残留风险的任务。
+- 收紧 `pencil-design-workflow` 与 `global-frontend-design` 交接：设计请求默认必须使用 Pencil Desktop/MCP 可视化流程，IDE 插件只作为用户明确指定当前画布时的例外；Desktop/MCP 不可用时必须停下说明，不能静默降级到 CLI/headless 或直接进入前端实现。
+- 轻量化 `pencil-design-workflow`：入口和主流程改为短闸门，CLI/headless、MCP 细节、保存位置和审查验证拆到按需 references，减少与前端设计 skill 叠加时的上下文负担。
 
 ## 2026-05-08
 

@@ -14,7 +14,9 @@
 
 如果受众、目标或视觉语气会实质影响 UI，但当前信息缺失，应先问一个聚焦问题。
 
-如果用户明确要求先生成 Pencil / `.pen` 设计图，或先设计确认后写代码，应先使用 `pencil-design-workflow` 完成设计稿确认；确认进入实现后再按本流程落地真实前端代码。
+如果用户提出“做设计图”“先做设计”“先设计确认后写代码”、mockup、wireframe 或 `.pen`，先交给 `pencil-design-workflow` 产出 Pencil Desktop/MCP 画布证据。没有可见画布证据前，不进入大规模前端实现，也不用代码草图替代设计稿。
+
+只有用户明确要求后台、无头、批量、自动化或不需要看过程时，才允许由 `pencil-design-workflow` 使用 CLI/headless。
 
 ## 2. 命名视觉方向
 
