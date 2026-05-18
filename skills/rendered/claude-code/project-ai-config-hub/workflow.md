@@ -1,12 +1,23 @@
 # 项目级 AI 配置中枢流程
 
-本 skill 是 `ai-config-hub` 的项目级分身。它不保存具体业务项目的长期规则，而是在目标项目里创建、升级、审计和修复 `docs/ai/` 中枢、工作状态机制、项目级 skill 事实源和 Claude Code / Codex 双端入口。
+本 skill 是 `ai-config-hub` 的项目级分身。它不保存具体业务项目的长期规则，而是在目标项目里创建、升级、审计和修复轻量的 `docs/ai/` 中枢、工作状态机制、项目级 skill 事实源和 Claude Code / Codex 双端入口。
 
 用户不需要显式点名本 skill。只要请求涉及新增、修改、迁移、审计、修复或同步项目级 skill，或者涉及 `docs/ai/`、`docs/ai/CURRENT.md`、`docs/ai/tasks/`、`.claude/skills`、`.agents/skills`、`.codex/skills`，就按本流程工作。
 
+## 0. 轻量化原则
+
+项目级 AI 配置应按项目风险和接手价值渐进启用，不把完整中枢无差别铺到每个项目。
+
+- 最小可用层：`AGENTS.md` 或 `CLAUDE.md` 加一段项目规则，适合小脚本、demo、一次性工具。
+- 接手状态层：`docs/ai/CURRENT.md`，适合长期项目或经常跨会话继续的项目。
+- 任务卡层：`docs/ai/tasks/`，只在任务会跨天、中断、多 AI 接手、等待确认、阻塞或有残留风险时使用。
+- Skill 层：`docs/ai/skills/` 与 `.claude/skills` / `.agents/skills` 入口，只在项目确实有可复用专门工作流时创建。
+
+默认先建立足够轻的机制。只有用户要求、项目复杂度需要，或已有状态必须保留时，才升级到下一层。
+
 ## 1. 识别当前项目
 
-先快速读取和检索：
+先快速读取和检索最相关入口，不要求每次全量读取：
 
 - `AGENTS.md`
 - `AGENTS.override.md`
@@ -23,6 +34,8 @@
 - `.codex-plugin/`
 
 再按项目类型补充查看工程入口，例如 `package.json`、`pyproject.toml`、`Cargo.toml`、`go.mod`、`Makefile`、`docker-compose.yml`。
+
+小项目或只读审计只需确认事实源和风险边界；不要为了“完整”读取无关目录。
 
 ## 2. 判断工作模式
 
@@ -52,17 +65,24 @@
 
 不要在低风险只读审计前要求用户选择更新类型。只有出现多个真实可行且会写入不同事实源、覆盖全局目录、迁移旧状态或删除入口的路径时，才询问用户取舍；询问选项必须包含当前项目语义下最可能的正确选项。
 
-如果用户只是要求初始化中枢，应先设计：
+如果用户只是要求初始化中枢，先判断需要哪一层。默认不要直接创建完整目录树。
+
+轻量初始化可只创建：
+
+```text
+docs/ai/CURRENT.md
+```
+
+当项目需要多任务接手、项目级 skills 或长期归档时，再补充：
 
 ```text
 docs/ai/README.md
-docs/ai/CURRENT.md
 docs/ai/tasks/README.md
 docs/ai/archive/
 docs/ai/skills-registry.md
 ```
 
-不要强行创建具体业务 skill。
+不要强行创建具体业务 skill；没有项目级 skill 时，`skills-registry.md` 可以暂不创建。
 
 如果用户要求修改已有项目级 skill，应先定位事实源：
 
@@ -82,7 +102,7 @@ docs/ai/skills-registry.md
 
 ## 4. 选择事实源和状态文件
 
-默认事实源和状态文件：
+完整形态的默认事实源和状态文件：
 
 ```text
 docs/ai/
@@ -95,6 +115,8 @@ docs/ai/skills/<skill-name>/
 ```
 
 `docs/ai/CURRENT.md` 是 AI 接手入口和多任务状态总览；具体任务事实保存在 `docs/ai/tasks/*.md`。它不是完整日志、日报或完成记录。
+
+轻量项目可以只有 `docs/ai/CURRENT.md`。任务卡、archive 和 registry 都是按需层，不是健康项目的硬性标志。
 
 如果已有某个工具目录承载完整规则，应先识别真实事实源，再迁移到共享目录。迁移后，工具目录中的 `SKILL.md` 只保留薄入口。
 
@@ -149,7 +171,7 @@ docs/ai/skills/<skill-name>/
 - 写入历史兼容目录 `.codex/skills`。
 - 涉及发布、部署、生产数据库、凭证、权限放宽或强制推送。
 
-计划至少列出：
+计划按风险裁剪。轻量修复可以只说明修改文件、验证方式和风险；迁移、覆盖或高风险操作才需要完整计划。完整计划至少列出：
 
 - 新增文件。
 - 修改文件。
@@ -163,7 +185,13 @@ docs/ai/skills/<skill-name>/
 
 ## 8. 实施和验证
 
-实施后检查：
+实施后按实际层级检查：
+
+- 没有接手价值的小改动，不强制创建 `docs/ai/` 或任务卡。
+- 只有 `CURRENT.md` 的轻量项目，应能说明当前活动任务、是否需要任务卡、后续应读哪里。
+- 完整中枢项目再检查任务卡、archive、registry 和多端入口。
+
+完整检查包括：
 
 - frontmatter 是否完整。
 - `docs/ai/CURRENT.md` 是否是接手入口和多任务状态总览。
