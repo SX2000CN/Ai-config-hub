@@ -7,6 +7,7 @@
 - 更新工作状态设计与项目文档，明确任务卡只用于跨会话、多任务、等待确认、阻塞或有残留风险的任务。
 - 收紧 `pencil-design-workflow` 与 `global-frontend-design` 交接：设计请求默认必须使用 Pencil Desktop/MCP 可视化流程，IDE 插件只作为用户明确指定当前画布时的例外；Desktop/MCP 不可用时必须停下说明，不能静默降级到 CLI/headless 或直接进入前端实现。
 - 轻量化 `pencil-design-workflow`：入口和主流程改为短闸门，CLI/headless、MCP 细节、保存位置和审查验证拆到按需 references，减少与前端设计 skill 叠加时的上下文负担。
+- 补准 Pencil Desktop 打开链路：区分启动 Desktop、连接 Desktop transport 和打开 `.pen`，明确 `pencil interactive -a desktop -i <file.pen>` 是连接检查，MCP server 握手不等于 Desktop 已连接；Windows 下普通 `Start-Process` 秒退时改用 `Invoke-Item` / `explorer.exe` 拉起真实窗口。
 
 ## 2026-05-08
 

@@ -7,10 +7,14 @@
 规则：
 
 - `.pen` 文件只能通过 Pencil MCP / Pencil 工具链访问，不用普通 `Read`、`Grep` 或文本方式读取。
-- 正确启动顺序是先正常启动 Pencil Desktop，等 MCP / Desktop transport 可连接后，再用 Pencil MCP `open_document` 打开目标 `.pen`。
-- 不要用 `Pencil.exe <file.pen>` 作为打开方式；如果运行时把 `.pen` 当脚本解析，可能出现 `Unexpected token ':'` 一类语法错误。
+- 正确顺序是先让 Pencil Desktop 真实运行并显示窗口，再连接 Desktop transport，最后打开或确认目标 `.pen`。
+- Windows 上如果 `Start-Process 'C:\Program Files\Pencil\Pencil.exe'` 秒退且没有 `pencil-desktop` transport，改用 `Invoke-Item 'C:\Program Files\Pencil\Pencil.exe'` 或 `explorer.exe 'C:\Program Files\Pencil\Pencil.exe'` 启动真实桌面窗口。
+- 推荐连接检查：`pencil interactive -a desktop -i <file.pen>`；进入 shell 后先运行 `get_editor_state({ include_schema: true })`。
+- 在 MCP 工具可用时，用 `open_document` 打开目标 `.pen`；MCP server 握手成功不等于 Desktop transport 已连接。
+- 不要用 `Pencil.exe <file.pen>` 作为打开方式；它不是官方 app-mode 连接方式，如果运行时把 `.pen` 当脚本解析，可能出现 `Unexpected token ':'` 一类错误。
 - 开始设计前必须确认 Desktop/MCP 可用，并取得可见画布证据，例如 MCP 截图、`snapshot_layout`、当前打开文件状态或等价说明。
 - 如果 Pencil MCP 未配置、未连接、工具不可用或目标画布无法确认，必须停下说明，不得改用 CLI/headless 继续。
+- 如果出现 `transport not connected to app: desktop` 或 `connect ENOENT \\.\pipe\pencil-desktop`，按 Desktop transport 未连接处理：检查 Desktop 是否真实运行、是否有可见窗口、`pencil interactive -a desktop -i <file.pen>` 是否能进入 shell、当前 MCP server 的 `--app` 是否为 `desktop`。
 - 开始修改前优先确认当前编辑器状态和目标 `.pen`。
 - 结构检查使用 `snapshot_layout`。
 - 视觉检查使用 `get_screenshot` 或 `export_nodes`。

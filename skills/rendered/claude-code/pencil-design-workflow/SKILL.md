@@ -30,6 +30,7 @@ when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wirefra
 - 只有用户明确要求批量、无头、后台、自动化或不需要看过程时，才使用 Pencil CLI / headless。
 - Desktop/MCP 不可用、未配置或无法确认当前画布时，必须停下说明，不得静默降级到 CLI。
 - `.pen` 文件在 MCP 场景下只通过 Pencil MCP / Pencil 工具链访问，不用普通文本读取工具。
-- Pencil Desktop 模式先正常启动 Desktop，等 MCP 连接后再用 `open_document` 打开 `.pen`；不要用 `Pencil.exe <file.pen>` 直接传参打开。
+- Pencil Desktop 模式先让 Desktop 真实运行并显示窗口，再用 Pencil MCP 或 `pencil interactive -a desktop -i <file.pen>` 连接；不要用 `Pencil.exe <file.pen>` 直接传参打开。
+- MCP server 握手成功不等于 Desktop transport 已连接；遇到 `transport not connected to app: desktop` 时停下诊断，不要反复重试或静默降级。
 - 设计确认前不进入大规模代码实现；确认后携带 `.pen` 和导出图证据进入真实前端实现流程。
 - Pencil 画布验证和导出图检查不能冒充真实浏览器验证；真实网页视觉自检需要 Playwright/浏览器 MCP。
