@@ -1,13 +1,21 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$SourcePath = Join-Path $Root 'tool-configs\mcp\shared\browser-visual.json'
 $RenderedRoot = Join-Path $Root 'tool-configs\mcp\rendered'
 $ClaudeOutput = Join-Path $RenderedRoot 'claude-code.mcp.json'
 $CodexOutput = Join-Path $RenderedRoot 'codex.mcp.toml'
-$RequiredServers = @('chrome-devtools', 'playwright')
-$StartMarker = '# >>> ai-config-hub managed mcp: browser-visual'
-$EndMarker = '# <<< ai-config-hub managed mcp: browser-visual'
+$McpGroups = @(
+    @{
+        Name = 'browser-visual'
+        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\browser-visual.json'
+        RequiredServers = @('chrome-devtools', 'playwright')
+    },
+    @{
+        Name = 'context-thread'
+        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\context-thread.json'
+        RequiredServers = @('context-thread')
+    }
+)
 
 function Write-Text($Path, $Content) {
     $parent = Split-Path -Parent $Path
@@ -18,36 +26,90 @@ function Write-Text($Path, $Content) {
     Set-Content -Encoding UTF8 -Path $Path -Value $Content -NoNewline
 }
 
-if (-not (Test-Path -LiteralPath $SourcePath)) {
-    throw "Missing MCP source: $SourcePath"
+function Get-PropertyNames($Object) {
+    if ($null -eq $Object) {
+        return @()
+    }
+
+    return @($Object.PSObject.Properties | ForEach-Object { $_.Name })
 }
 
-$source = Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath | ConvertFrom-Json
-if ($null -eq $source.servers) {
-    throw "Missing servers object in $SourcePath"
+function Get-ServerArgs($Server) {
+    $args = @($Server.args)
+    if ($null -ne $Server.repo_script -and -not [string]::IsNullOrWhiteSpace($Server.repo_script)) {
+        $scriptPath = Join-Path $Root ([string]$Server.repo_script)
+        $args += @($scriptPath)
+    }
+
+    if ($null -ne $Server.script_args) {
+        $args += @($Server.script_args)
+    }
+
+    return @($args)
 }
 
-foreach ($serverName in $RequiredServers) {
-    $server = $source.servers.$serverName
-    if ($null -eq $server) {
-        throw "Missing required MCP server: $serverName"
+function Read-McpGroup($Group) {
+    $sourcePath = $Group.SourcePath
+    if (-not (Test-Path -LiteralPath $sourcePath)) {
+        throw "Missing MCP source: $sourcePath"
     }
 
-    if ([string]::IsNullOrWhiteSpace($server.command)) {
-        throw "Missing command for MCP server: $serverName"
+    $source = Get-Content -Raw -Encoding UTF8 -LiteralPath $sourcePath | ConvertFrom-Json
+    if ($null -eq $source.servers) {
+        throw "Missing servers object in $sourcePath"
     }
 
-    if ($null -eq $server.args -or $server.args.Count -eq 0) {
-        throw "Missing args for MCP server: $serverName"
+    $sourceNames = Get-PropertyNames $source.servers
+    foreach ($serverName in $Group.RequiredServers) {
+        $server = $source.servers.$serverName
+        if ($null -eq $server) {
+            throw "Missing required MCP server: $serverName"
+        }
+
+        if ([string]::IsNullOrWhiteSpace($server.command)) {
+            throw "Missing command for MCP server: $serverName"
+        }
+
+        if ($null -eq $server.args -or @($server.args).Count -eq 0) {
+            throw "Missing args for MCP server: $serverName"
+        }
+
+        if ($null -ne $server.repo_script -and -not [string]::IsNullOrWhiteSpace($server.repo_script)) {
+            $scriptPath = Join-Path $Root ([string]$server.repo_script)
+            if (-not (Test-Path -LiteralPath $scriptPath)) {
+                throw "Missing repo_script for MCP server $serverName`: $scriptPath"
+            }
+        }
     }
+
+    foreach ($serverName in $sourceNames) {
+        if ($Group.RequiredServers -notcontains $serverName) {
+            throw "Unexpected MCP server in $sourcePath`: $serverName"
+        }
+    }
+
+    return $source
+}
+
+$groupSources = [ordered]@{}
+foreach ($group in $McpGroups) {
+    $groupSources[$group.Name] = Read-McpGroup $group
 }
 
 $claudeServers = [ordered]@{}
-foreach ($serverName in $RequiredServers) {
-    $server = $source.servers.$serverName
-    $claudeServers[$serverName] = [ordered]@{
-        command = [string]$server.command
-        args = @($server.args)
+foreach ($group in $McpGroups) {
+    $source = $groupSources[$group.Name]
+    foreach ($serverName in $group.RequiredServers) {
+        $server = $source.servers.$serverName
+        $entry = [ordered]@{}
+
+        if ($null -ne $server.type -and -not [string]::IsNullOrWhiteSpace($server.type)) {
+            $entry.type = [string]$server.type
+        }
+
+        $entry.command = [string]$server.command
+        $entry.args = Get-ServerArgs $server
+        $claudeServers[$serverName] = $entry
     }
 }
 
@@ -58,28 +120,38 @@ $claudeJson = ($claudeFragment | ConvertTo-Json -Depth 8) + "`n"
 Write-Text $ClaudeOutput $claudeJson
 
 $codexLines = New-Object System.Collections.Generic.List[string]
-$codexLines.Add($StartMarker)
-foreach ($serverName in $RequiredServers) {
-    $server = $source.servers.$serverName
-    $codexLines.Add("")
-    $codexLines.Add("[mcp_servers.$serverName]")
-    $codexLines.Add('command = "cmd"')
+foreach ($group in $McpGroups) {
+    $source = $groupSources[$group.Name]
+    $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
+    $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
 
-    $args = @('/c', [string]$server.command) + @($server.args)
-    $quotedArgs = $args | ForEach-Object { '"' + ($_ -replace '\\', '\\' -replace '"', '\"') + '"' }
-    $codexLines.Add('args = [' + ($quotedArgs -join ', ') + ']')
-
-    if ($null -ne $server.startup_timeout_ms) {
-        $codexLines.Add("startup_timeout_ms = $($server.startup_timeout_ms)")
+    if ($codexLines.Count -gt 0) {
+        $codexLines.Add("")
     }
 
+    $codexLines.Add($startMarker)
+    foreach ($serverName in $group.RequiredServers) {
+        $server = $source.servers.$serverName
+        $codexLines.Add("")
+        $codexLines.Add("[mcp_servers.$serverName]")
+        $codexLines.Add('command = "cmd"')
+
+        $args = @('/c', [string]$server.command) + (Get-ServerArgs $server)
+        $quotedArgs = $args | ForEach-Object { '"' + ($_ -replace '\\', '\\' -replace '"', '\"') + '"' }
+        $codexLines.Add('args = [' + ($quotedArgs -join ', ') + ']')
+
+        if ($null -ne $server.startup_timeout_ms) {
+            $codexLines.Add("startup_timeout_ms = $($server.startup_timeout_ms)")
+        }
+
+        $codexLines.Add("")
+        $codexLines.Add("[mcp_servers.$serverName.env]")
+        $codexLines.Add('SystemRoot = "C:\\Windows"')
+        $codexLines.Add('PROGRAMFILES = "C:\\Program Files"')
+    }
     $codexLines.Add("")
-    $codexLines.Add("[mcp_servers.$serverName.env]")
-    $codexLines.Add('SystemRoot = "C:\\Windows"')
-    $codexLines.Add('PROGRAMFILES = "C:\\Program Files"')
+    $codexLines.Add($endMarker)
 }
-$codexLines.Add("")
-$codexLines.Add($EndMarker)
 $codexToml = ($codexLines -join "`n") + "`n"
 Write-Text $CodexOutput $codexToml
 

@@ -1,6 +1,6 @@
-﻿# Skills 路线图
+# Skills 路线图
 
-`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner` 和 `pencil-design-workflow` 的源码化、渲染、检查和 dry-run 同步流程。
+`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread` 和 `pencil-design-workflow` 的源码化、渲染、检查和 dry-run 同步流程。
 
 `project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
 
@@ -48,6 +48,14 @@
   - Codex 入口源：`skills/codex/global-thinking-partner/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 约束：默认只读、手动触发优先，不负责写代码、同步、提交或推送。
+
+- `global-context-thread`
+  - 定位：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析，优先查询 context-thread 或 `docs/ai` 关系索引来缩小上下文。
+  - 共享源：`skills/shared/global-context-thread/`
+  - Claude Code 入口源：`skills/claude-code/global-context-thread/SKILL.md`
+  - Codex 入口源：`skills/codex/global-context-thread/SKILL.md`
+  - rendered 包：`skills/rendered/`
+  - 约束：L0/L1 小任务不自动初始化索引、不创建任务卡；context-thread 只负责代码结构关系，非代码复杂工作流由任务卡关系索引承接。
 
 - `pencil-design-workflow`
   - 定位：Pencil / `.pen` / pencli 设计先行轻量闸门 skill；设计请求默认必须走 Desktop/MCP 可视化流程，只有用户明确要求后台、无头、批量、自动化或不看过程时才按需读取 CLI/headless 细节。

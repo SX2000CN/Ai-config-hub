@@ -55,7 +55,11 @@ $SecretPatterns = @(
 )
 
 $MarkdownAndConfigFiles = Get-ChildItem -Path $ScanFiles -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
-    $_.Extension -in @('.md', '.toml', '.tpl', '.ps1', '.json', '.txt') -or $_.Name -eq '.gitignore'
+    -not $_.FullName.StartsWith((Join-Path $Root 'private'), [StringComparison]::OrdinalIgnoreCase) -and
+    -not ($_.FullName -match '[\\/]node_modules[\\/]') -and
+    -not ($_.FullName -match '[\\/]dist[\\/]') -and
+    -not ($_.FullName -match '[\\/]release[\\/]') -and
+    ($_.Extension -in @('.md', '.toml', '.tpl', '.ps1', '.json', '.txt') -or $_.Name -eq '.gitignore')
 }
 
 foreach ($file in $MarkdownAndConfigFiles) {

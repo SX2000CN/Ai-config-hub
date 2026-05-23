@@ -1,7 +1,7 @@
 # 当前工作状态
 
-更新时间：2026-05-19 03:05
-当前活动任务：无
+更新时间：2026-05-24 03:53
+当前活动任务：`docs/ai/tasks/2026-05-24-context-thread.md`
 
 ## 接手导航
 
@@ -15,12 +15,13 @@
 
 ## 当前活动任务
 
-- 无。
+- `docs/ai/tasks/2026-05-24-context-thread.md`：本地脉络引擎已迁移到 `tools/context-thread-engine`，CLI / MCP / 索引目录与用户级 skill / MCP 配置已同步；等待用户重启后试用确认。
 
 ## 待用户确认
 
+- `docs/ai/tasks/2026-05-24-context-thread.md`：已在仓库源文件、rendered 产物、dry-run 链路和本机用户级配置中引入轻量结构化事实层、`global-context-thread` skill、`context-thread` MCP 配置组、本地源码 wrapper 和任务卡关系索引；本地引擎已自有化迁移到 `tools/context-thread-engine`，等待用户重启后试用确认。
 - `docs/ai/tasks/2026-05-19-ai-config-lightweight.md`：AI 配置轻量化已完成仓库源文件、rendered 产物和本机全局配置同步，复查 dry-run 全部 `unchanged`；等待用户日常试用后确认轻量化手感。
-- `docs/ai/tasks/2026-05-18-pencil-design-workflow.md`：已根据真实失败反馈收紧 Pencil 设计先行规则，并进一步轻量化为短闸门；2026-05-19 已验证 Windows 下用 `Invoke-Item` / `explorer.exe` 启动 Pencil Desktop 可创建 `pencil-desktop` transport，并打开目标 `.pen`。
+- `docs/ai/tasks/2026-05-18-pencil-design-workflow.md`：已根据真实失败反馈收紧 Pencil 设计先行规则，并进一步轻量化为短闸门；2026-05-19 已修正宿主选择语义，默认使用当前会话可用的可见 Pencil MCP 宿主，VS Code/Cursor 插件端和 Pencil Desktop 客户端都可作为有效宿主，禁止模型假装能自由切换宿主或静默降级 CLI/headless。
 
 ## 暂停 / 阻塞
 

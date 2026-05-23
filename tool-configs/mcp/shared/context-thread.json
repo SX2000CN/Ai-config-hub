@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "context-thread": {
+      "type": "stdio",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"],
+      "repo_script": "scripts\\context-thread.ps1",
+      "script_args": ["serve", "--mcp"],
+      "startup_timeout_ms": 20000
+    }
+  }
+}

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$Apply,
     [switch]$IncludeCodexLegacy
@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
 $RenderedRoot = Join-Path $Root 'skills\rendered'
-$SkillNames = @('project-ai-config-hub', 'global-frontend-design', 'global-thinking-partner', 'pencil-design-workflow')
+$SkillNames = @('project-ai-config-hub', 'global-frontend-design', 'global-thinking-partner', 'global-context-thread', 'pencil-design-workflow')
 $UserHome = [Environment]::GetFolderPath('UserProfile')
 
 $Targets = @()

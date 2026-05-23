@@ -1,4 +1,4 @@
-﻿# 架构说明
+# 架构说明
 
 `ai-config-hub` 使用纯文本源文件和 PowerShell 脚本管理 AI 编程工具配置。
 
@@ -59,6 +59,7 @@ C:\Users\sx200\.agents\skills\<skill-name>\
 - `project-ai-config-hub`
 - `global-frontend-design`
 - `global-thinking-partner`
+- `global-context-thread`
 - `pencil-design-workflow`
 
 可选历史兼容目标：
@@ -75,20 +76,24 @@ MCP 配置只管理明确命名的非敏感片段，不保存完整用户配置�
 
 ```text
 tool-configs/mcp/shared/browser-visual.json
+tool-configs/mcp/shared/context-thread.json
         ↓
 tool-configs/mcp/rendered/claude-code.mcp.json
         ↓
-merge mcpServers.chrome-devtools/playwright only
+merge managed mcpServers.chrome-devtools/playwright/context-thread only
         ↓
 C:\Users\sx200\.claude.json
 ```
 
+`context-thread` server 的 command 指向 `powershell -File scripts/context-thread.ps1 serve --mcp`，wrapper 再从 `tools/context-thread-engine/dist/bin/context-thread.js` 启动本地源码构建产物。
+
 ```text
 tool-configs/mcp/shared/browser-visual.json
+tool-configs/mcp/shared/context-thread.json
         ↓
 tool-configs/mcp/rendered/codex.mcp.toml
         ↓
-merge managed [mcp_servers.chrome-devtools/playwright] block only
+merge managed browser-visual and context-thread blocks only
         ↓
 C:\Users\sx200\.codex\config.toml
 ```
@@ -135,6 +140,8 @@ docs/visual-validation/exports/
 - Codex 完整 `config.toml` 不作为仓库事实源，只提供安全示例模板和托管 MCP 片段。
 - skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件。
 - skill rendered 包通过 `render-skills.ps1` 为每个已登记全局 skill 生成，不应手工作为长期事实源编辑。
+- `global-context-thread` 是“脉络”轻量结构化事实层：context-thread 只负责代码结构关系，非代码复杂工作流仍由 `docs/ai` 任务卡关系索引承接；没有可用索引或 MCP 工具时回退到普通文件读取。
+- `scripts/context-thread.ps1` 是本仓库的本地源码 wrapper：`bootstrap` 只在 `tools/context-thread-engine` 下安装依赖并构建，`serve --mcp` / `init` / `sync` 等命令通过本地构建产物执行，不要求全局安装 `context-thread`。
 - `docs/ai/CURRENT.md` 是项目级 AI 接手入口和多任务状态总览，不是完整日志或完成记录；具体任务事实保存在 `docs/ai/tasks/*.md`，未确认或有风险的任务不得直接丢弃。
 - `project-ai-config-hub` 的 rendered skill 包会带托管标记，便于 `sync-skills.ps1` 区分历史安装和本仓库产物。
 - `.codex\skills` 只作为历史兼容目标，Codex 当前官方路径优先使用 `.agents\skills`。

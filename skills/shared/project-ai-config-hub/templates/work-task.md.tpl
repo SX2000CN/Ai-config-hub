@@ -30,6 +30,14 @@
 
 {{blocker}}
 
+## 关系索引
+
+> 可选。仅当任务存在复杂对象、状态、依赖、证据或跨 AI 接手关系时保留；简单任务删除本节。
+
+| 对象 | 当前状态 | 依赖 / 影响 | 证据 | 下一步 |
+|---|---|---|---|---|
+| `{{relation_object_1}}` | {{relation_status_1}} | {{relation_dependency_1}} | {{relation_evidence_1}} | {{relation_next_step_1}} |
+
 ## 下一步最小动作
 
 1. {{next_step_1}}

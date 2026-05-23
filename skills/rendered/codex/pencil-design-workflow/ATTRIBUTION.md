@@ -12,8 +12,8 @@
 
 本仓库只提炼以下最小工作流要点：
 
-- Pencil Desktop / MCP 可视化设计模式。
-- VS Code / Cursor 插件多窗口风险和显式例外边界。
+- Pencil 可见 MCP 宿主设计模式。
+- VS Code / Cursor 插件多窗口风险和 Desktop 客户端边界。
 - Pencil CLI / headless 按需生成和导出模式。
 - Claude Code / Codex 双端 skill 入口。
 - 与真实前端实现流程的交接边界。

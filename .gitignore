@@ -1,6 +1,10 @@
 /private/*
 !/private/README.md
 
+/tools/context-thread-engine/node_modules/
+/tools/context-thread-engine/dist/
+/tools/context-thread-engine/release/
+
 *.local.*
 *.secret.*
 *.secrets.*

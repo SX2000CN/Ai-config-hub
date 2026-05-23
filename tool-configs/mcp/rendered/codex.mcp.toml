@@ -19,3 +19,16 @@ SystemRoot = "C:\\Windows"
 PROGRAMFILES = "C:\\Program Files"
 
 # <<< ai-config-hub managed mcp: browser-visual
+
+# >>> ai-config-hub managed mcp: context-thread
+
+[mcp_servers.context-thread]
+command = "cmd"
+args = ["/c", "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "D:\\Windows\\桌面\\Encoding\\Ai-config-hub\\scripts\\context-thread.ps1", "serve", "--mcp"]
+startup_timeout_ms = 20000
+
+[mcp_servers.context-thread.env]
+SystemRoot = "C:\\Windows"
+PROGRAMFILES = "C:\\Program Files"
+
+# <<< ai-config-hub managed mcp: context-thread

@@ -1,4 +1,4 @@
-﻿# 同步流程
+# 同步流程
 
 本文记录全局规则、skills 和 MCP 配置片段的本机同步流程。所有同步脚本默认先 dry-run，只有显式 `-Apply` 才写入真实全局目录。
 
@@ -63,7 +63,7 @@
    - `skills/claude-code/<skill-name>/SKILL.md`
    - `skills/codex/<skill-name>/SKILL.md`
 
-   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`pencil-design-workflow`。
+   当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread`、`pencil-design-workflow`。
 
 2. 渲染输出：
 
@@ -118,6 +118,7 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 
 1. 修改源文件：
    - `tool-configs/mcp/shared/browser-visual.json`
+   - `tool-configs/mcp/shared/context-thread.json`
 
 2. 渲染输出：
 
@@ -129,6 +130,12 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 
 ```powershell
 .\scripts\check-mcp.ps1
+```
+
+`context-thread` MCP 走项目内本地引擎源码路线。首次启动前先准备本地引擎构建：
+
+```powershell
+.\scripts\context-thread.ps1 bootstrap
 ```
 
 4. 预览同步目标：
@@ -160,12 +167,14 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 当前托管目标：
 
 - `tool-configs/mcp/rendered/claude-code.mcp.json` → 合并 `mcpServers.chrome-devtools` / `mcpServers.playwright` 到 `C:\Users\sx200\.claude.json`
-- `tool-configs/mcp/rendered/codex.mcp.toml` → 合并托管 block 到 `C:\Users\sx200\.codex\config.toml`
+- `tool-configs/mcp/rendered/claude-code.mcp.json` → 合并 `mcpServers.context-thread` 到 `C:\Users\sx200\.claude.json`
+- `tool-configs/mcp/rendered/codex.mcp.toml` → 合并托管 `browser-visual` 和 `context-thread` blocks 到 `C:\Users\sx200\.codex\config.toml`
 
 注意事项：
 
 - 不要提交完整 `C:\Users\sx200\.claude.json` 或 `C:\Users\sx200\.codex\config.toml`。
 - `sync-mcp.ps1` 默认 dry-run；只有显式 `-Apply` 才写真实用户配置。
 - Claude Code 同步只新增或替换托管 server，保留 `pencil` 和未知 MCP server。
-- Codex 同步使用 `# >>> ai-config-hub managed mcp: browser-visual` marker block，只替换托管 block 或同名 server section，保留 `[mcp_servers.pencil]` 和其他私有配置。
+- Codex 同步使用 `# >>> ai-config-hub managed mcp: <group>` marker block，只替换托管 block 或同名 server section，保留 `[mcp_servers.pencil]` 和其他私有配置。
+- `context-thread` MCP 配置声明的是 `scripts/context-thread.ps1 serve --mcp`，由本仓库 wrapper 启动 `tools/context-thread-engine` 本地源码构建产物；本项目不自动全局安装 context-thread，也不自动初始化项目 `.context-thread/` 索引。`check-mcp.ps1` 会在本地构建缺失时给出 warning，但不阻塞浏览器 MCP 校验。
 - `sync-mcp.ps1 -Apply` 会先备份到 `C:\Users\sx200\.claude\ai-config-hub-config-backups\` 或 `C:\Users\sx200\.codex\ai-config-hub-config-backups\`。

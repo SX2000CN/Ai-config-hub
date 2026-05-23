@@ -1,13 +1,20 @@
 # Changelog
 
+## 2026-05-24
+
+- 引入轻量结构化事实层：新增 `global-context-thread` skill，用 context-thread 承接复杂代码关系，用 `docs/ai` 任务卡关系索引承接非代码复杂工作流，同时保持 L0/L1 小任务不升级。
+- 新增 `context-thread` MCP 配置组，通过 `scripts/context-thread.ps1` 从 `tools/context-thread-engine` 本地源码启动 MCP server，并将 MCP 渲染、检查和同步脚本升级为多组托管配置；未 bootstrap 本地源码时仅 warning，不阻塞浏览器 MCP。
+- 在共享规则中加入短版“结构化事实优先”原则，并给任务卡模板增加可选 `关系索引` 区块。
+
 ## 2026-05-19
 
 - 轻量化全局 AI 规则：把默认工作方式改为按风险升级，减少小任务中的文档、任务卡、计划和验证仪式感。
 - 调整 `project-ai-config-hub`：目标项目按需启用 `docs/ai/CURRENT.md`、任务卡、registry 和项目级 skill 入口，不再把完整中枢作为所有项目的默认负担。
 - 更新工作状态设计与项目文档，明确任务卡只用于跨会话、多任务、等待确认、阻塞或有残留风险的任务。
-- 收紧 `pencil-design-workflow` 与 `global-frontend-design` 交接：设计请求默认必须使用 Pencil Desktop/MCP 可视化流程，IDE 插件只作为用户明确指定当前画布时的例外；Desktop/MCP 不可用时必须停下说明，不能静默降级到 CLI/headless 或直接进入前端实现。
+- 收紧 `pencil-design-workflow` 与 `global-frontend-design` 交接：设计请求默认必须使用当前会话可用的可见 Pencil MCP 宿主，VS Code/Cursor 插件端和 Pencil Desktop 客户端都可作为有效宿主；Pencil MCP 不可用时必须停下说明，不能静默降级到 CLI/headless 或直接进入前端实现。
 - 轻量化 `pencil-design-workflow`：入口和主流程改为短闸门，CLI/headless、MCP 细节、保存位置和审查验证拆到按需 references，减少与前端设计 skill 叠加时的上下文负担。
-- 补准 Pencil Desktop 打开链路：区分启动 Desktop、连接 Desktop transport 和打开 `.pen`，明确 `pencil interactive -a desktop -i <file.pen>` 是连接检查，MCP server 握手不等于 Desktop 已连接；Windows 下普通 `Start-Process` 秒退时改用 `Invoke-Item` / `explorer.exe` 拉起真实窗口。
+- 补准 Pencil 宿主选择边界：宿主由当前 AI 工具环境注入，模型不能自由切换 Desktop 和插件端；只有当前宿主为 `desktop` 或用户明确要求 Desktop 主窗口时，才按 Desktop transport 细节处理。
+- 补准 Pencil 直连 MCP 验证：要求确认当前会话暴露 Pencil MCP 工具或 `tools/list` 返回关键工具，使用 `open_document({ path })` 打开目标 `.pen`，并用 `get_editor_state` 确认 active editor，避免误用 `filePath` 新建 `pencil-new.pen`。
 
 ## 2026-05-08
 

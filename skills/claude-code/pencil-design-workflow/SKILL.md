@@ -1,7 +1,7 @@
 ---
 name: pencil-design-workflow
-description: 将设计先行请求作为轻量闸门路由到 Pencil Desktop/MCP；仅在用户明确要求无头、批量、后台或不看过程时才进入 Pencil CLI/headless。
-when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wireframe、视觉方案，要求确认设计后再写代码，明确提到 Pencil、pencli、Pencil CLI、.pen、Pencil MCP、Pencil Desktop，或要求审查 Pencil 设计稿/导出图/设计到代码一致性时使用；局部 UI bugfix、已有界面小样式修复、根据已有设计直接写代码时不要使用。
+description: 将设计先行请求作为轻量闸门路由到当前可用的可见 Pencil MCP 宿主；仅在用户明确要求无头、批量、后台或不看过程时才进入 Pencil CLI/headless。
+when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wireframe、视觉方案，要求确认设计后再写代码，明确提到 Pencil、pencli、Pencil CLI、.pen、Pencil MCP、Pencil Desktop、VS Code/Cursor Pencil 插件，或要求审查 Pencil 设计稿/导出图/设计到代码一致性时使用；局部 UI bugfix、已有界面小样式修复、根据已有设计直接写代码时不要使用。
 ---
 
 # Pencil 设计先行工作流
@@ -16,7 +16,7 @@ when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wirefra
 
 按需再读：
 
-- `references/pencil-modes.md`：需要 MCP 操作边界或 IDE 插件例外时。
+- `references/pencil-modes.md`：需要 MCP 宿主、Desktop 客户端或 IDE 插件端操作边界时。
 - `references/cli-headless.md`：只有用户明确要求 CLI/headless 时。
 - `references/file-locations.md`：需要创建或整理长期 `.pen` 产物时。
 - `references/verification.md` 和 `templates/review-report.md`：只有审查、对照实现或最终验证汇报需要时。
@@ -26,11 +26,13 @@ when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wirefra
 
 - 用户说“做设计图”“先做设计”“先设计确认后写代码”等设计先行意图时自动使用，不要求用户显式说 Pencil 或 pencli。
 - 局部 UI bugfix、小样式修复、已有界面明确错误修复不使用本 skill。
-- 设计请求默认必须使用 Pencil Desktop + MCP 可视化流程；不需要用户额外说“我要看着做”。
+- 设计请求默认必须使用当前会话已注入的可见 Pencil MCP 宿主；不需要用户额外说“我要看着做”。
+- VS Code / Cursor 插件端和 Pencil Desktop 客户端都是有效宿主；宿主由运行环境注入，模型不能假装能自由切换。
 - 只有用户明确要求批量、无头、后台、自动化或不需要看过程时，才使用 Pencil CLI / headless。
-- Desktop/MCP 不可用、未配置或无法确认当前画布时，必须停下说明，不得静默降级到 CLI。
+- Pencil MCP 不可用、未配置或无法确认当前画布时，必须停下说明，不得静默降级到 CLI。
 - `.pen` 文件在 MCP 场景下只通过 Pencil MCP / Pencil 工具链访问，不用普通文本读取工具。
-- Pencil Desktop 模式先让 Desktop 真实运行并显示窗口，再用 Pencil MCP 或 `pencil interactive -a desktop -i <file.pen>` 连接；不要用 `Pencil.exe <file.pen>` 直接传参打开。
-- MCP server 握手成功不等于 Desktop transport 已连接；遇到 `transport not connected to app: desktop` 时停下诊断，不要反复重试或静默降级。
+- 只有当前宿主是 `desktop` 或用户明确要求 Desktop 主窗口时，才按 Desktop transport 细节处理；不要用 `Pencil.exe <file.pen>` 直接传参打开。
+- 直连 MCP 模式必须确认当前会话有 Pencil MCP 工具，并用 `open_document({ path })` 后再用 `get_editor_state` 确认 active editor 是目标 `.pen`；参数名不是 `filePath`。
+- MCP server 握手成功不等于宿主 app transport 已连接；遇到 transport 未连接时停下诊断，不要反复重试或静默降级。
 - 设计确认前不进入大规模代码实现；确认后携带 `.pen` 和导出图证据进入真实前端实现流程。
 - Pencil 画布验证和导出图检查不能冒充真实浏览器验证；真实网页视觉自检需要 Playwright/浏览器 MCP。

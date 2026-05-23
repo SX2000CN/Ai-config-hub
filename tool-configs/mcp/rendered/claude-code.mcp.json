@@ -13,6 +13,19 @@
                                                        "-y",
                                                        "@playwright/mcp@latest"
                                                    ]
-                                      }
+                                      },
+                       "context-thread":  {
+                                              "type":  "stdio",
+                                              "command":  "powershell",
+                                              "args":  [
+                                                           "-NoProfile",
+                                                           "-ExecutionPolicy",
+                                                           "Bypass",
+                                                           "-File",
+                                                           "D:\\Windows\\桌面\\Encoding\\Ai-config-hub\\scripts\\context-thread.ps1",
+                                                           "serve",
+                                                           "--mcp"
+                                                       ]
+                                          }
                    }
 }

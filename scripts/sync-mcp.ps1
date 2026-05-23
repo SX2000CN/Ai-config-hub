@@ -14,9 +14,17 @@ $CodexSource = Join-Path $RenderedRoot 'codex.mcp.toml'
 $UserHome = [Environment]::GetFolderPath('UserProfile')
 $ClaudeTarget = Join-Path $UserHome '.claude.json'
 $CodexTarget = Join-Path $UserHome '.codex\config.toml'
-$ManagedServers = @('chrome-devtools', 'playwright')
-$StartMarker = '# >>> ai-config-hub managed mcp: browser-visual'
-$EndMarker = '# <<< ai-config-hub managed mcp: browser-visual'
+$McpGroups = @(
+    @{
+        Name = 'browser-visual'
+        Servers = @('chrome-devtools', 'playwright')
+    },
+    @{
+        Name = 'context-thread'
+        Servers = @('context-thread')
+        LegacyServers = @()
+    }
+)
 
 if (-not $ClaudeCode -and -not $Codex) {
     $ClaudeCode = $true
@@ -29,6 +37,43 @@ if ($ClaudeCode -and -not (Test-Path -LiteralPath $ClaudeSource)) {
 
 if ($Codex -and -not (Test-Path -LiteralPath $CodexSource)) {
     throw "Missing rendered MCP source: $CodexSource. Run scripts\render-mcp.ps1 first."
+}
+
+function Get-ManagedServers() {
+    $servers = New-Object System.Collections.Generic.List[string]
+    foreach ($group in $McpGroups) {
+        foreach ($serverName in $group.Servers) {
+            $servers.Add($serverName)
+        }
+        foreach ($serverName in $group.LegacyServers) {
+            $servers.Add($serverName)
+        }
+    }
+    return @($servers)
+}
+
+function Get-ActiveManagedServers() {
+    $servers = New-Object System.Collections.Generic.List[string]
+    foreach ($group in $McpGroups) {
+        foreach ($serverName in $group.Servers) {
+            $servers.Add($serverName)
+        }
+    }
+    return @($servers)
+}
+
+function Test-LocalContextThreadSource() {
+    $sourceRoot = Join-Path $Root 'tools\context-thread-engine'
+    $entry = Join-Path $sourceRoot 'dist\bin\context-thread.js'
+
+    if (-not (Test-Path -LiteralPath $sourceRoot)) {
+        Write-Warning "Local context-thread engine source was not found at $sourceRoot. context-thread MCP cannot start until the project source is restored."
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $entry)) {
+        Write-Warning "Local context-thread engine build was not found at $entry. Run scripts\context-thread.ps1 bootstrap before starting context-thread MCP."
+    }
 }
 
 function Get-PropertyNames($Object) {
@@ -44,6 +89,8 @@ function ConvertTo-StableJson($Object) {
 }
 
 function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
+    $managedServers = Get-ManagedServers
+    $activeManagedServers = Get-ActiveManagedServers
     $source = Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath | ConvertFrom-Json
     $sourceServers = $source.mcpServers
     if ($null -eq $sourceServers) {
@@ -67,12 +114,21 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
     $actions = New-Object System.Collections.Generic.List[string]
     $existingNames = Get-PropertyNames $target.mcpServers
     foreach ($serverName in $existingNames) {
-        if ($ManagedServers -notcontains $serverName) {
+        if ($managedServers -notcontains $serverName) {
             $actions.Add("preserve mcpServers.$serverName")
         }
     }
 
-    foreach ($serverName in $ManagedServers) {
+    foreach ($serverName in $managedServers) {
+        if ($activeManagedServers -notcontains $serverName) {
+            if ($existingNames -contains $serverName) {
+                $target.mcpServers.PSObject.Properties.Remove($serverName)
+                $actions.Add("remove legacy mcpServers.$serverName")
+                $managedChanged = $true
+            }
+            continue
+        }
+
         $existingServer = $target.mcpServers.$serverName
         $newServer = $sourceServers.$serverName
         if ($null -eq $newServer) {
@@ -110,8 +166,21 @@ function Get-SectionPattern($SectionName) {
     return "(?ms)^\[$([regex]::Escape($SectionName))\]\r?\n.*?(?=^\[[^\]]+\]\r?\n|^# >>> ai-config-hub managed mcp:|\z)"
 }
 
+function Get-CodexGroupBlock($Content, $GroupName) {
+    $startMarker = "# >>> ai-config-hub managed mcp: $GroupName"
+    $endMarker = "# <<< ai-config-hub managed mcp: $GroupName"
+    $start = [regex]::Escape($startMarker)
+    $end = [regex]::Escape($endMarker)
+    $markerPattern = "(?ms)^$start\r?\n.*?^$end\r?\n?"
+    $matches = [regex]::Matches($Content, $markerPattern)
+    if ($matches.Count -ne 1) {
+        throw "Rendered Codex MCP fragment must contain exactly one $GroupName block."
+    }
+    return $matches[0].Value.TrimEnd()
+}
+
 function Get-CodexMergedContent($TargetPath, $SourcePath) {
-    $sourceBlock = (Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath).TrimEnd() + "`n"
+    $sourceContent = Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath
     $targetContent = if (Test-Path -LiteralPath $TargetPath) {
         Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath
     }
@@ -124,51 +193,60 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
         $actions.Add('preserve mcp_servers.pencil')
     }
 
-    $start = [regex]::Escape($StartMarker)
-    $end = [regex]::Escape($EndMarker)
-    $markerPattern = "(?ms)^$start\r?\n.*?^$end\r?\n?"
-    $markerMatches = [regex]::Matches($targetContent, $markerPattern)
-
-    if ($markerMatches.Count -gt 1) {
-        throw "Multiple ai-config-hub managed MCP blocks found in $TargetPath. Please clean up manually."
-    }
-
-    if ($markerMatches.Count -eq 1) {
-        $actions.Add('replace managed browser-visual MCP block')
-        $merged = [regex]::Replace($targetContent, $markerPattern, $sourceBlock, 1)
-        $content = $merged.TrimEnd() + "`n"
-        return [pscustomobject]@{
-            Content = $content
-            Actions = @($actions)
-            Changed = $content -ne $targetContent
-        }
-    }
-
     $working = $targetContent
-    foreach ($serverName in $ManagedServers) {
-        foreach ($section in @("mcp_servers.$serverName", "mcp_servers.$serverName.env")) {
-            $pattern = Get-SectionPattern $section
-            $sectionMatches = [regex]::Matches($working, $pattern)
-            if ($sectionMatches.Count -gt 1) {
-                throw "Multiple unmanaged [$section] sections found in $TargetPath. Please clean up manually."
-            }
-            elseif ($sectionMatches.Count -eq 1) {
-                $actions.Add("replace unmanaged $section")
-                $working = [regex]::Replace($working, $pattern, '', 1)
+    $newBlocks = New-Object System.Collections.Generic.List[string]
+
+    foreach ($group in $McpGroups) {
+        $sourceBlock = Get-CodexGroupBlock $sourceContent $group.Name
+        $newBlocks.Add($sourceBlock)
+
+        $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
+        $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
+        $start = [regex]::Escape($startMarker)
+        $end = [regex]::Escape($endMarker)
+        $markerPattern = "(?ms)^$start\r?\n.*?^$end\r?\n?"
+        $markerMatches = [regex]::Matches($working, $markerPattern)
+
+        if ($markerMatches.Count -gt 1) {
+            throw "Multiple $($group.Name) MCP blocks found in $TargetPath. Please clean up manually."
+        }
+
+        if ($markerMatches.Count -eq 1) {
+            $actions.Add("replace managed $($group.Name) MCP block")
+            $working = [regex]::Replace($working, $markerPattern, '', 1)
+        }
+        else {
+            $groupServerNames = @($group.Servers) + @($group.LegacyServers)
+            foreach ($serverName in $groupServerNames) {
+                foreach ($section in @("mcp_servers.$serverName", "mcp_servers.$serverName.env")) {
+                    $pattern = Get-SectionPattern $section
+                    $sectionMatches = [regex]::Matches($working, $pattern)
+                    if ($sectionMatches.Count -gt 1) {
+                        throw "Multiple unmanaged [$section] sections found in $TargetPath. Please clean up manually."
+                    }
+                    elseif ($sectionMatches.Count -eq 1) {
+                        $actions.Add("replace unmanaged $section")
+                        $working = [regex]::Replace($working, $pattern, '', 1)
+                    }
+                }
             }
         }
     }
 
-    $actions.Add('append managed browser-visual MCP block')
+    foreach ($group in $McpGroups) {
+        $actions.Add("append managed $($group.Name) MCP block")
+    }
+
+    $managedBlock = ($newBlocks -join "`n`n").TrimEnd()
     $mergedContent = $working.TrimEnd()
     if ([string]::IsNullOrWhiteSpace($mergedContent)) {
-        $mergedContent = $sourceBlock.TrimEnd()
+        $mergedContent = $managedBlock
     }
     else {
-        $mergedContent = $mergedContent + "`n`n" + $sourceBlock.TrimEnd()
+        $mergedContent = $mergedContent + "`n`n" + $managedBlock
     }
 
-    $content = $mergedContent + "`n"
+    $content = $mergedContent.TrimEnd() + "`n"
     return [pscustomobject]@{
         Content = $content
         Actions = @($actions)
@@ -229,6 +307,8 @@ function Sync-File($Name, $TargetPath, $Merged) {
         Write-Output "  - $action"
     }
 }
+
+Test-LocalContextThreadSource
 
 if (-not $Apply) {
     Write-Output 'Dry run only. Re-run with -Apply to merge managed MCP fragments after backups.'
