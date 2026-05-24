@@ -62,17 +62,41 @@ function Get-ActiveManagedServers() {
     return @($servers)
 }
 
-function Test-LocalContextThreadSource() {
-    $sourceRoot = Join-Path $Root 'tools\context-thread-engine'
-    $entry = Join-Path $sourceRoot 'dist\bin\context-thread.js'
+function Resolve-UserPath($Path) {
+    $text = [string]$Path
+    if ($text -eq '~') {
+        return [Environment]::GetFolderPath('UserProfile')
+    }
 
-    if (-not (Test-Path -LiteralPath $sourceRoot)) {
-        Write-Warning "Local context-thread engine source was not found at $sourceRoot. context-thread MCP cannot start until the project source is restored."
+    if ($text.StartsWith('~\') -or $text.StartsWith('~/')) {
+        return Join-Path ([Environment]::GetFolderPath('UserProfile')) $text.Substring(2)
+    }
+
+    return $text
+}
+
+function Test-ContextThreadRuntime() {
+    $sourcePath = Join-Path $Root 'tool-configs\mcp\shared\context-thread.json'
+    if (-not (Test-Path -LiteralPath $sourcePath)) {
+        Write-Warning "context-thread MCP source was not found: $sourcePath"
         return
     }
 
-    if (-not (Test-Path -LiteralPath $entry)) {
-        Write-Warning "Local context-thread engine build was not found at $entry. Run scripts\context-thread.ps1 bootstrap before starting context-thread MCP."
+    try {
+        $source = Get-Content -Raw -Encoding UTF8 -LiteralPath $sourcePath | ConvertFrom-Json
+        $server = $source.servers.'context-thread'
+        if ($null -eq $server -or [string]::IsNullOrWhiteSpace($server.runtime_entry)) {
+            Write-Warning 'context-thread MCP source has no runtime_entry.'
+            return
+        }
+
+        $runtimeEntry = Resolve-UserPath ([string]$server.runtime_entry)
+        if (-not (Test-Path -LiteralPath $runtimeEntry)) {
+            Write-Warning "context-thread runtime entry was not found at $runtimeEntry. Run scripts\sync-context-thread-runtime.ps1 -Apply before starting context-thread MCP."
+        }
+    }
+    catch {
+        Write-Warning "Could not inspect context-thread runtime entry: $($_.Exception.Message)"
     }
 }
 
@@ -308,7 +332,7 @@ function Sync-File($Name, $TargetPath, $Merged) {
     }
 }
 
-Test-LocalContextThreadSource
+Test-ContextThreadRuntime
 
 if (-not $Apply) {
     Write-Output 'Dry run only. Re-run with -Apply to merge managed MCP fragments after backups.'

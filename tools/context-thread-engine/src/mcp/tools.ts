@@ -289,7 +289,7 @@ export interface ToolResult {
  */
 const projectPathProperty: PropertySchema = {
   type: 'string',
-  description: 'Path to a different project with .context-thread/ initialized. If omitted, uses current project. Use this to query other codebases.',
+  description: 'Path to a different project with .Ai-config/context-thread/ initialized. If omitted, uses current project. Use this to query other codebases.',
 };
 
 /**
@@ -565,7 +565,7 @@ export class ToolHandler {
    * If projectPath is provided, opens that project's ContextThread (cached).
    * Otherwise returns the default ContextThread instance.
    *
-   * Walks up parent directories to find the nearest .context-thread/ folder,
+   * Walks up parent directories to find the nearest .Ai-config/context-thread/ folder,
    * similar to how git finds .git/ directories.
    */
   private getContextThread(projectPath?: string): ContextThread {
@@ -574,7 +574,7 @@ export class ToolHandler {
         const searched = this.defaultProjectHint ?? process.cwd();
         throw new Error(
           'No ContextThread project is loaded for this session.\n' +
-          `Searched for a .context-thread/ directory starting from: ${searched}\n` +
+          `Searched for a .Ai-config/context-thread/ directory starting from: ${searched}\n` +
           'The index is likely fine — this is a working-directory detection issue: ' +
           "the MCP client launched the server outside your project and didn't report the " +
           'workspace root. Fix it either way:\n' +
@@ -592,7 +592,7 @@ export class ToolHandler {
 
     // Reject sensitive system directories before opening. Only validate a
     // path that actually exists — a nested or not-yet-created sub-path of a
-    // real project must still be allowed to resolve UP to its .context-thread/
+    // real project must still be allowed to resolve UP to its .Ai-config/context-thread/
     // root below (issue #238), so we don't run the existence-checking
     // validator on paths that are meant to walk up.
     if (existsSync(projectPath)) {
@@ -602,7 +602,7 @@ export class ToolHandler {
       }
     }
 
-    // Walk up parent directories to find nearest .context-thread/
+    // Walk up parent directories to find nearest .Ai-config/context-thread/
     const resolvedRoot = findNearestContextThreadRoot(projectPath);
 
     if (!resolvedRoot) {

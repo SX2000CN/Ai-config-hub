@@ -370,11 +370,17 @@ function scanDirectoryWalk(
     }
 
     for (const entry of entries) {
-      // Never descend into git internals or our own data directory.
-      if (entry.name === '.git' || entry.name === '.context-thread') continue;
-
       const fullPath = path.join(dir, entry.name);
       const relativePath = normalizePath(path.relative(rootDir, fullPath));
+
+      // Never descend into git internals or our own data directory.
+      if (
+        entry.name === '.git' ||
+        relativePath === '.Ai-config/context-thread' ||
+        relativePath.startsWith('.Ai-config/context-thread/')
+      ) {
+        continue;
+      }
 
       if (entry.isSymbolicLink()) {
         try {

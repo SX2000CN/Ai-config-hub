@@ -16,13 +16,9 @@
                                       },
                        "context-thread":  {
                                               "type":  "stdio",
-                                              "command":  "powershell",
+                                              "command":  "node",
                                               "args":  [
-                                                           "-NoProfile",
-                                                           "-ExecutionPolicy",
-                                                           "Bypass",
-                                                           "-File",
-                                                           "D:\\Windows\\桌面\\Encoding\\Ai-config-hub\\scripts\\context-thread.ps1",
+                                                           "C:\\Users\\sx200\\.ai-config-hub\\mcp\\context-thread\\dist\\bin\\context-thread.js",
                                                            "serve",
                                                            "--mcp"
                                                        ]

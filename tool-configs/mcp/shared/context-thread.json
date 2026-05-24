@@ -2,9 +2,9 @@
   "servers": {
     "context-thread": {
       "type": "stdio",
-      "command": "powershell",
-      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"],
-      "repo_script": "scripts\\context-thread.ps1",
+      "command": "node",
+      "args": [],
+      "runtime_entry": "~\\.ai-config-hub\\mcp\\context-thread\\dist\\bin\\context-thread.js",
       "script_args": ["serve", "--mcp"],
       "startup_timeout_ms": 20000
     }

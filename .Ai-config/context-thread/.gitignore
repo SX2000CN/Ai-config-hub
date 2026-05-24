@@ -1,0 +1,19 @@
+# ContextThread runtime files
+# context-thread.db may be committed as a project structural fact source.
+
+# SQLite runtime sidecar files
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Cache
+cache/
+
+# Logs
+*.log
+
+# Locks
+*.lock
+
+# Hook markers
+.dirty

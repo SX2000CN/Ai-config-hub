@@ -1,15 +1,15 @@
 ---
 name: project-ai-config-hub
-description: ai-config-hub 的项目级分身；当用户要初始化、创建、修改、迁移、审计、修复或同步项目级 skill，或提到 docs/ai、CURRENT.md、tasks、skills-registry、.claude/skills、.agents/skills、.codex/skills、项目级 skill 中枢时自动使用。
+description: ai-config-hub 的项目级分身；当用户要初始化、创建、修改、迁移、审计、修复或同步项目级 skill，或提到 .Ai-config、旧版 docs/ai、CURRENT.md、tasks、skills-registry、.claude/skills、.agents/skills、.codex/skills、项目级 skill 中枢时自动使用。
 ---
 
 # 项目级 AI 配置中枢
 
 <!-- ai-config-hub-managed: project-ai-config-hub -->
 
-当用户要求初始化项目级 AI 配置中枢，或新增、修改、迁移、审计、修复、同步项目级 skill 时自动使用本 skill。用户不需要显式说出 `project-ai-config-hub`；只要需求涉及项目级 skill、`docs/ai/`、`docs/ai/CURRENT.md`、`docs/ai/tasks/`、v1 到 v2 工作状态迁移、`.claude/skills`、`.agents/skills` 或 `.codex/skills`，就按本 skill 工作。
+当用户要求初始化项目级 AI 配置中枢，或新增、修改、迁移、审计、修复、同步项目级 skill 时自动使用本 skill。用户不需要显式说出 `project-ai-config-hub`；只要需求涉及项目级 skill、`.Ai-config/`、旧版 `docs/ai/`、`.Ai-config/CURRENT.md`、`.Ai-config/tasks/`、v1 到 v2 工作状态迁移、`.claude/skills`、`.agents/skills` 或 `.codex/skills`，就按本 skill 工作。
 
-默认按风险和接手价值轻量启用配置：小项目可只保留项目规则或 `docs/ai/CURRENT.md`；只有跨会话、多任务、等待确认、有残留风险或确有项目级 workflow 时，才创建任务卡、registry 或多端 skill 入口。
+默认按风险和接手价值轻量启用配置：小项目可只保留项目规则或 `.Ai-config/CURRENT.md`；只有跨会话、多任务、等待确认、有残留风险或确有项目级 workflow 时，才创建任务卡、registry 或多端 skill 入口。
 
 修改目标项目前，按顺序读取本 skill 自带文件：
 
@@ -20,8 +20,9 @@ description: ai-config-hub 的项目级分身；当用户要初始化、创建�
 
 关键规则：
 
-- 按需用 `docs/ai/` 作为目标项目的 AI 配置中枢；不要把完整中枢当作所有项目的默认负担。
-- 只有存在项目级 skill 时，才用 `docs/ai/skills-registry.md` 记录清单、事实源、入口和状态。
+- 按需用 `.Ai-config/` 作为目标项目的 AI 配置中枢；不要把完整中枢当作所有项目的默认负担。
+- 旧版 `docs/ai/` 只作为迁移来源和兼容事实源；新配置统一写入 `.Ai-config/`。
+- 只有存在项目级 skill 时，才用 `.Ai-config/skills-registry.md` 记录清单、事实源、入口和状态。
 - 只有确有项目级可复用 workflow 时，才生成 `.claude/skills/<skill-name>/SKILL.md` 和 `.agents/skills/<skill-name>/SKILL.md` 作为薄入口。
 - 只有历史兼容或用户明确要求时，才使用 `.codex/skills/<skill-name>/SKILL.md`。
 - 不要把完整项目流程复制到多个工具入口。

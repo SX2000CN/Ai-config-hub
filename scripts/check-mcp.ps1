@@ -52,18 +52,47 @@ function Test-RepoScript($ServerName, $Server) {
     }
 }
 
-function Test-LocalContextThreadSource() {
-    $sourceRoot = Join-Path $Root 'tools\context-thread-engine'
-    $entry = Join-Path $sourceRoot 'dist\bin\context-thread.js'
+function Resolve-UserPath($Path) {
+    $text = [string]$Path
+    if ($text -eq '~') {
+        return [Environment]::GetFolderPath('UserProfile')
+    }
 
-    if (-not (Test-Path -LiteralPath $sourceRoot)) {
-        Write-Warning "Local context-thread engine source was not found at $sourceRoot. context-thread MCP cannot start until the project source is restored."
+    if ($text.StartsWith('~\') -or $text.StartsWith('~/')) {
+        return Join-Path ([Environment]::GetFolderPath('UserProfile')) $text.Substring(2)
+    }
+
+    return $text
+}
+
+function Test-RuntimeEntry($ServerName, $Server) {
+    if ($null -eq $Server.runtime_entry -or [string]::IsNullOrWhiteSpace($Server.runtime_entry)) {
         return
     }
 
-    if (-not (Test-Path -LiteralPath $entry)) {
-        Write-Warning "Local context-thread engine build was not found at $entry. Run scripts\context-thread.ps1 bootstrap before starting context-thread MCP."
+    $runtimeEntry = Resolve-UserPath ([string]$Server.runtime_entry)
+    if (-not [System.IO.Path]::IsPathRooted($runtimeEntry)) {
+        Fail "runtime_entry for source server $ServerName must resolve to an absolute path: $runtimeEntry"
+        return
     }
+
+    if (-not (Test-Path -LiteralPath $runtimeEntry)) {
+        Write-Warning "context-thread runtime entry was not found at $runtimeEntry. Run scripts\sync-context-thread-runtime.ps1 -Apply before starting context-thread MCP."
+    }
+}
+
+function Get-SourceServerArgs($Server) {
+    $args = @($Server.args)
+    if ($null -ne $Server.runtime_entry -and -not [string]::IsNullOrWhiteSpace($Server.runtime_entry)) {
+        $args += @(Resolve-UserPath ([string]$Server.runtime_entry))
+    }
+    if ($null -ne $Server.repo_script -and -not [string]::IsNullOrWhiteSpace($Server.repo_script)) {
+        $args += @(Join-Path $Root ([string]$Server.repo_script))
+    }
+    if ($null -ne $Server.script_args) {
+        $args += @($Server.script_args)
+    }
+    return @($args)
 }
 
 foreach ($path in @($ClaudePath, $CodexPath)) {
@@ -105,11 +134,12 @@ if (-not $Failed) {
                         Fail "Missing command for source server: $serverName"
                     }
 
-                    if ($null -eq $server.args -or @($server.args).Count -eq 0) {
+                    if (@(Get-SourceServerArgs $server).Count -eq 0) {
                         Fail "Missing args for source server: $serverName"
                     }
 
                     Test-RepoScript $serverName $server
+                    Test-RuntimeEntry $serverName $server
                 }
             }
         }
@@ -177,8 +207,6 @@ if (-not $Failed) {
         }
     }
 }
-
-Test-LocalContextThreadSource
 
 $ScanPaths = @(
     (Join-Path $Root 'tool-configs'),

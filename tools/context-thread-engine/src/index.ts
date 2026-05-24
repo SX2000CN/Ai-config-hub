@@ -29,6 +29,7 @@ import {
   createDirectory,
   removeDirectory,
   validateDirectory,
+  getContextThreadDir,
 } from './directory';
 import {
   ExtractionOrchestrator,
@@ -52,6 +53,7 @@ import { FileWatcher, WatchOptions } from './sync';
 export * from './types';
 export { getDatabasePath } from './db';
 export {
+  AI_CONFIG_DIR,
   getContextThreadDir,
   isInitialized,
   findNearestContextThreadRoot,
@@ -147,7 +149,7 @@ export class ContextThread {
     this.queries = queries;
     this.projectRoot = projectRoot;
     this.fileLock = new FileLock(
-      path.join(projectRoot, '.context-thread', 'context-thread.lock')
+      path.join(getContextThreadDir(projectRoot), 'context-thread.lock')
     );
     this.orchestrator = new ExtractionOrchestrator(projectRoot, queries);
     this.resolver = createResolver(projectRoot, queries);

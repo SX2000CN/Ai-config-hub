@@ -36,6 +36,10 @@ function Get-PropertyNames($Object) {
 
 function Get-ServerArgs($Server) {
     $args = @($Server.args)
+    if ($null -ne $Server.runtime_entry -and -not [string]::IsNullOrWhiteSpace($Server.runtime_entry)) {
+        $args += @(Resolve-UserPath ([string]$Server.runtime_entry))
+    }
+
     if ($null -ne $Server.repo_script -and -not [string]::IsNullOrWhiteSpace($Server.repo_script)) {
         $scriptPath = Join-Path $Root ([string]$Server.repo_script)
         $args += @($scriptPath)
@@ -46,6 +50,19 @@ function Get-ServerArgs($Server) {
     }
 
     return @($args)
+}
+
+function Resolve-UserPath($Path) {
+    $text = [string]$Path
+    if ($text -eq '~') {
+        return [Environment]::GetFolderPath('UserProfile')
+    }
+
+    if ($text.StartsWith('~\') -or $text.StartsWith('~/')) {
+        return Join-Path ([Environment]::GetFolderPath('UserProfile')) $text.Substring(2)
+    }
+
+    return $text
 }
 
 function Read-McpGroup($Group) {
@@ -70,7 +87,7 @@ function Read-McpGroup($Group) {
             throw "Missing command for MCP server: $serverName"
         }
 
-        if ($null -eq $server.args -or @($server.args).Count -eq 0) {
+        if (@(Get-ServerArgs $server).Count -eq 0) {
             throw "Missing args for MCP server: $serverName"
         }
 
@@ -78,6 +95,13 @@ function Read-McpGroup($Group) {
             $scriptPath = Join-Path $Root ([string]$server.repo_script)
             if (-not (Test-Path -LiteralPath $scriptPath)) {
                 throw "Missing repo_script for MCP server $serverName`: $scriptPath"
+            }
+        }
+
+        if ($null -ne $server.runtime_entry -and -not [string]::IsNullOrWhiteSpace($server.runtime_entry)) {
+            $runtimeEntry = Resolve-UserPath ([string]$server.runtime_entry)
+            if (-not [System.IO.Path]::IsPathRooted($runtimeEntry)) {
+                throw "runtime_entry for MCP server $serverName must resolve to an absolute path: $runtimeEntry"
             }
         }
     }

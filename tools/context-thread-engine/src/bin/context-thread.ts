@@ -144,7 +144,7 @@ program
 /**
  * Resolve project path from argument or current directory
  * Walks up parent directories to find nearest initialized ContextThread project
- * (must have .context-thread/context-thread.db, not just .context-thread/lessons.db)
+ * (must have .Ai-config/context-thread/context-thread.db, not just .Ai-config/context-thread/lessons.db)
  */
 function resolveProjectPath(pathArg?: string): string {
   const absolutePath = path.resolve(pathArg || process.cwd());
@@ -155,7 +155,7 @@ function resolveProjectPath(pathArg?: string): string {
   }
 
   // Walk up to find nearest parent with ContextThread initialized
-  // Note: findNearestContextThreadRoot finds any .context-thread folder, but we need one with context-thread.db
+  // Note: findNearestContextThreadRoot finds any .Ai-config/context-thread folder, but we need one with context-thread.db
   let current = absolutePath;
   const root = path.parse(current).root;
 
@@ -333,14 +333,14 @@ function printIndexResult(clack: typeof import('@clack/prompts'), result: IndexR
 
     if (projectPath) {
       writeErrorLog(projectPath, result.errors);
-      clack.log.info('See .context-thread/errors.log for details');
+      clack.log.info('See .Ai-config/context-thread/errors.log for details');
     }
 
     if (result.filesIndexed > 0) {
       clack.log.info(`The index is fully usable ${getGlyphs().dash} only the failed files are missing.`);
     }
   } else if (projectPath) {
-    const logPath = path.join(projectPath, '.context-thread', 'errors.log');
+    const logPath = path.join(projectPath, '.Ai-config/context-thread', 'errors.log');
     if (fs.existsSync(logPath)) {
       fs.unlinkSync(logPath);
     }
@@ -348,10 +348,10 @@ function printIndexResult(clack: typeof import('@clack/prompts'), result: IndexR
 }
 
 /**
- * Write detailed error log to .context-thread/errors.log
+ * Write detailed error log to .Ai-config/context-thread/errors.log
  */
 function writeErrorLog(projectPath: string, errors: Array<{ message: string; filePath?: string; severity: string; code?: string }>): void {
-  const cgDir = path.join(projectPath, '.context-thread');
+  const cgDir = path.join(projectPath, '.Ai-config/context-thread');
   if (!fs.existsSync(cgDir)) return;
 
   const logPath = path.join(cgDir, 'errors.log');
@@ -458,7 +458,7 @@ program
  */
 program
   .command('uninit [path]')
-  .description('Remove ContextThread from a project (deletes .context-thread/ directory)')
+  .description('Remove ContextThread from a project (deletes .Ai-config/context-thread/ directory)')
   .option('-f, --force', 'Skip confirmation prompt')
   .action(async (pathArg: string | undefined, options: { force?: boolean }) => {
     const projectPath = resolveProjectPath(pathArg);

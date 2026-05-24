@@ -120,25 +120,28 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
    - `tool-configs/mcp/shared/browser-visual.json`
    - `tool-configs/mcp/shared/context-thread.json`
 
-2. 渲染输出：
+2. 如果改动了 `tools/context-thread-engine/` 或首次配置本机 runtime，先同步脉络运行时：
+
+```powershell
+.\scripts\sync-context-thread-runtime.ps1
+.\scripts\sync-context-thread-runtime.ps1 -Apply
+```
+
+默认运行时位置：`C:\Users\sx200\.ai-config-hub\mcp\context-thread\`。
+
+3. 渲染输出：
 
 ```powershell
 .\scripts\render-mcp.ps1
 ```
 
-3. 检查生成结果：
+4. 检查生成结果：
 
 ```powershell
 .\scripts\check-mcp.ps1
 ```
 
-`context-thread` MCP 走项目内本地引擎源码路线。首次启动前先准备本地引擎构建：
-
-```powershell
-.\scripts\context-thread.ps1 bootstrap
-```
-
-4. 预览同步目标：
+5. 预览同步目标：
 
 ```powershell
 .\scripts\sync-mcp.ps1
@@ -151,7 +154,7 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 .\scripts\sync-mcp.ps1 -Codex
 ```
 
-5. 确认无误后应用：
+6. 确认无误后应用：
 
 ```powershell
 .\scripts\sync-mcp.ps1 -Apply
@@ -176,5 +179,5 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 - `sync-mcp.ps1` 默认 dry-run；只有显式 `-Apply` 才写真实用户配置。
 - Claude Code 同步只新增或替换托管 server，保留 `pencil` 和未知 MCP server。
 - Codex 同步使用 `# >>> ai-config-hub managed mcp: <group>` marker block，只替换托管 block 或同名 server section，保留 `[mcp_servers.pencil]` 和其他私有配置。
-- `context-thread` MCP 配置声明的是 `scripts/context-thread.ps1 serve --mcp`，由本仓库 wrapper 启动 `tools/context-thread-engine` 本地源码构建产物；本项目不自动全局安装 context-thread，也不自动初始化项目 `.context-thread/` 索引。`check-mcp.ps1` 会在本地构建缺失时给出 warning，但不阻塞浏览器 MCP 校验。
+- `context-thread` MCP 配置声明的是 `node C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js serve --mcp`；源码仍由本仓库维护，运行时由 `sync-context-thread-runtime.ps1 -Apply` 分发。本项目不依赖 npm 全局 `context-thread` 命令，也不自动初始化项目 `.Ai-config/context-thread/` 索引。`check-mcp.ps1` 会在 runtime 缺失时给出 warning，但不阻塞浏览器 MCP 校验。
 - `sync-mcp.ps1 -Apply` 会先备份到 `C:\Users\sx200\.claude\ai-config-hub-config-backups\` 或 `C:\Users\sx200\.codex\ai-config-hub-config-backups\`。

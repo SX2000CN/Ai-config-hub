@@ -11,10 +11,10 @@
 
 当前已实现：
 
-- `project-ai-config-hub`：`ai-config-hub` 的项目级分身，用于在目标项目中按风险和接手价值创建 `docs/ai/` AI 配置中枢，并创建、迁移、审计和修复多端项目 skills。
+- `project-ai-config-hub`：`ai-config-hub` 的项目级分身，用于在目标项目中按风险和接手价值创建 `.Ai-config/` AI 配置中枢，并创建、迁移、审计和修复多端项目 skills。
 - `global-frontend-design`：全局前端设计 skill，用于创建、重设计或 review 前端界面，先建立鲜明视觉方向，再落地生产级 UI 工程约束。
 - `global-thinking-partner`：低副作用思维扩展 skill，用于复杂 coding 决策前的方案发散、失败模式、简化路径和维护者视角检查。
-- `global-context-thread`：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析；优先使用 context-thread、`docs/ai` 任务卡等事实源缩小上下文，同时保持 L0/L1 小任务不升级。
+- `global-context-thread`：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析；优先使用 context-thread、`.Ai-config` 任务卡等事实源缩小上下文，同时保持 L0/L1 小任务不升级。
 - `pencil-design-workflow`：Pencil / `.pen` / pencli 设计先行轻量闸门 skill；设计请求默认必须走 Desktop/MCP 可视化流程，只有用户明确要求后台、无头、批量、自动化或不看过程时才按需读取 CLI/headless 细节。
 
 维护流程：

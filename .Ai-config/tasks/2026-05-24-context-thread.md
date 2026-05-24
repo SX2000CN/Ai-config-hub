@@ -1,0 +1,102 @@
+# 工作任务：引入轻量脉络 / context-thread 思路
+
+任务 ID：2026-05-24-context-thread
+创建时间：2026-05-24 00:32
+更新时间：2026-05-24 06:45
+状态：待用户确认
+当前活动：否
+
+## 目标
+
+在 `ai-config-hub` 中引入轻量结构化事实层：代码关系复杂时优先使用 context-thread 这类可查询图谱，非代码工作流复杂时使用 `.Ai-config` 任务卡关系索引，同时保持 L0/L1 小任务不升级、不增加 AI 负担。
+
+## 背景和当前上下文
+
+用户要求把刚研究的 `外部结构化图谱项目` 项目概念和具体方案引入本仓库配置。计划已明确：全局默认可用，但实际使用按风险和关系复杂度触发；context-thread 负责代码结构关系，`.Ai-config` 承接非代码工作流关系；二者都不替代真实文件、用户需求和验证。
+
+## 最近结论
+
+- 已新增 `global-context-thread` 全局 skill，覆盖 Claude Code、Codex 和 legacy rendered 产物。
+- 已在共享规则中加入一段“结构化事实优先”规则，但保持短规则，不改变默认轻量原则。
+- 已新增 `context-thread` MCP 配置组，现渲染为 `node C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js serve --mcp`，由用户级 runtime 启动 MCP server。
+- 已把 MCP 脚本从单一 `browser-visual` server 清单改为多组托管配置。
+- 已给任务卡模板加入可选 `关系索引`，用于非代码复杂工作流接手。
+- 已新增 `scripts/sync-context-thread-runtime.ps1`，负责把 `tools/context-thread-engine` 源码构建产物和生产依赖分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`。
+- 已新增 `scripts/context-thread.ps1`，支持 `bootstrap`、`serve --mcp`、`init`、`sync` 等命令；`bootstrap` 会同步用户级 runtime，其他命令调用该 runtime。
+- 已把本地脉络引擎迁移到仓库内自有路径 `tools/context-thread-engine`，并把 CLI / MCP / 索引目录统一改成 `context-thread` / `.Ai-config/context-thread` / `context_thread_*`。
+- 当前仓库已按用户明确要求初始化 `.Ai-config/context-thread/context-thread.db`；这不改变其他项目仍按任务复杂度触发初始化的原则。
+
+## 已确认事实
+
+- 本机不需要 npm 全局 `context-thread` 命令；MCP 配置通过 `node` 直接启动用户级 runtime。
+- 已运行 `scripts/sync-context-thread-runtime.ps1 -Apply`，在 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\` 下生成可运行 runtime。
+- 本项目这次已按用户明确要求初始化 `.Ai-config/context-thread/` 索引；其他项目仍不自动初始化。
+- `sync.ps1 -Apply`、`sync-skills.ps1 -Apply`、`sync-mcp.ps1 -Apply` 已执行；真实用户级规则、skill 和 MCP 配置已同步到本机。
+
+## 已尝试 / 已排除
+
+- 已排除把 context-thread 研究笔记整段写入正式规则；正式规则只保留结构化事实层原则。
+- 已排除给非代码工作流引入新数据库或自研图谱；v1 只用任务卡关系索引。
+- 已排除在 L0/L1 小任务中强制初始化 context-thread 或创建任务卡。
+
+## 当前卡点
+
+等待用户基于当前仓库的已初始化索引进行试用反馈；其他目标项目仍按任务需要决定是否初始化 `.Ai-config/context-thread/` 索引。
+
+## 关系索引
+
+| 对象 | 当前状态 | 依赖 / 影响 | 证据 | 下一步 |
+|---|---|---|---|---|
+| `global-context-thread` skill | 仓库源、rendered 与本机用户级目录已同步 | 影响 Claude Code / Codex 用户级 skill 同步 | `sync-skills.ps1 -Apply` 已执行；dry-run 现为 unchanged | 后续按需试用并再决定是否微调 |
+| `context-thread` MCP | 仓库源、runtime 分发脚本和 rendered 已更新 | 依赖 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\` 用户级 runtime | `sync-context-thread-runtime.ps1 -Apply` 已执行；rendered 已指向 runtime | 后续整体同步后试用 |
+| `.Ai-config/context-thread/context-thread.db` | 当前仓库已初始化，数据库可跟踪 | 影响当前项目代码结构查询和 MCP status/context/search 等工具 | `context-thread.ps1 status .`：84 files / 1,410 nodes / 4,083 edges | 代码结构变化后按需 `sync` 或重建索引 |
+| 共享规则 | 仓库 rendered 与本机用户级目录已同步 | 影响全局 Claude / Codex 规则同步 | `sync.ps1 -Apply` 已执行；dry-run 现为 unchanged | 后续按需试用并再决定是否微调 |
+| 任务卡关系索引 | 模板和 README 已更新 | 影响后续复杂工作流任务卡写法 | `check-skills.ps1` 通过 | 后续只在复杂接手任务使用 |
+
+## 下一步最小动作
+
+1. 用户基于当前仓库已初始化的脉络索引进行试用。
+2. 若需要微调，再回到仓库源文件、用户级 runtime 或 MCP 配置继续修正。
+
+## 验证状态
+
+- 已运行 `scripts/check-all.ps1`，结果 `All render, check, and dry-run steps passed`。
+- `check-all` 中 `check.ps1` 输出 `Check passed`。
+- `check-all` 中 `check-skills.ps1` 输出 `Skill check passed`。
+- `check-all` 中 `check-mcp.ps1` 输出 `MCP check passed`。
+- 已运行 `scripts\sync-context-thread-runtime.ps1 -Apply`，用户级 runtime 分发成功。
+- 已运行 `scripts/context-thread.ps1 init . --index`，当前项目索引初始化成功。
+- 已运行 `scripts/context-thread.ps1 status .`，确认 wrapper 能启动用户级 runtime，当前索引为 84 files / 1,410 nodes / 4,083 edges，数据库约 4.36 MB，状态为 up to date。
+- 已通过 MCP `context_thread_status` 读取同一索引状态。
+- 旧版 JSON-RPC 最小握手曾验证 `scripts/context-thread.ps1 serve --mcp` 能返回 `context_thread_*` 工具；runtime 路线仍待下一轮整体测试确认。
+- `sync-skills.ps1 -Apply` 已执行，用户级 `global-context-thread` 目录已存在，后续 dry-run 为 `unchanged`。
+- `sync-mcp.ps1 -Apply` 已执行，用户级 `context-thread` MCP 已写入；后续 dry-run 为 `unchanged`。
+- `scripts/check-all.ps1` 已执行，渲染、检查和 dry-run 全部通过。
+
+## 残留风险
+
+- 如果 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js` 被清理，真实同步后的 `context-thread` MCP server 需要先重新运行 `scripts\sync-context-thread-runtime.ps1 -Apply`。
+- 其他目标项目没有 `.Ai-config/context-thread/` 索引时，MCP 可启动但结构化查询会提示未初始化；是否初始化仍按 L2/L3 或真实复杂代码任务触发。
+- 当前仓库的 `.Ai-config/context-thread/context-thread.db` 后续可能随代码变化陈旧，需要按需 `sync` 或重建索引。
+- 工作区存在本轮前已有的 Pencil 相关未提交改动；本任务没有回滚或覆盖这些改动。
+- 用户级 `global-context-thread` 与 `context-thread` MCP 已同步，重启 Codex / Claude 后才能看到新文案和新工具名。
+
+## 相关文件
+
+- `rules/shared/core.md`：结构化事实优先短规则。
+- `skills/shared/global-context-thread/`：新 skill 事实源。
+- `tool-configs/mcp/shared/context-thread.json`：`context-thread` MCP 事实源，底层调用用户级 runtime。
+- `scripts/sync-context-thread-runtime.ps1`：用户级 runtime 分发脚本。
+- `scripts/context-thread.ps1`：本地 wrapper，负责 bootstrap 和调用用户级 runtime。
+- `scripts/render-mcp.ps1`、`scripts/check-mcp.ps1`、`scripts/sync-mcp.ps1`：多 MCP 组渲染、检查和同步。
+- `.Ai-config/tasks/README.md`：任务卡关系索引说明。
+
+## 不要重复
+
+- 不要把 context-thread 不可用当成 L0/L1 任务阻塞点。
+- 不要把 `.Ai-config/context-thread/` 初始化写成默认动作。
+- 不要把关系索引当成所有任务必填项。
+
+## 关闭依据 / 最终结果
+
+仓库源文件、rendered 产物、用户级规则、技能和 MCP 已完成同步；任务仍保留为待用户试用确认，以便后续根据实际使用感受决定是否微调。

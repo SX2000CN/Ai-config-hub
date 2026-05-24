@@ -11,12 +11,12 @@
    - Rules：`rules/shared`、`rules/tools`、`rules/rendered`
    - Skills：`skills/shared`、`skills/claude-code`、`skills/codex`、`skills/rendered`
    - MCP tool configs：`tool-configs/mcp/shared`、`tool-configs/mcp/rendered`、`scripts/render-mcp.ps1`
-   - AI status docs：`docs/ai/CURRENT.md`、`docs/ai/tasks`
+   - AI status docs：`.Ai-config/CURRENT.md`、`.Ai-config/tasks`
 3. 展示通用流水线：source → render → check → dry-run → apply。
 4. 页面中需要有状态 badges：
    - global skills synced
    - browser MCP synced
-   - docs/ai idle
+   - .Ai-config active
    - legacy .codex/skills avoided
 5. 页面中需要有验证边界说明：
    - Pencil design/export validation

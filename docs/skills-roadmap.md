@@ -23,10 +23,10 @@
 - 当前工作状态文档
   - 设计文档：[work-state-design.md](work-state-design.md)
   - 定位：项目级 AI 接手入口、多任务状态总览和任务无损接手卡，用于中断、隔天继续、切换任务或切换 AI 编程工具时恢复当前工作现场。
-  - 当前实现：已接入 `rules/shared/core.md`、`project-ai-config-hub` 流程和模板；核心形态是项目内极简 Markdown 状态文件和按需任务卡，不以 hook 或 skill 作为核心机制。轻量项目可以只保留项目规则或 `docs/ai/CURRENT.md`，只有跨会话、多任务、等待确认或有残留风险时才创建任务卡。
+  - 当前实现：已接入 `rules/shared/core.md`、`project-ai-config-hub` 流程和模板；核心形态是项目内极简 Markdown 状态文件和按需任务卡，不以 hook 或 skill 作为核心机制。轻量项目可以只保留项目规则或 `.Ai-config/CURRENT.md`，只有跨会话、多任务、等待确认或有残留风险时才创建任务卡。
 
 - `project-ai-config-hub`
-  - 定位：`ai-config-hub` 的项目级分身，用于在目标项目中按风险和接手价值创建或升级 `docs/ai/` 中枢、多任务工作状态机制和多端项目 skills。
+  - 定位：`ai-config-hub` 的项目级分身，用于在目标项目中按风险和接手价值创建或升级 `.Ai-config/` 中枢、多任务工作状态机制和多端项目 skills。
   - 共享源：`skills/shared/project-ai-config-hub/`
   - Claude Code 入口源：`skills/claude-code/project-ai-config-hub/SKILL.md`
   - Codex 入口源：`skills/codex/project-ai-config-hub/SKILL.md`
@@ -39,7 +39,7 @@
   - Claude Code 入口源：`skills/claude-code/global-frontend-design/SKILL.md`
   - Codex 入口源：`skills/codex/global-frontend-design/SKILL.md`
   - rendered 包：`skills/rendered/`
-  - 来源归档：`docs/ai/archive/global-frontend-design-sources/`
+  - 来源归档：`.Ai-config/archive/global-frontend-design-sources/`
 
 - `global-thinking-partner`
   - 定位：低副作用思维扩展 skill，用于复杂 coding 决策前的方案发散、失败模式、简化路径和维护者视角检查。
@@ -50,7 +50,7 @@
   - 约束：默认只读、手动触发优先，不负责写代码、同步、提交或推送。
 
 - `global-context-thread`
-  - 定位：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析，优先查询 context-thread 或 `docs/ai` 关系索引来缩小上下文。
+  - 定位：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析，优先查询 context-thread 或 `.Ai-config` 关系索引来缩小上下文。
   - 共享源：`skills/shared/global-context-thread/`
   - Claude Code 入口源：`skills/claude-code/global-context-thread/SKILL.md`
   - Codex 入口源：`skills/codex/global-context-thread/SKILL.md`

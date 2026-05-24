@@ -16,7 +16,7 @@
 ## 2. 选择事实源
 
 - 代码结构关系：如果当前会话暴露 `context_thread_*` MCP 工具，且项目已有索引，优先用 context-thread。
-- 非代码工作流关系：优先读 `docs/ai/CURRENT.md`、相关任务卡、skills registry 和近邻规则文档。
+- 非代码工作流关系：优先读 `.Ai-config/CURRENT.md`、相关任务卡、skills registry 和近邻规则文档。
 - 没有结构化事实源：直接使用 `rg`、文件读取和项目已有验证，不停下来要求用户安装或初始化。
 
 context-thread MCP 可用时，先用 `context_thread_status` 判断索引是否可用。若提示未初始化：
@@ -51,4 +51,4 @@ context-thread MCP 可用时，先用 `context_thread_status` 判断索引是否
 - 读取文件或运行验证确认的事实。
 - 基于当前信息做出的推断。
 
-context-thread 提供 code context，不提供产品需求；`docs/ai` 提供工作状态，不替代用户当前说明。
+context-thread 提供 code context，不提供产品需求；`.Ai-config` 提供工作状态，不替代用户当前说明。

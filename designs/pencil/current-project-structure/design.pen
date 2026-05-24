@@ -233,7 +233,7 @@
                   "type": "text",
                   "id": "nt0l3",
                   "fill": "$text",
-                  "content": "docs/ai idle",
+                  "content": ".Ai-config active",
                   "fontFamily": "$font-mono",
                   "fontSize": 13,
                   "fontWeight": "700"
@@ -991,7 +991,7 @@
                       "fill": "$muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "docs/ai/CURRENT.md and task cards",
+                      "content": ".Ai-config/CURRENT.md and task cards",
                       "lineHeight": 1.35,
                       "fontFamily": "$font-sans",
                       "fontSize": 14,
@@ -1066,7 +1066,7 @@
                           "type": "text",
                           "id": "alrwp",
                           "fill": "$text",
-                          "content": "docs/ai idle",
+                          "content": ".Ai-config active",
                           "fontFamily": "$font-sans",
                           "fontSize": 18,
                           "fontWeight": "700"

@@ -16,7 +16,7 @@
 当前目录是这个 skill 的共享事实源和维护稿。原始来源快照、许可证和下载记录归档在：
 
 ```text
-docs/ai/archive/global-frontend-design-sources/
+.Ai-config/archive/global-frontend-design-sources/
 ```
 
 这些归档文件用于审计来源，不参与日常 skill 运行。

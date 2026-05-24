@@ -44,7 +44,7 @@ export interface WatchOptions {
  * - Minimal resource usage (native OS file events, no polling)
  * - Debounced to avoid thrashing on rapid saves
  * - Filters to supported source files by extension
- * - Ignores .context-thread/ directory changes
+ * - Ignores .Ai-config/context-thread/ directory changes
  */
 export class FileWatcher {
   private watcher: fs.FSWatcher | null = null;
@@ -99,11 +99,10 @@ export class FileWatcher {
           // Normalize path separators
           const normalized = normalizePath(filename);
 
-          // Ignore .context-thread/ directory changes (our own DB writes)
+          // Ignore .Ai-config/context-thread/ directory changes (our own DB writes)
           if (
-            normalized === '.context-thread' ||
-            normalized.startsWith('.context-thread/') ||
-            normalized.startsWith('.context-thread\\')
+            normalized === '.Ai-config/context-thread' ||
+            normalized.startsWith('.Ai-config/context-thread/')
           ) {
             return;
           }

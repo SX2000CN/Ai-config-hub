@@ -6,37 +6,37 @@
 
 ## 使用场景
 
-- 初始化当前项目的 `docs/ai/` 项目级 AI 配置中枢。
-- 创建、维护或升级 `docs/ai/CURRENT.md` AI 接手入口和多任务状态总览。
-- 创建或维护 `docs/ai/tasks/` 任务无损接手卡机制。
-- 将早期单槽位 `docs/ai/CURRENT.md` 状态迁移为 v2 总览加任务卡。
+- 初始化当前项目的 `.Ai-config/` 项目级 AI 配置中枢。
+- 创建、维护或升级 `.Ai-config/CURRENT.md` AI 接手入口和多任务状态总览。
+- 创建或维护 `.Ai-config/tasks/` 任务无损接手卡机制。
+- 将旧版 `docs/ai/` 或早期单槽位 `.Ai-config/CURRENT.md` 状态迁移为 `.Ai-config/` 总览加任务卡。
 - 为当前项目新增项目级 skill。
 - 修改当前项目已有的项目级 skill。
 - 把已有 `.codex/skills`、`.agents/skills` 或 `.claude/skills` 迁移为共享事实源加工具入口。
 - 审计项目内多个 AI 工具入口是否漂移。
 - 为同一个项目能力生成 Claude Code 和 Codex 双端入口。
 - 检查 skill 中是否包含敏感信息、过期路径或重复事实源。
-- 在 `ai-config-hub` 本仓库中，当用户说“更新项目 AI 配置”或“让项目配置和全局配置匹配”时，默认审计并追平项目内 `docs/ai/` 状态、rendered 产物和本机全局目标的一致性。
+- 在 `ai-config-hub` 本仓库中，当用户说“更新项目 AI 配置”或“让项目配置和全局配置匹配”时，默认审计并追平项目内 `.Ai-config/` 状态、rendered 产物和本机全局目标的一致性；如果仍存在旧版 `docs/ai/`，先把它当作迁移来源。
 
 ## 默认事实源
 
 完整项目级中枢使用：
 
 ```text
-docs/ai/
-docs/ai/CURRENT.md
-docs/ai/tasks/
-docs/ai/tasks/README.md
-docs/ai/archive/
-docs/ai/skills-registry.md
-docs/ai/skills/<skill-name>/
+.Ai-config/
+.Ai-config/CURRENT.md
+.Ai-config/tasks/
+.Ai-config/tasks/README.md
+.Ai-config/archive/
+.Ai-config/skills-registry.md
+.Ai-config/skills/<skill-name>/
 ```
 
 轻量项目可以只使用：
 
 ```text
 AGENTS.md / CLAUDE.md
-docs/ai/CURRENT.md
+.Ai-config/CURRENT.md
 ```
 
 `tasks/`、`archive/`、`skills-registry.md` 和 `skills/<skill-name>/` 都是按需层：只有存在跨会话任务、长期接手状态、项目级 skill 或用户明确要求时才创建。
@@ -57,9 +57,10 @@ docs/ai/CURRENT.md
 ## 工作原则
 
 - 先识别项目已有文档、AI 规则和 skill 入口，再设计目录结构。
-- 按风险和接手价值分层启用配置，不把完整 `docs/ai/` 结构当作所有项目的默认负担。
-- `docs/ai/` 是项目级 AI 配置中枢，`docs/ai/skills/<skill-name>/` 是具体 skill 事实源。
-- `docs/ai/CURRENT.md` 是 AI 接手入口和多任务状态总览；只有有接手价值的任务才保存在 `docs/ai/tasks/*.md`。
+- 按风险和接手价值分层启用配置，不把完整 `.Ai-config/` 结构当作所有项目的默认负担。
+- `.Ai-config/` 是项目级 AI 配置中枢，`.Ai-config/skills/<skill-name>/` 是具体 skill 事实源。
+- 旧版 `docs/ai/` 只作为迁移来源和兼容事实源；新配置统一写入 `.Ai-config/`。
+- `.Ai-config/CURRENT.md` 是 AI 接手入口和多任务状态总览；只有有接手价值的任务才保存在 `.Ai-config/tasks/*.md`。
 - 目标项目的主 README 只作为项目概览，不应被模板强行写成固定 agent 接手入口。
 - 共享事实源描述真实项目状态，不把计划写成已完成。
 - 工具入口必须明确指向共享事实源，不能复制完整规则。

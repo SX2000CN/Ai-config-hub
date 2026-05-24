@@ -1,14 +1,11 @@
-[CmdletBinding()]
-param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$ContextThreadArgs
-)
-
 $ErrorActionPreference = 'Stop'
 
+$ContextThreadArgs = $args
+
 $Root = Split-Path -Parent $PSScriptRoot
-$ContextThreadRoot = Join-Path $Root 'tools\context-thread-engine'
-$ContextThreadEntry = Join-Path $ContextThreadRoot 'dist\bin\context-thread.js'
+$UserHome = [Environment]::GetFolderPath('UserProfile')
+$RuntimeRoot = Join-Path $UserHome '.ai-config-hub\mcp\context-thread'
+$RuntimeEntry = Join-Path $RuntimeRoot 'dist\bin\context-thread.js'
 
 function Write-Usage() {
     Write-Error @"
@@ -30,37 +27,20 @@ function Require-Command($Name) {
     return $command
 }
 
-if (-not (Test-Path -LiteralPath $ContextThreadRoot)) {
-    throw "Local context-thread engine source was not found: $ContextThreadRoot"
-}
-
 if ($null -eq $ContextThreadArgs -or $ContextThreadArgs.Count -eq 0) {
     Write-Usage
     exit 64
 }
 
 if ($ContextThreadArgs[0] -eq 'bootstrap') {
-    $npm = Require-Command 'npm'
-
-    Push-Location -LiteralPath $ContextThreadRoot
-    try {
-        & $npm.Source ci
-        if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-        }
-
-        & $npm.Source run build
-        exit $LASTEXITCODE
-    }
-    finally {
-        Pop-Location
-    }
+    & (Join-Path $Root 'scripts\sync-context-thread-runtime.ps1') -Apply
+    exit $LASTEXITCODE
 }
 
-if (-not (Test-Path -LiteralPath $ContextThreadEntry)) {
-    throw "Local context-thread engine build was not found: $ContextThreadEntry. Run '.\scripts\context-thread.ps1 bootstrap' first."
+if (-not (Test-Path -LiteralPath $RuntimeEntry)) {
+    throw "ContextThread runtime was not found: $RuntimeEntry. Run '.\scripts\sync-context-thread-runtime.ps1 -Apply' first."
 }
 
 $node = Require-Command 'node'
-& $node.Source $ContextThreadEntry @ContextThreadArgs
+& $node.Source $RuntimeEntry @ContextThreadArgs
 exit $LASTEXITCODE

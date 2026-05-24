@@ -218,7 +218,7 @@ export class MCPServer {
   /**
    * Try to initialize ContextThread for the default project.
    *
-   * Walks up parent directories to find the nearest .context-thread/ folder,
+   * Walks up parent directories to find the nearest .Ai-config/context-thread/ folder,
    * similar to how git finds .git/ directories.
    *
    * If initialization fails, the error is recorded but the server continues
@@ -229,7 +229,7 @@ export class MCPServer {
     // Record where we searched so a later "not initialized" error can name it.
     this.toolHandler.setDefaultProjectHint(projectPath);
 
-    // Walk up parent directories to find nearest .context-thread/
+    // Walk up parent directories to find nearest .Ai-config/context-thread/
     const resolvedRoot = findNearestContextThreadRoot(projectPath);
 
     if (!resolvedRoot) {

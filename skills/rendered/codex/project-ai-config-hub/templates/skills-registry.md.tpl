@@ -4,7 +4,7 @@
 
 | Skill | 状态 | 事实源 | Claude Code 入口 | Codex 入口 | 备注 |
 |---|---|---|---|---|---|
-| {{skill_name}} | {{status}} | `docs/ai/skills/{{skill_name}}/` | `.claude/skills/{{skill_name}}/SKILL.md` | `.agents/skills/{{skill_name}}/SKILL.md` | {{note}} |
+| {{skill_name}} | {{status}} | `.Ai-config/skills/{{skill_name}}/` | `.claude/skills/{{skill_name}}/SKILL.md` | `.agents/skills/{{skill_name}}/SKILL.md` | {{note}} |
 
 ## 状态说明
 

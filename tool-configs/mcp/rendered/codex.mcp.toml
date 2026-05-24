@@ -24,7 +24,7 @@ PROGRAMFILES = "C:\\Program Files"
 
 [mcp_servers.context-thread]
 command = "cmd"
-args = ["/c", "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "D:\\Windows\\桌面\\Encoding\\Ai-config-hub\\scripts\\context-thread.ps1", "serve", "--mcp"]
+args = ["/c", "node", "C:\\Users\\sx200\\.ai-config-hub\\mcp\\context-thread\\dist\\bin\\context-thread.js", "serve", "--mcp"]
 startup_timeout_ms = 20000
 
 [mcp_servers.context-thread.env]

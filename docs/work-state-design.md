@@ -2,7 +2,7 @@
 
 本文设计一种按需启用的轻量项目级 AI 协作状态机制，用来让任意 AI 编程工具在中断、隔天继续、切换任务或切换工具时快速恢复现场。
 
-当前状态：v2 已设计，目标是替代早期单槽位 `docs/ai/CURRENT.md` 机制。
+当前状态：v2 已设计，目标是替代早期单槽位 `.Ai-config/CURRENT.md` 机制。
 
 ## 背景
 
@@ -19,7 +19,7 @@
 
 ## 目标
 
-- 让任意 AI 工具进入项目后，可以先从 `docs/ai/CURRENT.md` 判断当前是否有活动任务、暂停任务、阻塞任务或待确认任务。
+- 让任意 AI 工具进入项目后，可以先从 `.Ai-config/CURRENT.md` 判断当前是否有活动任务、暂停任务、阻塞任务或待确认任务。
 - 支持多个任务并存，但同一时间只有一个当前活动任务。
 - 让有接手价值的任务拥有独立任务卡，避免新任务覆盖旧任务状态。
 - 有接手价值的工作完成一轮后不要求用户每次手动归档；需要用户审核或仍有风险时进入 `待用户确认`，由任务卡保留结果、验证和风险。
@@ -34,14 +34,14 @@
 - 不做复杂看板、数据库、JSON 状态机或自动任务调度系统。
 - 不默认记录敏感信息、真实凭证、私有 URL 或生产细节。
 - 不要求每个小任务、简单问答、一次性命令或马上完成且没有接手价值的改动都创建任务卡。
-- 不把 `docs/ai/tasks/`、`archive/` 或 `skills-registry.md` 当作所有项目的强制健康指标。
+- 不把 `.Ai-config/tasks/`、`archive/` 或 `skills-registry.md` 当作所有项目的强制健康指标。
 
 ## 推荐位置
 
 完整形态推荐使用：
 
 ```text
-docs/ai/
+.Ai-config/
   README.md
   CURRENT.md
   tasks/
@@ -52,17 +52,17 @@ docs/ai/
 
 含义：
 
-- `docs/ai/README.md`：AI 配置中枢索引和边界说明。
-- `docs/ai/CURRENT.md`：AI 接手入口和工作状态总览。
-- `docs/ai/tasks/README.md`：任务卡规则说明。
-- `docs/ai/tasks/*.md`：单个任务的无损接手卡。
-- `docs/ai/archive/`：可选长期整理目录，不作为每次任务完成的必需动作。
+- `.Ai-config/README.md`：AI 配置中枢索引和边界说明。
+- `.Ai-config/CURRENT.md`：AI 接手入口和工作状态总览。
+- `.Ai-config/tasks/README.md`：任务卡规则说明。
+- `.Ai-config/tasks/*.md`：单个任务的无损接手卡。
+- `.Ai-config/archive/`：可选长期整理目录，不作为每次任务完成的必需动作。
 
 ## 核心定义
 
-`docs/ai/CURRENT.md` 是项目当前 AI 协作接手入口和工作状态总览。它不承载完整任务上下文，而是指向对应任务卡，并给出按任务类型读取事实源的导航。
+`.Ai-config/CURRENT.md` 是项目当前 AI 协作接手入口和工作状态总览。它不承载完整任务上下文，而是指向对应任务卡，并给出按任务类型读取事实源的导航。
 
-`docs/ai/tasks/*.md` 是任务事实源。任务卡保存目标、背景、状态、最近结论、已确认事实、已尝试和排除方向、卡点、下一步、验证状态、残留风险和相关文件。
+`.Ai-config/tasks/*.md` 是任务事实源。任务卡保存目标、背景、状态、最近结论、已确认事实、已尝试和排除方向、卡点、下一步、验证状态、残留风险和相关文件。
 
 日常工作中，“关闭任务”取代“手动归档”。`已关闭` 表示任务已经无需继续处理，且关闭依据已记录；涉及文件修改、配置修改、脚本执行、同步风险、验证缺失或残留风险时，必须先有用户明确确认。未审核、未验证或有残留风险的任务应保持为 `待用户确认`、`等待验证`、`阻塞` 或 `暂停`。
 
@@ -75,8 +75,8 @@ docs/ai/
 以本仓库为例：
 
 ```text
-1. 先读 docs/ai/CURRENT.md，判断是否有当前任务和任务卡。
-2. 再按 CURRENT.md 指引读取 docs/ai/README.md，理解 AI 协作中枢边界。
+1. 先读 .Ai-config/CURRENT.md，判断是否有当前任务和任务卡。
+2. 再按 CURRENT.md 指引读取 .Ai-config/README.md，理解 AI 协作中枢边界。
 3. 如果任务涉及全局规则，读 rules/shared/core.md、rules/tools/*、templates/*。
 4. 如果任务涉及 project-ai-config-hub skill，读 skills/shared/project-ai-config-hub/ 和工具入口源。
 5. 如果任务涉及渲染/同步，读 scripts/render*.ps1、check*.ps1、sync*.ps1 和 docs/sync-workflow.md。
@@ -166,7 +166,7 @@ docs/ai/
 # 当前工作状态
 
 更新时间：YYYY-MM-DD HH:mm
-当前活动任务：无 / docs/ai/tasks/YYYY-MM-DD-topic.md
+当前活动任务：无 / .Ai-config/tasks/YYYY-MM-DD-topic.md
 
 ## 接手导航
 
@@ -268,18 +268,18 @@ docs/ai/
 
 `project-ai-config-hub` 分身 skill 应把 v2 作为默认项目级 AI 配置中枢形态，但按项目复杂度分层启用：
 
-- 轻量项目可只创建 `docs/ai/CURRENT.md`，甚至只保留项目规则文件。
-- 需要跨会话、多任务或等待确认时，再创建 `docs/ai/tasks/README.md` 和任务卡。
-- 只有存在项目级 skill 或用户要求登记时，才创建 `docs/ai/skills-registry.md`。
-- `docs/ai/archive/` 只作为长期整理目录，不是日常任务关闭所需结构。
+- 轻量项目可只创建 `.Ai-config/CURRENT.md`，甚至只保留项目规则文件。
+- 需要跨会话、多任务或等待确认时，再创建 `.Ai-config/tasks/README.md` 和任务卡。
+- 只有存在项目级 skill 或用户要求登记时，才创建 `.Ai-config/skills-registry.md`。
+- `.Ai-config/archive/` 只作为长期整理目录，不是日常任务关闭所需结构。
 - 旧项目已有 v1 `CURRENT.md` 时不得直接覆盖，应先判断是否明确空闲。
-- 不能确认为空闲的 v1 状态，包括 `进行中`、`暂停`、`阻塞`、`等待验证`、`待用户审核` 或 `待用户确认`，都应迁移为 `docs/ai/tasks/YYYY-MM-DD-<topic>.md`，再把 `CURRENT.md` 改为总览并指向任务卡。
+- 不能确认为空闲的 v1 状态，包括 `进行中`、`暂停`、`阻塞`、`等待验证`、`待用户审核` 或 `待用户确认`，都应迁移为 `.Ai-config/tasks/YYYY-MM-DD-<topic>.md`，再把 `CURRENT.md` 改为总览并指向任务卡。
 - 迁移、覆盖、删除旧状态前应给计划并等待确认。
 
 ## 已确认
 
-- `docs/ai/CURRENT.md` 是接手入口和状态总览，不是完整任务事实源。
-- `docs/ai/tasks/*.md` 是有接手价值任务的无损接手卡，不是每个任务的必需产物。
+- `.Ai-config/CURRENT.md` 是接手入口和状态总览，不是完整任务事实源。
+- `.Ai-config/tasks/*.md` 是有接手价值任务的无损接手卡，不是每个任务的必需产物。
 - 主 `README.md` 不是 agent 固定接手入口，只作为项目概览补充。
 - 日常关闭任务不需要移动到 `archive/`。
 - v2 不引入 hook、数据库或复杂脚本状态机。

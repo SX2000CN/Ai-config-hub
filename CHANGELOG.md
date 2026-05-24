@@ -2,14 +2,15 @@
 
 ## 2026-05-24
 
-- 引入轻量结构化事实层：新增 `global-context-thread` skill，用 context-thread 承接复杂代码关系，用 `docs/ai` 任务卡关系索引承接非代码复杂工作流，同时保持 L0/L1 小任务不升级。
-- 新增 `context-thread` MCP 配置组，通过 `scripts/context-thread.ps1` 从 `tools/context-thread-engine` 本地源码启动 MCP server，并将 MCP 渲染、检查和同步脚本升级为多组托管配置；未 bootstrap 本地源码时仅 warning，不阻塞浏览器 MCP。
+- 将本仓库项目级 AI 配置中枢从旧版 `docs/ai/` 迁移到根目录 `.Ai-config/`，旧路径仅保留兼容提示；`.Ai-config/context-thread/` 作为脉络项目索引目录并加入忽略。
+- 引入轻量结构化事实层：新增 `global-context-thread` skill，用 context-thread 承接复杂代码关系，用 `.Ai-config` 任务卡关系索引承接非代码复杂工作流，同时保持 L0/L1 小任务不升级。
+- 新增 `context-thread` MCP 配置组，并把脉络引擎运行时分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`；MCP 配置通过 `node` 启动用户级 runtime，不再指向当前仓库路径，runtime 缺失时仅 warning，不阻塞浏览器 MCP。
 - 在共享规则中加入短版“结构化事实优先”原则，并给任务卡模板增加可选 `关系索引` 区块。
 
 ## 2026-05-19
 
 - 轻量化全局 AI 规则：把默认工作方式改为按风险升级，减少小任务中的文档、任务卡、计划和验证仪式感。
-- 调整 `project-ai-config-hub`：目标项目按需启用 `docs/ai/CURRENT.md`、任务卡、registry 和项目级 skill 入口，不再把完整中枢作为所有项目的默认负担。
+- 调整 `project-ai-config-hub`：目标项目按需启用 `.Ai-config/CURRENT.md`、任务卡、registry 和项目级 skill 入口，不再把完整中枢作为所有项目的默认负担。
 - 更新工作状态设计与项目文档，明确任务卡只用于跨会话、多任务、等待确认、阻塞或有残留风险的任务。
 - 收紧 `pencil-design-workflow` 与 `global-frontend-design` 交接：设计请求默认必须使用当前会话可用的可见 Pencil MCP 宿主，VS Code/Cursor 插件端和 Pencil Desktop 客户端都可作为有效宿主；Pencil MCP 不可用时必须停下说明，不能静默降级到 CLI/headless 或直接进入前端实现。
 - 轻量化 `pencil-design-workflow`：入口和主流程改为短闸门，CLI/headless、MCP 细节、保存位置和审查验证拆到按需 references，减少与前端设计 skill 叠加时的上下文负担。

@@ -4,6 +4,10 @@
 /tools/context-thread-engine/node_modules/
 /tools/context-thread-engine/dist/
 /tools/context-thread-engine/release/
+/.Ai-config/context-thread/*
+!/.Ai-config/context-thread/.gitignore
+!/.Ai-config/context-thread/README.md
+!/.Ai-config/context-thread/context-thread.db
 
 *.local.*
 *.secret.*
