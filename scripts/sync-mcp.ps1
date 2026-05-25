@@ -14,6 +14,7 @@ $CodexSource = Join-Path $RenderedRoot 'codex.mcp.toml'
 $UserHome = [Environment]::GetFolderPath('UserProfile')
 $ClaudeTarget = Join-Path $UserHome '.claude.json'
 $CodexTarget = Join-Path $UserHome '.codex\config.toml'
+. (Join-Path $PSScriptRoot 'mcp-local.ps1')
 $McpGroups = @(
     @{
         Name = 'browser-visual'
@@ -25,6 +26,7 @@ $McpGroups = @(
         LegacyServers = @()
     }
 )
+$LocalMcpServers = @('pencil')
 
 if (-not $ClaudeCode -and -not $Codex) {
     $ClaudeCode = $true
@@ -112,6 +114,19 @@ function ConvertTo-StableJson($Object) {
     return ($Object | ConvertTo-Json -Depth 32) + "`n"
 }
 
+function Get-PencilMcpServerObject($AgentName) {
+    $server = Resolve-AiConfigHubPencilMcpServer
+    if ($null -eq $server) {
+        return $null
+    }
+
+    return [pscustomobject]@{
+        type = 'stdio'
+        command = $server.Command
+        args = @('--app', $server.App, '--agent', $AgentName)
+    }
+}
+
 function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
     $managedServers = Get-ManagedServers
     $activeManagedServers = Get-ActiveManagedServers
@@ -138,7 +153,7 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
     $actions = New-Object System.Collections.Generic.List[string]
     $existingNames = Get-PropertyNames $target.mcpServers
     foreach ($serverName in $existingNames) {
-        if ($managedServers -notcontains $serverName) {
+        if ($managedServers -notcontains $serverName -and $LocalMcpServers -notcontains $serverName) {
             $actions.Add("preserve mcpServers.$serverName")
         }
     }
@@ -179,6 +194,21 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
         $target.mcpServers | Add-Member -MemberType NoteProperty -Name $serverName -Value $newServer
     }
 
+    if ($existingNames -contains 'pencil') {
+        $actions.Add('preserve local mcpServers.pencil')
+    }
+    else {
+        $pencilServer = Get-PencilMcpServerObject 'claudeCode'
+        if ($null -eq $pencilServer) {
+            Write-Warning 'Pencil MCP server was not found locally; sync-mcp will not add mcpServers.pencil. Install Pencil Desktop or Pencil MCP support before using pencil-design-workflow.'
+        }
+        else {
+            $target.mcpServers | Add-Member -MemberType NoteProperty -Name 'pencil' -Value $pencilServer
+            $actions.Add("add local mcpServers.pencil ($($pencilServer.command))")
+            $managedChanged = $true
+        }
+    }
+
     return [pscustomobject]@{
         Content = if ($managedChanged -or -not $targetExists) { ConvertTo-StableJson $target } else { $targetContent }
         Actions = @($actions)
@@ -201,6 +231,29 @@ function Get-CodexGroupBlock($Content, $GroupName) {
         throw "Rendered Codex MCP fragment must contain exactly one $GroupName block."
     }
     return $matches[0].Value.TrimEnd()
+}
+
+function Format-TomlString($Value) {
+    return '"' + ([string]$Value -replace '\\', '\\' -replace '"', '\"') + '"'
+}
+
+function Format-TomlStringArray($Values) {
+    $quoted = @($Values) | ForEach-Object { Format-TomlString $_ }
+    return '[' + ($quoted -join ', ') + ']'
+}
+
+function New-CodexPencilMcpBlock {
+    $server = Resolve-AiConfigHubPencilMcpServer
+    if ($null -eq $server) {
+        return $null
+    }
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add('[mcp_servers.pencil]')
+    $lines.Add('command = ' + (Format-TomlString $server.Command))
+    $lines.Add('args = ' + (Format-TomlStringArray @('--app', $server.App, '--agent', 'codexCLI')))
+    $lines.Add("startup_timeout_ms = $($server.StartupTimeoutMs)")
+    return ($lines -join "`n")
 }
 
 function Get-CodexMergedContent($TargetPath, $SourcePath) {
@@ -253,6 +306,22 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
                         $working = [regex]::Replace($working, $pattern, '', 1)
                     }
                 }
+            }
+        }
+    }
+
+    if ($working -notmatch '(?m)^\[mcp_servers\.pencil\]$') {
+        $pencilBlock = New-CodexPencilMcpBlock
+        if ($null -eq $pencilBlock) {
+            Write-Warning 'Pencil MCP server was not found locally; sync-mcp will not add [mcp_servers.pencil]. Install Pencil Desktop or Pencil MCP support before using pencil-design-workflow.'
+        }
+        else {
+            $actions.Add('add local mcp_servers.pencil')
+            if ([string]::IsNullOrWhiteSpace($working)) {
+                $working = $pencilBlock + "`n"
+            }
+            else {
+                $working = $working.TrimEnd() + "`n`n" + $pencilBlock + "`n"
             }
         }
     }

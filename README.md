@@ -83,6 +83,8 @@ MCP 配置片段管理流程：
 .\scripts\sync-mcp.ps1
 ```
 
+`sync-mcp.ps1` 会在同步本机时自动发现 Pencil MCP server，并把 `pencil` 配置合并到 Claude Code / Codex 用户配置；如果本机还没有 Pencil Desktop 或对应 MCP server，只给 warning，不阻塞浏览器和脉络 MCP 同步。
+
 脉络 MCP 使用本仓库源码构建，但运行时分发到用户级目录，不指向当前项目路径。首次使用或引擎源码变更后，先同步全局运行时：
 
 ```powershell
@@ -123,7 +125,7 @@ MCP 配置片段管理流程：
 - 已支持 Claude Code 和 Codex 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
 - 已支持五个全局 skill 的源码化、渲染、检查和 dry-run 同步流程；新增或变更的用户级安装需执行 `sync-skills.ps1 -Apply`。
-- 已支持浏览器视觉验证 MCP 与 脉络 MCP 的源码化片段、渲染、检查和 dry-run 安全合并同步流程；真实用户级配置需执行 `sync-mcp.ps1 -Apply`。
+- 已支持浏览器视觉验证 MCP、脉络 MCP 和 Pencil MCP 的检查与 dry-run 安全合并同步流程；其中 Pencil MCP 按本机安装自动发现，真实用户级配置需执行 `sync-mcp.ps1 -Apply`。
 - 脉络 MCP 的源码维护在 `tools/context-thread-engine/`，运行时由 `scripts/sync-context-thread-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`，MCP 配置通过 `node` 启动该用户级 runtime，不依赖当前仓库路径或全局 `context-thread` 命令。
 - Pencil 设计先行和真实浏览器 MCP 截图检查链路已完成过验证；对应一次性夹具产物已清理，不作为长期项目资产保留。
 - Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。

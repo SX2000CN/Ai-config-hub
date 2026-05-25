@@ -4,6 +4,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $RenderedRoot = Join-Path $Root 'tool-configs\mcp\rendered'
 $ClaudePath = Join-Path $RenderedRoot 'claude-code.mcp.json'
 $CodexPath = Join-Path $RenderedRoot 'codex.mcp.toml'
+. (Join-Path $PSScriptRoot 'mcp-local.ps1')
 $McpGroups = @(
     @{
         Name = 'browser-visual'
@@ -212,6 +213,7 @@ $ScanPaths = @(
     (Join-Path $Root 'tool-configs'),
     (Join-Path $Root 'scripts\render-mcp.ps1'),
     (Join-Path $Root 'scripts\check-mcp.ps1'),
+    (Join-Path $Root 'scripts\mcp-local.ps1'),
     (Join-Path $Root 'scripts\sync-mcp.ps1'),
     (Join-Path $Root 'docs'),
     (Join-Path $Root 'README.md')
@@ -255,6 +257,14 @@ foreach ($file in $scanFiles) {
             }
         }
     }
+}
+
+$pencilServer = Resolve-AiConfigHubPencilMcpServer
+if ($null -eq $pencilServer) {
+    Write-Warning 'Pencil MCP server was not found locally. sync-mcp.ps1 can still manage browser/context-thread MCP, but pencil-design-workflow needs Pencil Desktop or Pencil MCP support before use.'
+}
+else {
+    Write-Output "Pencil MCP candidate: $($pencilServer.Command) --app $($pencilServer.App)"
 }
 
 if ($Failed) {
