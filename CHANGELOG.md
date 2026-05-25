@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-05-25
+
+- 将项目文档重心从分发系统调整为 AI 配置本体，新增 `docs/ai-config-design.md`，并把脉络设计、实现和场景文档整理到 `docs/context-thread/`。
+- 清理迁移后的旧 `docs/ai/` 副本，以及一次性视觉验证和 Pencil 测试产物；`.Ai-config/` 保留为当前项目 AI 接手事实源。
+- 补强 context-thread 引擎的 MCP 工具关闭、watcher 说明、依赖方重解析和新增源码目录 pending 检测，并增加对应测试。
+- 在共享规则中加入项目文档和产物整理原则，要求旧入口、重复副本、一次性夹具和运行时临时文件不作为长期项目资产保留。
+
 ## 2026-05-24
 
 - 将本仓库项目级 AI 配置中枢从旧版 `docs/ai/` 迁移到根目录 `.Ai-config/`，旧路径仅保留兼容提示；`.Ai-config/context-thread/` 作为脉络项目索引目录并加入忽略。

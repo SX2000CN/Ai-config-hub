@@ -57,13 +57,13 @@ of calls; a grep/read exploration is dozens.
 - **Don't grep first** when looking up a symbol by name — \`context_thread_search\` is faster and returns kind + location + signature.
 - **Don't chain \`context_thread_search\` + \`context_thread_node\`** when you just want context — \`context_thread_context\` is one round-trip.
 - **Don't loop \`context_thread_node\` over many symbols** — one \`context_thread_explore\` call returns them all grouped by file, while each separate call re-reads the whole context and costs far more. Use \`context_thread_node\` for a single symbol.
-- **Don't query the index immediately after editing a file** — the watcher needs ~500ms to debounce + sync. Wait for the next turn.
+- **Don't query the index immediately after editing a file** — the watcher needs ~2s to debounce + sync. Wait for the next turn.
 
 ## Limitations
 
 - Auto-sync requires an initialized project plus an active MCP watcher; otherwise
   check \`context_thread_status\` for pending changes and refresh or verify from files.
-- With an active watcher, the index usually lags file writes by ~1 second.
+- With an active watcher, the index usually lags file writes by about 2-3 seconds.
 - Cross-file resolution is best-effort name matching; ambiguous calls may return multiple candidates.
 - No live correctness validation — that's still the TypeScript compiler / test suite / linter's job. ContextThread supplements those with structural context they don't have.
 `;

@@ -641,7 +641,8 @@ export class ToolHandler {
    * Close all cached project connections
    */
   closeAll(): void {
-    for (const cg of this.projectCache.values()) {
+    const uniqueConnections = new Set(this.projectCache.values());
+    for (const cg of uniqueConnections) {
       cg.close();
     }
     this.projectCache.clear();

@@ -1,6 +1,8 @@
 # context-thread engine
 
 This is the local source engine used by ai-config-hub's "脉络" MCP workflow.
+The full design and implementation notes live in `../../docs/context-thread/`.
+
 It is built from this repo, then published to a user-level runtime:
 
 ```powershell

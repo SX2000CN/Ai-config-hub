@@ -14,6 +14,7 @@ import {
   FileRecord,
   ExtractionResult,
   ExtractionError,
+  EdgeKind,
 } from '../types';
 import { QueryBuilder } from '../db/queries';
 import { extractFromSource } from './tree-sitter';
@@ -208,7 +209,7 @@ function getGitChangedFiles(rootDir: string): GitChanges | null {
   try {
     const output = execFileSync(
       'git',
-      ['status', '--porcelain', '--no-renames'],
+      ['status', '--porcelain', '--no-renames', '--untracked-files=all'],
       { cwd: rootDir, encoding: 'utf-8', timeout: 10000, stdio: ['pipe', 'pipe', 'pipe'] }
     );
 
@@ -489,6 +490,43 @@ export class ExtractionOrchestrator {
     const context = this.buildDetectionContext(fileList);
     this.detectedFrameworkNames = detectFrameworks(context).map((r) => r.name);
     return this.detectedFrameworkNames;
+  }
+
+  /**
+   * Return files whose currently indexed edges point at symbols in filePath.
+   * This is intentionally broader than import-only dependency detection: a
+   * symbol move, rename, or deletion can invalidate calls/references stored in
+   * otherwise unchanged files, so those dependents need a fresh parse pass.
+   */
+  private getRelationshipDependents(filePath: string): string[] {
+    const nodes = this.queries.getNodesByFile(filePath);
+    if (nodes.length === 0) return [];
+
+    const edgeKinds: EdgeKind[] = [
+      'imports',
+      'calls',
+      'references',
+      'type_of',
+      'returns',
+      'instantiates',
+      'extends',
+      'implements',
+      'decorates',
+      'overrides',
+    ];
+    const dependents = new Set<string>();
+
+    for (const node of nodes) {
+      const incomingEdges = this.queries.getIncomingEdges(node.id, edgeKinds);
+      for (const edge of incomingEdges) {
+        const sourceNode = this.queries.getNodeById(edge.source);
+        if (sourceNode && sourceNode.filePath !== filePath) {
+          dependents.add(sourceNode.filePath);
+        }
+      }
+    }
+
+    return Array.from(dependents);
   }
 
   /**
@@ -1029,7 +1067,7 @@ export class ExtractionOrchestrator {
   /**
    * Index a single file
    */
-  async indexFile(relativePath: string): Promise<ExtractionResult> {
+  async indexFile(relativePath: string, options: { force?: boolean } = {}): Promise<ExtractionResult> {
     const fullPath = validatePathWithinRoot(this.rootDir, relativePath);
 
     if (!fullPath) {
@@ -1065,7 +1103,7 @@ export class ExtractionOrchestrator {
       };
     }
 
-    return this.indexFileWithContent(relativePath, content, stats);
+    return this.indexFileWithContent(relativePath, content, stats, options);
   }
 
   /**
@@ -1075,7 +1113,8 @@ export class ExtractionOrchestrator {
   async indexFileWithContent(
     relativePath: string,
     content: string,
-    stats: fs.Stats
+    stats: fs.Stats,
+    options: { force?: boolean } = {}
   ): Promise<ExtractionResult> {
     // Prevent path traversal
     const fullPath = validatePathWithinRoot(this.rootDir, relativePath);
@@ -1128,7 +1167,7 @@ export class ExtractionOrchestrator {
 
     // Store in database
     if (result.nodes.length > 0 || result.errors.length === 0) {
-      this.storeExtractionResult(relativePath, content, language, stats, result);
+      this.storeExtractionResult(relativePath, content, language, stats, result, options);
     }
 
     return result;
@@ -1142,13 +1181,14 @@ export class ExtractionOrchestrator {
     content: string,
     language: Language,
     stats: fs.Stats,
-    result: ExtractionResult
+    result: ExtractionResult,
+    options: { force?: boolean } = {}
   ): void {
     const contentHash = hashContent(content);
 
     // Check if file already exists and hasn't changed
     const existingFile = this.queries.getFileByPath(filePath);
-    if (existingFile && existingFile.contentHash === contentHash) {
+    if (existingFile && existingFile.contentHash === contentHash && !options.force) {
       return; // No changes
     }
 
@@ -1228,6 +1268,29 @@ export class ExtractionOrchestrator {
     });
 
     const filesToIndex: string[] = [];
+    const forceReindexFiles = new Set<string>();
+    const forceReindexDependents = new Set<string>();
+    const enqueueFileForIndex = (
+      filePath: string,
+      kind: 'added' | 'modified' | 'dependent'
+    ): void => {
+      if (!filesToIndex.includes(filePath)) {
+        filesToIndex.push(filePath);
+      }
+      if (kind === 'dependent') {
+        forceReindexFiles.add(filePath);
+      }
+      if (!changedFilePaths.includes(filePath)) {
+        changedFilePaths.push(filePath);
+      }
+    };
+    const rememberDependents = (filePath: string): void => {
+      for (const dependent of this.getRelationshipDependents(filePath)) {
+        if (dependent !== filePath) {
+          forceReindexDependents.add(dependent);
+        }
+      }
+    };
     const gitChanges = getGitChangedFiles(this.rootDir);
 
     if (gitChanges) {
@@ -1239,6 +1302,7 @@ export class ExtractionOrchestrator {
       for (const filePath of gitChanges.deleted) {
         const tracked = this.queries.getFileByPath(filePath);
         if (tracked) {
+          rememberDependents(filePath);
           this.queries.deleteFile(filePath);
           filesRemoved++;
         }
@@ -1263,12 +1327,11 @@ export class ExtractionOrchestrator {
         const tracked = this.queries.getFileByPath(filePath);
 
         if (!tracked) {
-          filesToIndex.push(filePath);
-          changedFilePaths.push(filePath);
+          enqueueFileForIndex(filePath, 'added');
           filesAdded++;
         } else if (tracked.contentHash !== contentHash) {
-          filesToIndex.push(filePath);
-          changedFilePaths.push(filePath);
+          rememberDependents(filePath);
+          enqueueFileForIndex(filePath, 'modified');
           filesModified++;
         }
       }
@@ -1287,6 +1350,7 @@ export class ExtractionOrchestrator {
       // Find files to remove (in DB but not on disk)
       for (const tracked of trackedFiles) {
         if (!currentFiles.has(tracked.path)) {
+          rememberDependents(tracked.path);
           this.queries.deleteFile(tracked.path);
           filesRemoved++;
         }
@@ -1307,15 +1371,23 @@ export class ExtractionOrchestrator {
         const tracked = trackedMap.get(filePath);
 
         if (!tracked) {
-          filesToIndex.push(filePath);
-          changedFilePaths.push(filePath);
+          enqueueFileForIndex(filePath, 'added');
           filesAdded++;
         } else if (tracked.contentHash !== contentHash) {
-          filesToIndex.push(filePath);
-          changedFilePaths.push(filePath);
+          rememberDependents(filePath);
+          enqueueFileForIndex(filePath, 'modified');
           filesModified++;
         }
       }
+    }
+
+    // A changed file can invalidate edges stored in files that import/reference it
+    // even when those dependent files did not change on disk. Re-index those
+    // dependents so callers/impact queries do not keep stale cross-file edges
+    // after symbol moves, renames, or deletions.
+    for (const filePath of forceReindexDependents) {
+      if (!this.queries.getFileByPath(filePath)) continue;
+      enqueueFileForIndex(filePath, 'dependent');
     }
 
     // Load only grammars needed for changed files
@@ -1339,7 +1411,11 @@ export class ExtractionOrchestrator {
         currentFile: filePath,
       });
 
-      const result = await this.indexFile(filePath);
+      const force = forceReindexFiles.has(filePath);
+      const result = await this.indexFile(filePath, { force });
+      if (force && result.errors.length === 0 && result.nodes.length > 0) {
+        filesModified++;
+      }
       nodesUpdated += result.nodes.length;
     }
 

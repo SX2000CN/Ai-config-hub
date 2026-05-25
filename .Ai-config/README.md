@@ -1,6 +1,8 @@
 # 项目级 AI 配置中枢
 
-本目录记录当前项目的 AI 协作状态、项目级 skills 清单和维护约定。
+本目录记录当前项目的 AI 协作状态、项目级 skills 清单和维护约定。它是项目状态层，不是整套 AI 配置设计的全部。
+
+整套配置的设计目标、问题域和分层实现见：[../docs/ai-config-design.md](../docs/ai-config-design.md)。
 
 ## 目录
 
@@ -9,6 +11,12 @@
 - `archive/`：可选长期整理目录，只在用户明确要求整理或归档长期摘要时使用。
 - `skills-registry.md`：项目级 skills 清单、事实源、入口和状态。
 - `skills/`：面向项目自身的项目级 skill 事实源目录。
+
+## 与 docs/ 的边界
+
+- 长期设计文档放在 `docs/`，例如 `docs/ai-config-design.md`、`docs/context-thread/`、`docs/work-state-design.md`。
+- `.Ai-config/` 只保存当前项目 AI 接手所需状态、任务事实和项目级 skill 登记。
+- 任务卡可以链接长期文档，但不要把长期设计说明复制进任务卡。
 
 ## 当前工作状态
 
@@ -28,4 +36,4 @@
 
 ## 本仓库说明
 
-本仓库同时维护全局规则和可同步到用户级目录的 `project-ai-config-hub` skill。该 skill 的长期事实源仍位于 `skills/shared/project-ai-config-hub/`，并通过 `scripts/render-skills.ps1` 生成 rendered 包；`.Ai-config/` 承担当前仓库的 AI 协作中枢职责，旧版 `docs/ai/` 仅作为迁移兼容入口。
+本仓库同时维护全局规则和可同步到用户级目录的 `project-ai-config-hub` skill。该 skill 的长期事实源仍位于 `skills/shared/project-ai-config-hub/`，并通过 `scripts/render-skills.ps1` 生成 rendered 包；`.Ai-config/` 承担当前仓库的 AI 协作中枢职责。旧版 `docs/ai/` 历史副本已清理，历史记录保留在 `.Ai-config/archive/` 和相关任务卡中。

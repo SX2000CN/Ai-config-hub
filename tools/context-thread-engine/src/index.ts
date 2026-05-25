@@ -399,6 +399,11 @@ export class ContextThread {
 
         // Resolve references if files were updated
         if (result.filesAdded > 0 || result.filesModified > 0) {
+          // Re-indexing deletes and recreates nodes, so resolver caches can hold
+          // stale node IDs from before this sync. Clear them before resolving
+          // the new unresolved refs to avoid dangling edges.
+          this.resolver.initialize();
+
           if (result.changedFilePaths) {
             // Scope resolution to changed files (git fast path — bounded set)
             const unresolvedRefs = this.queries.getUnresolvedReferencesByFiles(result.changedFilePaths);

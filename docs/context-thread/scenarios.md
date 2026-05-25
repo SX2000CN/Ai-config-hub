@@ -2,6 +2,8 @@
 
 本文记录 `ai-config-hub` 引入脉络后的真实使用边界。目标不是让每个任务都走图谱，而是让复杂关系任务有一层可查询、可同步、低负担的结构化事实源。
 
+整体设计见 [design.md](design.md)，技术实现见 [implementation.md](implementation.md)。
+
 ## 总体判断
 
 当前方案是可用的，但不是所有场景都完全无感。
@@ -21,10 +23,11 @@
 | L2 复杂代码影响面 | 先 `context_thread_status`，再 `context_thread_context/search/impact`，最后读关键文件确认 | 已支持 | 索引陈旧导致判断偏差 | `status` 显示 pending changes；修改后仍以当前文件和验证为准 |
 | 新项目从 0 接入 | 先按需创建 `.Ai-config/CURRENT.md`，复杂代码任务再初始化索引 | 部分支持 | 用户以为安装全局 MCP 后所有项目都有索引 | 文档明确每个项目索引独立 |
 | 已有项目开始使用 | 识别 `AGENTS.md`、旧 `docs/ai/`、已有 `.Ai-config/`，再迁移或补轻量层 | 已支持 | 非空状态被覆盖，旧入口和新入口断层 | `project-ai-config-hub` 要求迁移前读旧状态并保留任务卡 |
-| 旧项目已有 `docs/ai/` | 把旧目录作为迁移来源，新事实源落到 `.Ai-config/` | 已支持 | 历史链接仍指向旧路径 | 迁移后保留兼容提示，删除需单独确认 |
+| 旧项目已有 `docs/ai/` | 把旧目录作为迁移来源，新事实源落到 `.Ai-config/` | 已支持 | 历史链接仍指向旧路径 | 迁移完成前保留旧信息；确认清理后删除旧副本 |
 | MCP runtime 缺失 | `check-mcp` warning，真实 MCP 无法启动 | 已支持 warning | 用户重启后看不到工具 | 运行 `.\scripts\sync-context-thread-runtime.ps1 -Apply` 后重启工具 |
 | 索引文件被提交 | clone 后可直接查已有结构 | 已支持 | DB 与源码版本漂移 | 修改源码后跑 `context-thread sync` 或依赖 watcher |
-| 源码结构变动且 MCP 正在运行 | watcher 约 1-2 秒后自动 sync | 已支持 | watcher 被禁用或平台不支持 | `context_thread_status` 看 pending changes，必要时手动 sync |
+| 源码结构变动且 MCP 正在运行 | watcher 约 2-3 秒后自动 sync | 已支持 | watcher 被禁用或平台不支持 | `context_thread_status` 看 pending changes，必要时手动 sync |
+| 跨文件符号移动 / 重命名 | 变动文件及其依赖方一起重解析 | 已支持 | 只重建变动文件会留下旧调用边 | 增量 sync 会强制刷新依赖方，最终仍以当前文件和验证为准 |
 | 源码结构变动但 MCP 没运行 | 不会自动更新 | 当前如此 | 用户以为 DB 会自己变 | 文档必须说明：需要 MCP watcher 或手动 `sync` |
 | Windows 本机项目 | `fs.watch` 递归 watcher 通常可用 | 已支持 | 大项目 watch 成本 | L2/L3 才初始化索引，小任务回退 |
 | WSL2 `/mnt/*` 项目 | watcher 自动禁用 | 已支持 | 索引容易陈旧 | 手动 `context-thread sync`，git hooks 目前不作为默认路线 |
@@ -74,3 +77,10 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.ai-config-hub\mcp\co
 3. 在 `project-ai-config-hub` workflow 中补一段“目标项目启用脉络”的分层流程：先 `.Ai-config`，后按需索引。
 4. 给 `.Ai-config/context-thread/README.md` 保留项目级命令和 sidecar 提交边界。
 5. 后续如果真实使用中发现手动 sync 高频，再考虑新增一个目标项目通用 wrapper 或项目级任务命令，不急着把它变成默认负担。
+
+## 已补强点
+
+- MCP 工具跨项目缓存关闭时会去重，避免同一个数据库连接被重复 close。
+- MCP server instructions 中的 watcher 延迟已经和实际 2 秒 debounce 对齐。
+- 增量 sync 现在会把变动文件的依赖方纳入强制重解析，减少符号移动、重命名、删除后 callers / impact 保留旧边的风险。
+- `git status` fast path 会展开未跟踪目录，避免新增源码目录被误判为没有 pending changes。

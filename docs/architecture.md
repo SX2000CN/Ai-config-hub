@@ -1,6 +1,46 @@
 # 架构说明
 
-`ai-config-hub` 使用纯文本源文件和 PowerShell 脚本管理 AI 编程工具配置。
+`ai-config-hub` 的架构先是一套 AI 编程协作配置，再是一套把配置交付到工具中的分发系统。
+
+配置本体负责规定 AI 如何工作：什么时候轻量处理、什么时候升级、什么时候使用 skills、什么时候读取 `.Ai-config` 或脉络索引、什么时候验证和交接。分发系统负责把这些配置渲染、检查并同步到 Claude Code、Codex 等工具中。
+
+设计总览见：[AI 配置设计与实现](ai-config-design.md)。
+脉络作为结构化事实层的详细设计见：[context-thread/](context-thread/README.md)。
+
+## 配置能力层
+
+```text
+核心行为层
+rules/shared/core.md
+        ↓
+工具适配层
+rules/tools/* + templates/*
+        ↓
+可复用能力层
+skills/shared/<skill-name>/
+        ↓
+项目状态层
+.Ai-config/CURRENT.md + .Ai-config/tasks/
+        ↓
+结构化事实层
+.Ai-config/context-thread/context-thread.db + 任务卡关系索引
+        ↓
+工具桥接层
+tool-configs/ + tools/context-thread-engine/ + 按需临时验证产物
+        ↓
+分发与验证层
+render / check / sync 脚本
+```
+
+各层职责：
+
+- 核心行为层：定义默认轻量、按风险升级、文档同步、验证、敏感信息和版本控制边界。
+- 工具适配层：处理 Claude Code、Codex 等工具差异，不复制通用原则。
+- 可复用能力层：把项目中枢、前端设计、思维伙伴、脉络和 Pencil workflow 做成 skills。
+- 项目状态层：在具体项目中保存当前工作状态、任务卡和接手入口。
+- 结构化事实层：用脉络索引和任务卡关系索引辅助复杂关系判断。
+- 工具桥接层：提供 MCP、本地引擎能力，以及按需生成的临时浏览器 / Pencil 验证产物。
+- 分发与验证层：让配置可审阅、可检查、可安全同步。
 
 ## 数据流
 
@@ -114,28 +154,9 @@ AI 接手入口和多任务状态总览
 单个任务的无损接手卡；archive/ 仅作为可选长期整理目录
 ```
 
-### 视觉验证产物
-
-```text
-designs/pencil/<slug>/
-        ↓
-Pencil .pen 设计文件和导出图
-```
-
-```text
-docs/visual-validation/<page>.html
-        ↓
-无构建依赖的静态验证页面
-        ↓
-docs/visual-validation/exports/
-        ↓
-真实浏览器 MCP 截图证据
-```
-
-`Pencil` 导出图只证明设计产物可视化结果，不能替代真实浏览器截图、console、DOM 或可访问性检查。
-
 ## 设计原则
 
+- AI 配置设计优先于分发实现；render、sync 和 MCP 合并只服务配置落地。
 - 共享规则只写一份，避免 Claude Code 和 Codex 长期漂移。
 - 工具专属内容放在 `rules/tools/`，不污染通用规则。
 - rendered 文件保留在仓库中，方便审阅最终效果。

@@ -1,7 +1,7 @@
 # 当前工作状态
 
-更新时间：2026-05-24 15:22
-当前活动任务：`.Ai-config/tasks/2026-05-24-ai-config-path-migration.md`
+更新时间：2026-05-25 18:47
+当前活动任务：无
 
 ## 接手导航
 
@@ -11,16 +11,18 @@
 4. 如果任务涉及 `project-ai-config-hub` skill，读 `skills/shared/project-ai-config-hub/` 和 `skills/claude-code/`、`skills/codex/` 下的入口源。
 5. 如果任务涉及渲染、检查或同步，读 `scripts/render*.ps1`、`scripts/check*.ps1`、`scripts/sync*.ps1` 和 `docs/sync-workflow.md`。
 6. 需要理解整体数据流时，读 `docs/architecture.md`。
-7. `README.md` 只作为项目概览补充，不是固定的 agent 接手入口。
+7. 如果任务涉及脉络设计、MCP、索引、watcher 或同步边界，读 `docs/context-thread/README.md`。
+8. `README.md` 只作为项目概览补充，不是固定的 agent 接手入口。
 
 ## 当前活动任务
 
-- `.Ai-config/tasks/2026-05-24-ai-config-path-migration.md`：正在把本仓库项目级 AI 配置中枢从旧版 `docs/ai/` 迁移到根目录 `.Ai-config/`，旧路径仅保留兼容提示；当前仓库已初始化 `.Ai-config/context-thread/context-thread.db`，等待本轮验证和用户确认。
+- 暂无。
 
 ## 待用户确认
 
+- `.Ai-config/tasks/2026-05-24-ai-config-path-migration.md`：本仓库项目级 AI 配置中枢已迁移到根目录 `.Ai-config/`，旧版 `docs/ai/` 历史副本已清理；当前仓库已初始化 `.Ai-config/context-thread/context-thread.db`，等待用户确认迁移结果和清理范围。
 - `.Ai-config/tasks/2026-05-24-context-thread.md`：已在仓库源文件、rendered 产物、dry-run 链路和本机用户级配置中引入轻量结构化事实层、`global-context-thread` skill、`context-thread` MCP 配置组和任务卡关系索引；本地引擎源码已自有化迁移到 `tools/context-thread-engine`，运行时改为分发到用户级 `.ai-config-hub` 目录，当前仓库索引已初始化，等待用户下一轮统一测试。
-- 脉络真实使用场景推演：已新增 `docs/context-thread-scenarios.md`，并补充索引自动同步、pending changes、runtime 缺失、新/旧项目接入和非代码关系索引的边界；本轮修改尚未同步到用户级 skill/runtime。
+- 脉络文档体系整理：已迁入 `docs/context-thread/`，并补充 `README.md`、`design.md`、`implementation.md`、`scenarios.md`，用于后续优化和迭代；本轮修改尚未同步到用户级 runtime。
 - `.Ai-config/tasks/2026-05-19-ai-config-lightweight.md`：AI 配置轻量化已完成仓库源文件、rendered 产物和本机全局配置同步，复查 dry-run 全部 `unchanged`；等待用户日常试用后确认轻量化手感。
 - `.Ai-config/tasks/2026-05-18-pencil-design-workflow.md`：已根据真实失败反馈收紧 Pencil 设计先行规则，并进一步轻量化为短闸门；2026-05-19 已修正宿主选择语义，默认使用当前会话可用的可见 Pencil MCP 宿主，VS Code/Cursor 插件端和 Pencil Desktop 客户端都可作为有效宿主，禁止模型假装能自由切换宿主或静默降级 CLI/headless。
 
@@ -30,7 +32,7 @@
 
 ## 最近关闭
 
-- 当前项目结构页面验证：已确认无需新增项目级 skill 入口；已用 Pencil 生成设计产物，并用浏览器 MCP 对真实 HTTP 页面完成桌面/移动截图、console 检查和 Lighthouse snapshot；后续已修正 Pencil 工作流，默认可视化设计过程，并要求区分设计稿还原与独立验证夹具；修正后的 skills 已同步到本机 `.claude/skills` 和 `.agents/skills`。随后补充 Pencil Desktop 正确启动顺序：先正常启动 Desktop 并等待 MCP 连接，再用 `open_document` 打开 `.pen`，不要用 `Pencil.exe <file.pen>` 直接传参；仓库 skill 已渲染检查通过，并已按用户确认再次同步到本机用户级 skill，dry-run 全部 `unchanged`。
+- 当前项目结构页面验证：已确认无需新增项目级 skill 入口；曾用一次性 Pencil 设计产物和静态浏览器夹具验证 MCP 截图、console 检查和 Lighthouse snapshot；后续已修正 Pencil 工作流，默认可视化设计过程，并要求区分设计稿还原与独立验证夹具。对应测试产物已清理，不作为长期项目资产保留；修正后的 skills 已同步到本机 `.claude/skills` 和 `.agents/skills`，dry-run 全部 `unchanged`。
 - `pencil-design-workflow` 全局 skill：已同步到本机 Claude Code / Codex 用户级 skill 目录，未同步历史 `.codex\skills`，同步后 dry-run 全部 unchanged。
 - 浏览器视觉验证 MCP：已同步 `chrome-devtools` / `playwright` 到本机 Claude Code / Codex 用户级配置，保留既有 Pencil MCP，同步后检查通过。
 - `project-ai-config-hub` 自身更新语义优化：已同步到本机 Claude Code / Codex 全局 skill 目录，同步后 dry-run 全部 unchanged。

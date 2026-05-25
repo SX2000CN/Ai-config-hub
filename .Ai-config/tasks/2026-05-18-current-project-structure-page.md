@@ -2,7 +2,7 @@
 
 任务 ID：2026-05-18-current-project-structure-page
 创建时间：2026-05-18 00:00
-更新时间：2026-05-18 00:00
+更新时间：2026-05-25 18:47
 状态：已完成
 当前活动：否
 
@@ -70,22 +70,20 @@
 - 已执行 `./scripts/render-skills.ps1` 与 `./scripts/check-skills.ps1`：通过。
 - 已按用户确认再次执行 `./scripts/sync-skills.ps1 -Apply`，将包含 Pencil Desktop 正确启动顺序的 rendered skills 同步到本机 `.claude/skills` 和 `.agents/skills`；未同步 legacy `.codex/skills`。
 - 同步后已执行 `./scripts/sync-skills.ps1` dry-run：全部 `unchanged`。
+- 2026-05-25 用户确认这类旧测试产物对项目后续没有价值；已清理 `docs/visual-validation/` 和 `designs/pencil/current-project-structure/`，仅保留本任务卡中的历史记录。
 
 ## 残留风险
 
 - Pencil CLI 可能受上游服务或本机登录状态影响。
 - 浏览器 MCP 能辅助视觉检查，但不等同完整 E2E 测试或像素级视觉回归基线。
 - 本次页面只用于验证工具链，不代表项目新增正式前端应用。
-- 本次 HTML 保留为独立浏览器验证夹具，不作为 `.pen` 设计稿还原成果。
+- 本次 HTML 和 Pencil 产物已作为一次性测试产物清理，不作为长期项目资产。
 
 ## 相关文件
 
-- `designs/pencil/current-project-structure/brief.md`
-- `designs/pencil/current-project-structure/design.pen`
-- `designs/pencil/current-project-structure/exports/design.png`
-- `docs/visual-validation/current-project-structure.html`
-- `docs/visual-validation/exports/`
+- 已清理：`designs/pencil/current-project-structure/`
+- 已清理：`docs/visual-validation/`
 
 ## 关闭依据 / 最终结果
 
-已完成项目级 AI 配置审计，结论是不需要新增项目级 `.claude/skills`、`.agents/skills` 或 legacy `.codex/skills` 入口。已生成 Pencil 设计产物和静态项目结构验证页面，并通过真实浏览器 MCP 完成桌面/移动截图、DOM 快照、console 检查和 Lighthouse snapshot。Pencil 设计验证与真实浏览器验证已分目录保存，避免混淆。
+已完成项目级 AI 配置审计，结论是不需要新增项目级 `.claude/skills`、`.agents/skills` 或 legacy `.codex/skills` 入口。曾生成 Pencil 设计产物和静态项目结构验证页面，并通过真实浏览器 MCP 完成桌面/移动截图、DOM 快照、console 检查和 Lighthouse snapshot；这些产物已在后续清理中删除，仅保留历史记录。

@@ -1,6 +1,8 @@
 # Skills 路线图
 
-`skills/` 目录用于管理 AI 编程工具的可复用能力。当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread` 和 `pencil-design-workflow` 的源码化、渲染、检查和 dry-run 同步流程。
+`skills/` 目录是这套 AI 配置的可复用能力层，不只是可分发文件包。它把项目中枢、前端设计、思维扩展、脉络关系和 Pencil 设计先行等专门工作流沉淀为 AI 可按需触发的能力。
+
+当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread` 和 `pencil-design-workflow` 的源码化、渲染、检查和 dry-run 同步流程。
 
 `project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
 
@@ -51,6 +53,8 @@
 
 - `global-context-thread`
   - 定位：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析，优先查询 context-thread 或 `.Ai-config` 关系索引来缩小上下文。
+  - 设计文档：`docs/context-thread/design.md`
+  - 技术实现文档：`docs/context-thread/implementation.md`
   - 共享源：`skills/shared/global-context-thread/`
   - Claude Code 入口源：`skills/claude-code/global-context-thread/SKILL.md`
   - Codex 入口源：`skills/codex/global-context-thread/SKILL.md`
