@@ -12,6 +12,7 @@
 - 用 `tool-configs/` 维护可分发的工具配置片段，当前用于浏览器视觉验证 MCP 和 脉络 MCP。
 - 用 `designs/pencil/` 和 `docs/visual-validation/` 保存设计先行与真实浏览器视觉验证产物。
 - 用 `.Ai-config/CURRENT.md` 和 `.Ai-config/tasks/` 维护 AI 接手入口、多任务状态总览和任务无损接手卡。
+- 用 `docs/context-thread-scenarios.md` 记录脉络在真实项目中的触发、同步、回退和误用纠正场景。
 
 ## 目录结构
 
@@ -68,6 +69,8 @@ MCP 配置片段管理流程：
 ```
 
 默认运行时位置：`C:\Users\sx200\.ai-config-hub\mcp\context-thread\`。
+
+脉络索引是项目级事实源，不是全局共享数据库。目标项目需要复杂代码关系分析时，再初始化自己的 `.Ai-config/context-thread/context-thread.db`；MCP 正在运行且 watcher 可用时会自动同步受支持源码变更，否则按需运行 `context-thread sync` 或直接读取当前文件确认。
 
 确认 dry-run 结果无误后，按本次修改范围执行对应同步：
 

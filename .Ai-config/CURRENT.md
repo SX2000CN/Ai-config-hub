@@ -1,6 +1,6 @@
 # 当前工作状态
 
-更新时间：2026-05-24 06:45
+更新时间：2026-05-24 15:22
 当前活动任务：`.Ai-config/tasks/2026-05-24-ai-config-path-migration.md`
 
 ## 接手导航
@@ -20,6 +20,7 @@
 ## 待用户确认
 
 - `.Ai-config/tasks/2026-05-24-context-thread.md`：已在仓库源文件、rendered 产物、dry-run 链路和本机用户级配置中引入轻量结构化事实层、`global-context-thread` skill、`context-thread` MCP 配置组和任务卡关系索引；本地引擎源码已自有化迁移到 `tools/context-thread-engine`，运行时改为分发到用户级 `.ai-config-hub` 目录，当前仓库索引已初始化，等待用户下一轮统一测试。
+- 脉络真实使用场景推演：已新增 `docs/context-thread-scenarios.md`，并补充索引自动同步、pending changes、runtime 缺失、新/旧项目接入和非代码关系索引的边界；本轮修改尚未同步到用户级 skill/runtime。
 - `.Ai-config/tasks/2026-05-19-ai-config-lightweight.md`：AI 配置轻量化已完成仓库源文件、rendered 产物和本机全局配置同步，复查 dry-run 全部 `unchanged`；等待用户日常试用后确认轻量化手感。
 - `.Ai-config/tasks/2026-05-18-pencil-design-workflow.md`：已根据真实失败反馈收紧 Pencil 设计先行规则，并进一步轻量化为短闸门；2026-05-19 已修正宿主选择语义，默认使用当前会话可用的可见 Pencil MCP 宿主，VS Code/Cursor 插件端和 Pencil Desktop 客户端都可作为有效宿主，禁止模型假装能自由切换宿主或静默降级 CLI/headless。
 

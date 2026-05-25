@@ -180,4 +180,6 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 - Claude Code 同步只新增或替换托管 server，保留 `pencil` 和未知 MCP server。
 - Codex 同步使用 `# >>> ai-config-hub managed mcp: <group>` marker block，只替换托管 block 或同名 server section，保留 `[mcp_servers.pencil]` 和其他私有配置。
 - `context-thread` MCP 配置声明的是 `node C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js serve --mcp`；源码仍由本仓库维护，运行时由 `sync-context-thread-runtime.ps1 -Apply` 分发。本项目不依赖 npm 全局 `context-thread` 命令，也不自动初始化项目 `.Ai-config/context-thread/` 索引。`check-mcp.ps1` 会在 runtime 缺失时给出 warning，但不阻塞浏览器 MCP 校验。
+- 每个目标项目的 context-thread 索引都是项目本地文件，默认位置是 `.Ai-config/context-thread/context-thread.db`。全局 MCP runtime 存在不等于目标项目已经有索引；复杂任务按需初始化，L0/L1 无索引时直接回退到普通文件搜索和读取。
+- MCP server 已运行且 watcher 可用时，受支持源码变更会自动增量同步；MCP 没运行、watcher 被禁用或平台不支持递归 watch 时不会自动更新。复杂任务前可用 `context_thread_status` 或 `context-thread status` 查看 pending changes，必要时运行 `context-thread sync`。
 - `sync-mcp.ps1 -Apply` 会先备份到 `C:\Users\sx200\.claude\ai-config-hub-config-backups\` 或 `C:\Users\sx200\.codex\ai-config-hub-config-backups\`。

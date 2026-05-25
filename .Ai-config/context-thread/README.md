@@ -18,3 +18,5 @@
 - 数据库大小：约 4.36 MB
 
 代码结构发生变化后，按需运行 `.\scripts\context-thread.ps1 sync .` 更新索引；如果需要重建索引，可重新执行 `.\scripts\context-thread.ps1 init . --index`。
+
+如果 MCP server 正在运行且 watcher 可用，受支持源码变更会自动触发增量同步；否则索引不会自己更新。复杂关系任务前可先看 `context_thread_status` 或运行 `.\scripts\context-thread.ps1 status .`，若出现 pending changes，再手动 sync 或读取当前文件确认关键事实。

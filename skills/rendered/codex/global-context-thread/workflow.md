@@ -24,6 +24,14 @@ context-thread MCP 可用时，先用 `context_thread_status` 判断索引是否
 - L0/L1：直接回退到 `rg` / 文件读取。
 - L2/L3 或长期项目理解任务：说明初始化会生成项目本地索引，征得确认后再考虑 `context-thread init -i`。
 
+若 `context_thread_status` 提示存在 pending changes，说明索引落后于当前文件状态：
+
+- 能手动刷新且任务确实依赖关系判断时，先运行 `context-thread sync` 或目标项目提供的 wrapper。
+- 不能刷新时，仍可用索引缩小范围，但最终判断必须读取当前文件确认。
+- 刚修改文件后，不要立刻把索引结果当成最新事实。
+
+索引自动更新只在 MCP server 已运行、项目已初始化、文件 watcher 可用且变更文件类型受支持时成立。MCP 没启动、watcher 被禁用或平台不支持时，不会自动同步；这不是失败，小任务直接回退，大任务按需手动 sync。
+
 ## 3. 代码任务使用顺序
 
 - 了解功能、区域或修复入口：先用 `context_thread_context`。

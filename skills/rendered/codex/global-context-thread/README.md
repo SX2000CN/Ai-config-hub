@@ -8,6 +8,8 @@
 - `.Ai-config/CURRENT.md` 与任务卡是非代码工作流 provider，负责任务依赖、状态、证据和下一步。
 - 本 skill 是路由层，不是新的项目管理流程。
 - 小任务不触发图谱仪式；没有可用工具时正常回退。
+- context-thread 索引是项目级事实源，不是全局共享数据库；每个目标项目按需初始化自己的 `.Ai-config/context-thread/context-thread.db`。
+- 索引自动同步只在 MCP server 正在运行且 watcher 可用时成立；否则用 `context-thread sync` 或回到当前文件确认。
 
 ## 文件说明
 

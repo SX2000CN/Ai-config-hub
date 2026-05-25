@@ -1442,6 +1442,11 @@ export class ToolHandler {
   private async handleStatus(args: Record<string, unknown>): Promise<ToolResult> {
     const cg = this.getContextThread(args.projectPath as string | undefined);
     const stats = cg.getStats();
+    const changes = cg.getChangedFiles();
+    const pendingAdded = changes.added.length;
+    const pendingModified = changes.modified.length;
+    const pendingRemoved = changes.removed.length;
+    const pendingTotal = pendingAdded + pendingModified + pendingRemoved;
 
     const lines: string[] = [
       '## ContextThread Status',
@@ -1468,6 +1473,19 @@ export class ToolHandler {
         `**Journal mode:** ⚠ ${journalMode || 'unknown'} — WAL not active, so reads ` +
         `can block on a concurrent write (WAL appears unsupported on this filesystem)`
       );
+    }
+
+    if (pendingTotal > 0) {
+      lines.push(
+        `**Pending changes:** ${pendingTotal} file(s) need sync ` +
+        `(added ${pendingAdded}, modified ${pendingModified}, removed ${pendingRemoved})`
+      );
+      lines.push(
+        '',
+        '> The index is stale. Run `context-thread sync` when a local CLI is available, or verify critical facts from current files.'
+      );
+    } else {
+      lines.push('**Pending changes:** 0 (index is up to date)');
     }
 
     lines.push('', '### Nodes by Kind:');

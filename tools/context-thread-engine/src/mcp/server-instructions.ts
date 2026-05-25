@@ -18,9 +18,9 @@
 export const SERVER_INSTRUCTIONS = `# ContextThread — code intelligence over an indexed knowledge graph
 
 ContextThread is a SQLite knowledge graph of every symbol, edge, and file
-in the workspace. Reads are sub-millisecond; the index lags writes by
-about a second through the file watcher. Consult it BEFORE writing or
-editing code, not during.
+in the workspace. Reads are sub-millisecond; when the MCP server is running
+and the file watcher is active, the index usually lags writes by about a
+second. Consult it BEFORE writing or editing code, not during.
 
 ## Answer directly — don't delegate exploration
 
@@ -44,7 +44,7 @@ of calls; a grep/read exploration is dozens.
 - **"Show me this symbol's source / signature / docstring."** → \`context_thread_node\`
 - **"Show me several related symbols' source / survey an area."** → \`context_thread_explore\` (ONE capped call; prefer over many context_thread_node/Read)
 - **"What's in directory X?"** → \`context_thread_files\`
-- **"Is the index ready / what's its size?"** → \`context_thread_status\`
+- **"Is the index ready / fresh / what's its size?"** → \`context_thread_status\`
 
 ## Common chains
 
@@ -61,7 +61,9 @@ of calls; a grep/read exploration is dozens.
 
 ## Limitations
 
-- Index lags file writes by ~1 second.
+- Auto-sync requires an initialized project plus an active MCP watcher; otherwise
+  check \`context_thread_status\` for pending changes and refresh or verify from files.
+- With an active watcher, the index usually lags file writes by ~1 second.
 - Cross-file resolution is best-effort name matching; ambiguous calls may return multiple candidates.
 - No live correctness validation — that's still the TypeScript compiler / test suite / linter's job. ContextThread supplements those with structural context they don't have.
 `;

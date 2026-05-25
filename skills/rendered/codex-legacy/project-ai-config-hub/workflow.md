@@ -85,6 +85,14 @@
 
 不要强行创建具体业务 skill；没有项目级 skill 时，`skills-registry.md` 可以暂不创建。
 
+启用脉络时也按需分层：
+
+1. 全局 MCP / skill 可默认存在，但这只代表工具入口可用。
+2. 目标项目只有在复杂代码关系、影响面、长期理解或用户明确要求时，才初始化 `.Ai-config/context-thread/context-thread.db`。
+3. 项目初始化索引前应说明这是项目本地结构化事实源，数据库可按项目策略跟踪或忽略。
+4. 索引自动更新只在 MCP server 正在运行且 watcher 可用时成立；否则需要手动 sync 或回退到读取当前文件。
+5. 非代码复杂流程不要写入 context-thread DB，用 `.Ai-config/tasks/*.md` 的 `关系索引` 承接。
+
 如果用户要求修改已有项目级 skill，应先定位事实源：
 
 1. 查 `.Ai-config/skills-registry.md`。
