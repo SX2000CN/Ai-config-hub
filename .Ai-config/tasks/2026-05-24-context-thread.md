@@ -2,7 +2,7 @@
 
 任务 ID：2026-05-24-context-thread
 创建时间：2026-05-24 00:32
-更新时间：2026-05-25 18:29
+更新时间：2026-05-25 19:32
 状态：待用户确认
 当前活动：否
 
@@ -30,6 +30,8 @@
 - 已修复本轮发现的三个脉络引擎问题：跨项目缓存 close 去重、watcher 延迟说明与 2 秒 debounce 对齐、增量 sync 会强制重解析变动文件的依赖方以减少旧调用边残留；同时发现并修复 resolver 缓存导致 dangling edge 的外键失败。
 - 已修正 git fast path，`git status` 会展开未跟踪目录，避免新增源码目录不进入 pending changes。
 - 已将脉络长期文档整理到 `docs/context-thread/`，拆分为设计说明、技术实现和场景边界，避免设计、任务卡、runtime README 和项目索引 README 混在一起。
+- 2026-05-25 已显式运行 `scripts/context-thread.ps1 sync .`，当前索引返回 Already up to date；CLI JSON status 和 MCP `context_thread_status` 均显示 87 files / 1,423 nodes / 3,667 edges / pending 0。
+- 2026-05-25 已做用户级 runtime 指纹对比，`package.json`、`package-lock.json`、`README.md`、`LICENSE` 和 `dist` 均与仓库源一致；本轮无需执行 `sync-context-thread-runtime.ps1 -Apply`。
 
 ## 已确认事实
 
@@ -46,15 +48,15 @@
 
 ## 当前卡点
 
-等待用户基于当前仓库的已初始化索引进行试用反馈；其他目标项目仍按任务需要决定是否初始化 `.Ai-config/context-thread/` 索引。
+当前仓库索引和用户级 runtime 已追平，等待用户基于当前仓库的已初始化索引进行试用反馈；其他目标项目仍按任务需要决定是否初始化 `.Ai-config/context-thread/` 索引。
 
 ## 关系索引
 
 | 对象 | 当前状态 | 依赖 / 影响 | 证据 | 下一步 |
 |---|---|---|---|---|
 | `global-context-thread` skill | 仓库源、rendered 与本机用户级目录已同步 | 影响 Claude Code / Codex 用户级 skill 同步 | `sync-skills.ps1 -Apply` 已执行；dry-run 现为 unchanged | 后续按需试用并再决定是否微调 |
-| `context-thread` MCP | 仓库源、runtime 分发脚本和 rendered 已更新 | 依赖 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\` 用户级 runtime | `sync-context-thread-runtime.ps1 -Apply` 已执行；rendered 已指向 runtime | 后续整体同步后试用 |
-| `.Ai-config/context-thread/context-thread.db` | 当前仓库已初始化，数据库可跟踪 | 影响当前项目代码结构查询和 MCP status/context/search 等工具 | 源码版 `context-thread status . --json`：87 files / 1,423 nodes / 3,667 edges / pending 0 | 代码结构变化后按需 `sync` 或重建索引 |
+| `context-thread` MCP | 仓库源、runtime 分发脚本、rendered 和用户级 runtime 已一致 | 依赖 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\` 用户级 runtime | 2026-05-25 指纹对比：package、lock、README、LICENSE、dist 均一致；rendered 已指向 runtime | 后续重启 / 试用即可 |
+| `.Ai-config/context-thread/context-thread.db` | 当前仓库已初始化，数据库可跟踪，索引已追平 | 影响当前项目代码结构查询和 MCP status/context/search 等工具 | 2026-05-25 `scripts/context-thread.ps1 sync .`：Already up to date；JSON / MCP status：87 files / 1,423 nodes / 3,667 edges / pending 0 | 代码结构变化后按需 `sync` 或重建索引 |
 | 索引自动同步 | MCP server 运行且 watcher 可用时自动同步；否则需要手动 sync | 影响“无感使用”的真实边界 | `tools/context-thread-engine/src/mcp/index.ts` / `src/sync/watcher.ts`；说明已改为约 2-3 秒 | 后续根据实测决定是否增加更便捷 wrapper |
 | 增量关系刷新 | 变动文件及其当前依赖方会进入同一轮重解析 | 影响 callers / impact 在符号移动、重命名、删除后的可信度 | `tools/context-thread-engine/src/extraction/index.ts`；`__tests__/sync-dependents.test.ts` | 后续如发现更大范围漂移，再考虑更细粒度反向依赖索引 |
 | 脉络长期文档 | 已迁入 `docs/context-thread/` | 影响后续优化、调试和迭代入口 | `docs/context-thread/README.md`、`design.md`、`implementation.md`、`scenarios.md` | 后续优化先更新对应分层文档 |
@@ -63,7 +65,7 @@
 
 ## 下一步最小动作
 
-1. 用户基于当前仓库已初始化的脉络索引进行试用。
+1. 用户基于当前仓库已初始化且已追平的脉络索引进行试用。
 2. 若需要微调，再回到仓库源文件、用户级 runtime 或 MCP 配置继续修正。
 
 ## 验证状态
@@ -76,16 +78,20 @@
 - 已运行 `scripts/context-thread.ps1 init . --index`，当前项目索引初始化成功。
 - 已运行源码构建产物 `node tools/context-thread-engine/dist/bin/context-thread.js status . --json`，当前索引为 87 files / 1,423 nodes / 3,667 edges，数据库约 4.36 MB，pending changes 为 0。
 - 已通过 MCP `context_thread_status` 读取同一索引状态。
+- 2026-05-25 已运行 `scripts/context-thread.ps1 sync .`，输出 `Already up to date`。
+- 2026-05-25 已运行 `scripts/context-thread.ps1 status . --json`，当前索引为 87 files / 1,423 nodes / 3,667 edges，pending changes 为 0。
+- 2026-05-25 已通过 MCP `context_thread_status` 再次确认同一索引状态。
+- 2026-05-25 已对比用户级 runtime 与仓库源指纹，`package.json`、`package-lock.json`、`README.md`、`LICENSE` 和 `dist` 均一致。
 - 已补充并迁移为 `docs/context-thread/scenarios.md`，推演真实使用场景和错误纠正路线。
 - 已新增 `docs/context-thread/design.md` 和 `docs/context-thread/implementation.md`，补齐脉络整体设计与技术实现说明。
-- 已修改 MCP `context_thread_status`，让它返回 pending changes；仍需跑引擎构建 / check-all 验证。
+- 已修改 MCP `context_thread_status`，让它返回 pending changes；后续已通过 `check-all`、CLI status 和 MCP status 验证。
 - 旧版 JSON-RPC 最小握手曾验证 `scripts/context-thread.ps1 serve --mcp` 能返回 `context_thread_*` 工具；runtime 路线仍待下一轮整体测试确认。
 - `sync-skills.ps1 -Apply` 已执行，用户级 `global-context-thread` 目录已存在，后续 dry-run 为 `unchanged`。
 - `sync-mcp.ps1 -Apply` 已执行，用户级 `context-thread` MCP 已写入；后续 dry-run 为 `unchanged`。
 - `scripts/check-all.ps1` 已执行，渲染、检查和 dry-run 全部通过。
 - 已运行 `npm test`（在 `tools/context-thread-engine`），完成 build + Vitest，3 个测试全部通过。
 - 已运行 `git diff --check`，仅有 LF/CRLF warning，无 whitespace error。
-- 本轮只更新了仓库源码和当前项目索引；用户级 runtime 仍需后续明确执行 `scripts/sync-context-thread-runtime.ps1 -Apply` 后才会使用新引擎。
+- 本轮只更新当前项目索引状态和任务记录；用户级 runtime 指纹已确认与仓库源一致，因此没有执行 `scripts/sync-context-thread-runtime.ps1 -Apply`。
 
 ## 残留风险
 
@@ -93,7 +99,7 @@
 - 其他目标项目没有 `.Ai-config/context-thread/` 索引时，MCP 可启动但结构化查询会提示未初始化；是否初始化仍按 L2/L3 或真实复杂代码任务触发。
 - 当前仓库的 `.Ai-config/context-thread/context-thread.db` 后续可能随代码变化陈旧，需要按需 `sync` 或重建索引。
 - MCP status 能提示 pending changes 后，仍不代表自动修复所有陈旧索引；它只是让 AI 更早发现问题。
-- 本轮修复尚未同步到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\` 用户级 runtime；重启 Codex 前若要试用新引擎，需要先同步本机。
+- 如果后续 `tools/context-thread-engine` 源码或 dist 变化，需要重新运行 `scripts/sync-context-thread-runtime.ps1 -Apply` 或 `scripts/context-thread.ps1 bootstrap`，再重启相关 MCP host。
 - 工作区存在本轮前已有的 Pencil 相关未提交改动；本任务没有回滚或覆盖这些改动。
 - 用户级 `global-context-thread` 与 `context-thread` MCP 已同步，重启 Codex / Claude 后才能看到新文案和新工具名。
 
