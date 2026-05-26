@@ -180,7 +180,7 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 
 - 不要提交完整 `C:\Users\sx200\.claude.json` 或 `C:\Users\sx200\.codex\config.toml`。
 - `sync-mcp.ps1` 默认 dry-run；只有显式 `-Apply` 才写真实用户配置。
-- Claude Code 的 `chrome-devtools`、`playwright` 和 `context-thread` 仍合并到 `C:\Users\sx200\.claude.json`；`pencil` 不再直接写 `.claude.json`，改用 Claude Code 官方 MCP 命令注册，避免被运行时重写丢失。
+- Claude Code 的 `chrome-devtools`、`playwright` 和 `context-thread` 仍合并到 `C:\Users\sx200\.claude.json`；`pencil` 不再直接写 `.claude.json`，改用 Claude Code 官方 MCP 命令注册。为避免正在运行的 Claude Code 会话用旧配置覆盖新注册，持久同步 `pencil` 时应完全退出 Claude Code 后，从普通终端运行 `sync-mcp.ps1 -Apply -ClaudeCode`。
 - Codex 同步使用 `# >>> ai-config-hub managed mcp: <group>` marker block，只替换托管 block 或同名 server section，保留其他私有配置。
 - Pencil MCP 是同步本机的本地自动配置项：优先发现 `AI_CONFIG_HUB_PENCIL_MCP_COMMAND`，再发现 `~\.pencil\mcp\<app>\out\mcp-server-windows-x64.exe` 中的 VS Code / Cursor 等插件端。Desktop transport 暂不自动发现；如果现有用户配置仍指向 Desktop，`sync-mcp.ps1` 会替换为可发现的插件端。发现失败只给 warning，不阻塞 browser/context-thread MCP 校验；真正执行设计请求前仍要在当前会话确认 Pencil MCP 工具和目标画布可用。
 - `context-thread` MCP 配置声明的是 `node C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js serve --mcp`；源码仍由本仓库维护，运行时由 `sync-context-thread-runtime.ps1 -Apply` 分发。本项目不依赖 npm 全局 `context-thread` 命令，也不自动初始化项目 `.Ai-config/context-thread/` 索引。`check-mcp.ps1` 会在 runtime 缺失时给出 warning，但不阻塞浏览器 MCP 校验。

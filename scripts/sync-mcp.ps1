@@ -453,6 +453,7 @@ function Sync-ClaudePencilMcp($TargetPath) {
     if (-not $Apply) {
         Write-Output "would register`tclaude-code pencil`t$($pencilServer.command)"
         Write-Output '  - via claude mcp add -s user pencil -- <command> <args>'
+        Write-Output '  - for durable registration, close running Claude Code sessions before applying from a normal terminal'
         return
     }
 
@@ -462,6 +463,7 @@ function Sync-ClaudePencilMcp($TargetPath) {
         throw "claude mcp add failed for pencil with exit code $LASTEXITCODE"
     }
     Write-Output "Registered: claude-code pencil`t$($pencilServer.command)"
+    Write-Warning 'If this was run inside an active Claude Code session, fully exit Claude Code and rerun sync-mcp.ps1 -Apply -ClaudeCode from a normal terminal so the running session cannot overwrite the new user MCP registration on shutdown.'
 }
 
 function Sync-File($Name, $TargetPath, $Merged) {
