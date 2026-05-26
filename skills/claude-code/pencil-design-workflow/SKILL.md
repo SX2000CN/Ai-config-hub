@@ -27,11 +27,11 @@ when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wirefra
 - 用户说“做设计图”“先做设计”“先设计确认后写代码”等设计先行意图时自动使用，不要求用户显式说 Pencil 或 pencli。
 - 局部 UI bugfix、小样式修复、已有界面明确错误修复不使用本 skill。
 - 设计请求默认必须使用当前会话已注入的可见 Pencil MCP 宿主；不需要用户额外说“我要看着做”。
-- VS Code / Cursor 插件端和 Pencil Desktop 客户端都是有效宿主；宿主由运行环境注入，模型不能假装能自由切换。
+- VS Code / Cursor 插件端是当前默认可见宿主；Pencil Desktop 暂停作为默认路径，宿主由运行环境注入，模型不能假装能自由切换。
 - 只有用户明确要求批量、无头、后台、自动化或不需要看过程时，才使用 Pencil CLI / headless。
 - Pencil MCP 不可用、未配置或无法确认当前画布时，必须停下说明，不得静默降级到 CLI。
 - `.pen` 文件在 MCP 场景下只通过 Pencil MCP / Pencil 工具链访问，不用普通文本读取工具。
-- 只有当前宿主是 `desktop` 或用户明确要求 Desktop 主窗口时，才按 Desktop transport 细节处理；不要用 `Pencil.exe <file.pen>` 直接传参打开。
+- 只有用户明确要求重新调试 Desktop 主窗口时，才按 Desktop transport 细节处理；正常设计工作不要自动走 Desktop。
 - 直连 MCP 模式必须确认当前会话有 Pencil MCP 工具，并用 `open_document({ path })` 后再用 `get_editor_state` 确认 active editor 是目标 `.pen`；参数名不是 `filePath`。
 - MCP server 握手成功不等于宿主 app transport 已连接；遇到 transport 未连接时停下诊断，不要反复重试或静默降级。
 - 设计确认前不进入大规模代码实现；确认后携带 `.pen` 和导出图证据进入真实前端实现流程。

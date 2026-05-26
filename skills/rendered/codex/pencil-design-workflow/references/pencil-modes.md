@@ -7,8 +7,9 @@
 规则：
 
 - `.pen` 文件只能通过 Pencil MCP / Pencil 工具链访问，不用普通 `Read`、`Grep` 或文本方式读取。
-- 宿主由当前 AI 工具环境注入，不由模型自由选择；同名 `pencil` server 可能指向 `visual_studio_code`、`desktop` 或其他 app。
-- VS Code / Cursor 插件端和 Pencil Desktop 客户端都是有效的可见 MCP 宿主，只要用户能看到画布且 active `.pen` 可以确认。
+- 宿主由当前 AI 工具环境注入，不由模型自由选择；同名 `pencil` server 可能指向 `visual_studio_code`、`cursor` 或其他插件端 app。
+- VS Code / Cursor 插件端是当前默认可见 MCP 宿主，只要用户能看到画布且 active `.pen` 可以确认。
+- Pencil Desktop transport 在本机长期未稳定成功，暂不作为自动同步、默认路径或插件端失败后的 fallback；只有用户明确要求重新调试 Desktop 时才处理。
 - 模型能使用的是当前会话暴露的 MCP 工具；用户界面里看到某个 MCP server 不等于当前 agent 已获得对应工具。
 - 在 MCP 工具可用时，用 `open_document({ path: "<absolute .pen path>" })` 打开目标 `.pen`；参数名是 `path`，不是 `filePath`。传错参数可能新建 `pencil-new.pen`，造成实际编辑对象错误。
 - 直连 MCP 可用性的最小证明：当前会话有 Pencil MCP 工具，或 `tools/list` 返回 `open_document`、`get_editor_state`、`batch_design`；随后 `open_document({ path })` 成功，且 `get_editor_state({ include_schema: true })` 返回的 active editor 是目标 `.pen`。
@@ -42,16 +43,16 @@
 - 如果目标画布不明确，停下说明当前宿主、active editor 和建议动作。
 - 不修改 VS 插件、Codex 或 Claude Code MCP 配置，除非用户明确要求并确认风险。
 
-## Desktop 客户端宿主
+## Desktop 客户端宿主（暂停默认使用）
 
 适合：
 
-- 用户明确要求 Pencil Desktop 主窗口。
-- 当前会话注入的 `pencil` MCP server 指向 `desktop`。
-- 需要避开 IDE 多窗口路由风险。
+- 用户明确要求重新调试 Pencil Desktop 主窗口。
+- 当前会话误注入的 `pencil` MCP server 指向 `desktop`，需要诊断或改回插件端。
 
 规则：
 
+- 当前默认同步不应生成 Desktop MCP 配置；发现 Desktop 配置优先改回 VS Code / Cursor 插件端。
 - 正确顺序是先让 Pencil Desktop 真实运行并显示窗口，再连接 Desktop transport，最后打开或确认目标 `.pen`。
 - Windows 上如果 `Start-Process 'C:\Program Files\Pencil\Pencil.exe'` 秒退且没有 `pencil-desktop` transport，改用 `Invoke-Item 'C:\Program Files\Pencil\Pencil.exe'` 或 `explorer.exe 'C:\Program Files\Pencil\Pencil.exe'` 启动真实桌面窗口。
 - 推荐连接检查：`pencil interactive -a desktop -i <file.pen>`；进入 shell 后先运行 `get_editor_state({ include_schema: true })`。

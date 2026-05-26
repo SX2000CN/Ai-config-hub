@@ -127,6 +127,22 @@ function Get-PencilMcpServerObject($AgentName) {
     }
 }
 
+function Test-ClaudePencilServerUsesDesktop($Server) {
+    if ($null -eq $Server) {
+        return $false
+    }
+
+    $serverArgs = @($Server.args)
+    for ($i = 0; $i -lt $serverArgs.Count - 1; $i++) {
+        if ([string]$serverArgs[$i] -eq '--app' -and [string]$serverArgs[$i + 1] -eq 'desktop') {
+            return $true
+        }
+    }
+
+    $command = [string]$Server.command
+    return $command -match '\\Program Files\\Pencil\\resources\\app\.asar\.unpacked\\out\\mcp-server-windows-x64\.exe$'
+}
+
 function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
     $managedServers = Get-ManagedServers
     $activeManagedServers = Get-ActiveManagedServers
@@ -194,18 +210,25 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
         $target.mcpServers | Add-Member -MemberType NoteProperty -Name $serverName -Value $newServer
     }
 
-    if ($existingNames -contains 'pencil') {
-        $actions.Add('preserve local mcpServers.pencil')
+    $existingPencil = $target.mcpServers.pencil
+    $pencilServer = Get-PencilMcpServerObject 'claudeCode'
+    if ($null -eq $pencilServer) {
+        Write-Warning 'Pencil plugin MCP server was not found locally; sync-mcp will not register pencil with Claude Code. Enable VS Code/Cursor Pencil MCP support before using pencil-design-workflow.'
+    }
+    elseif ($null -eq $existingPencil) {
+        $actions.Add("register local pencil via Claude Code CLI ($($pencilServer.command))")
     }
     else {
-        $pencilServer = Get-PencilMcpServerObject 'claudeCode'
-        if ($null -eq $pencilServer) {
-            Write-Warning 'Pencil MCP server was not found locally; sync-mcp will not add mcpServers.pencil. Install Pencil Desktop or Pencil MCP support before using pencil-design-workflow.'
+        $existingJson = $existingPencil | ConvertTo-Json -Depth 16 -Compress
+        $newJson = $pencilServer | ConvertTo-Json -Depth 16 -Compress
+        if ($existingJson -eq $newJson) {
+            $actions.Add('pencil already registered by Claude Code CLI')
+        }
+        elseif (Test-ClaudePencilServerUsesDesktop $existingPencil) {
+            $actions.Add("replace desktop pencil via Claude Code CLI ($($pencilServer.command))")
         }
         else {
-            $target.mcpServers | Add-Member -MemberType NoteProperty -Name 'pencil' -Value $pencilServer
-            $actions.Add("add local mcpServers.pencil ($($pencilServer.command))")
-            $managedChanged = $true
+            $actions.Add('preserve local mcpServers.pencil')
         }
     }
 
@@ -226,11 +249,11 @@ function Get-CodexGroupBlock($Content, $GroupName) {
     $start = [regex]::Escape($startMarker)
     $end = [regex]::Escape($endMarker)
     $markerPattern = "(?ms)^$start\r?\n.*?^$end\r?\n?"
-    $matches = [regex]::Matches($Content, $markerPattern)
-    if ($matches.Count -ne 1) {
+    $markerMatches = [regex]::Matches($Content, $markerPattern)
+    if ($markerMatches.Count -ne 1) {
         throw "Rendered Codex MCP fragment must contain exactly one $GroupName block."
     }
-    return $matches[0].Value.TrimEnd()
+    return $markerMatches[0].Value.TrimEnd()
 }
 
 function Format-TomlString($Value) {
@@ -256,6 +279,22 @@ function New-CodexPencilMcpBlock {
     return ($lines -join "`n")
 }
 
+function Test-CodexPencilBlockUsesDesktop($Content) {
+    $pattern = Get-SectionPattern 'mcp_servers.pencil'
+    $sectionMatch = [regex]::Match($Content, $pattern)
+    if (-not $sectionMatch.Success) {
+        return $false
+    }
+
+    return $sectionMatch.Value -match '"--app"\s*,\s*"desktop"' -or
+        $sectionMatch.Value -match '\\Program Files\\Pencil\\resources\\app\.asar\.unpacked\\out\\mcp-server-windows-x64\.exe'
+}
+
+function Remove-CodexPencilBlock($Content) {
+    $pattern = Get-SectionPattern 'mcp_servers.pencil'
+    return [regex]::Replace($Content, $pattern, '', 1)
+}
+
 function Get-CodexMergedContent($TargetPath, $SourcePath) {
     $sourceContent = Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath
     $targetContent = if (Test-Path -LiteralPath $TargetPath) {
@@ -271,6 +310,11 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     }
 
     $working = $targetContent
+    if (Test-CodexPencilBlockUsesDesktop $working) {
+        $working = Remove-CodexPencilBlock $working
+        $actions.Add('replace local mcp_servers.pencil desktop target')
+    }
+
     $newBlocks = New-Object System.Collections.Generic.List[string]
 
     foreach ($group in $McpGroups) {
@@ -313,7 +357,7 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     if ($working -notmatch '(?m)^\[mcp_servers\.pencil\]$') {
         $pencilBlock = New-CodexPencilMcpBlock
         if ($null -eq $pencilBlock) {
-            Write-Warning 'Pencil MCP server was not found locally; sync-mcp will not add [mcp_servers.pencil]. Install Pencil Desktop or Pencil MCP support before using pencil-design-workflow.'
+            Write-Warning 'Pencil plugin MCP server was not found locally; sync-mcp will not add [mcp_servers.pencil]. Enable VS Code/Cursor Pencil MCP support before using pencil-design-workflow.'
         }
         else {
             $actions.Add('add local mcp_servers.pencil')
@@ -347,6 +391,79 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     }
 }
 
+function Backup-TargetFile($Name, $TargetPath) {
+    if (-not (Test-Path -LiteralPath $TargetPath)) {
+        return
+    }
+
+    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    if ($Name -eq 'claude-code') {
+        $backupRoot = Join-Path $UserHome '.claude\ai-config-hub-config-backups'
+        $backupName = ".claude.json.$timestamp.bak"
+    }
+    else {
+        $backupRoot = Join-Path $UserHome '.codex\ai-config-hub-config-backups'
+        $backupName = "config.toml.$timestamp.bak"
+    }
+
+    if (-not (Test-Path -LiteralPath $backupRoot)) {
+        New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
+    }
+
+    $backupPath = Join-Path $backupRoot $backupName
+    Copy-Item -LiteralPath $TargetPath -Destination $backupPath -Force
+    Write-Output "Backup created: $backupPath"
+}
+
+function Test-SameJsonObject($Left, $Right) {
+    if ($null -eq $Left -or $null -eq $Right) {
+        return $false
+    }
+
+    $leftJson = $Left | ConvertTo-Json -Depth 16 -Compress
+    $rightJson = $Right | ConvertTo-Json -Depth 16 -Compress
+    return $leftJson -eq $rightJson
+}
+
+function Sync-ClaudePencilMcp($TargetPath) {
+    $pencilServer = Get-PencilMcpServerObject 'claudeCode'
+    if ($null -eq $pencilServer) {
+        return
+    }
+
+    $target = if (Test-Path -LiteralPath $TargetPath) {
+        Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath | ConvertFrom-Json
+    }
+    else {
+        [pscustomobject]@{}
+    }
+    $existingPencil = if ($null -ne $target.mcpServers) { $target.mcpServers.pencil } else { $null }
+
+    if (Test-SameJsonObject $existingPencil $pencilServer) {
+        Write-Output "Unchanged: claude-code pencil`t$($pencilServer.command)"
+        return
+    }
+
+    if ($null -ne $existingPencil -and -not (Test-ClaudePencilServerUsesDesktop $existingPencil)) {
+        Write-Output "Unchanged: claude-code pencil`tcustom existing registration"
+        Write-Output '  - preserve local mcpServers.pencil'
+        return
+    }
+
+    if (-not $Apply) {
+        Write-Output "would register`tclaude-code pencil`t$($pencilServer.command)"
+        Write-Output '  - via claude mcp add -s user pencil -- <command> <args>'
+        return
+    }
+
+    Backup-TargetFile 'claude-code' $TargetPath
+    & claude mcp add -s user pencil -- $pencilServer.command @($pencilServer.args)
+    if ($LASTEXITCODE -ne 0) {
+        throw "claude mcp add failed for pencil with exit code $LASTEXITCODE"
+    }
+    Write-Output "Registered: claude-code pencil`t$($pencilServer.command)"
+}
+
 function Sync-File($Name, $TargetPath, $Merged) {
     $targetExists = Test-Path -LiteralPath $TargetPath
     $targetContent = if ($targetExists) { Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath } else { '' }
@@ -374,25 +491,7 @@ function Sync-File($Name, $TargetPath, $Merged) {
         New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
     }
 
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    if ($targetExists) {
-        if ($Name -eq 'claude-code') {
-            $backupRoot = Join-Path $UserHome '.claude\ai-config-hub-config-backups'
-            $backupName = ".claude.json.$timestamp.bak"
-        }
-        else {
-            $backupRoot = Join-Path $UserHome '.codex\ai-config-hub-config-backups'
-            $backupName = "config.toml.$timestamp.bak"
-        }
-
-        if (-not (Test-Path -LiteralPath $backupRoot)) {
-            New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
-        }
-
-        $backupPath = Join-Path $backupRoot $backupName
-        Copy-Item -LiteralPath $TargetPath -Destination $backupPath -Force
-        Write-Output "Backup created: $backupPath"
-    }
+    Backup-TargetFile $Name $TargetPath
 
     Set-Content -Encoding UTF8 -LiteralPath $TargetPath -Value $Merged.Content -NoNewline
     Write-Output "Synced: $Name`t$TargetPath"
@@ -410,6 +509,7 @@ if (-not $Apply) {
 if ($ClaudeCode) {
     $merged = Get-ClaudeMergedContent $ClaudeTarget $ClaudeSource
     Sync-File 'claude-code' $ClaudeTarget $merged
+    Sync-ClaudePencilMcp $ClaudeTarget
 }
 
 if ($Codex) {

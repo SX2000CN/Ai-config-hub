@@ -21,11 +21,11 @@
 
 设计请求默认必须走 **当前会话可用的可见 Pencil MCP 宿主**。用户不需要额外说“我要看着做”。
 
-宿主由运行环境注入，不由模型自由选择。VS Code / Cursor 插件端和 Pencil Desktop 客户端都是有效的可见 MCP 宿主；模型只负责确认当前会话是否真实暴露 Pencil MCP 工具、目标 `.pen` 是否已打开、active editor 是否正确。
+宿主由运行环境注入，不由模型自由选择。当前默认只把 VS Code / Cursor 等插件端作为可见 MCP 宿主；Pencil Desktop transport 在本机长期未稳定成功，暂不作为自动同步或默认工作路径。模型只负责确认当前会话是否真实暴露 Pencil MCP 工具、目标 `.pen` 是否已打开、active editor 是否正确。
 
 把四件事分清楚：
 
-- 宿主来源：当前会话实际注入的是哪个 Pencil MCP server，例如 `--app visual_studio_code` 或 `--app desktop`。
+- 宿主来源：当前会话实际注入的是哪个 Pencil MCP server，例如 `--app visual_studio_code`、`--app cursor`。
 - 可用工具：当前会话必须真实暴露 Pencil MCP 工具，或 `tools/list` 能看到 `open_document`、`get_editor_state`、`batch_design` 等工具。
 - 打开 / 确认文件：用已注入宿主打开目标 `.pen`，再确认当前画布。
 - 可见证据：宿主中必须有用户可见的 Pencil 画布；CLI/headless 导出图不能冒充可见过程。
@@ -54,7 +54,7 @@ Pencil MCP 不可用、未配置、未连接或无法确认画布时，必须停
 4. 用 `get_editor_state`、`snapshot_layout` 或截图确认当前 active editor 是目标 `.pen`。
 5. 分批迭代，并在关键结构、视觉方向和最终稿阶段给用户看结果。
 
-Desktop 客户端是可见宿主之一，但不是模型可强制选择的唯一默认。只有用户明确要求 Desktop 主窗口，或当前注入宿主就是 `desktop` 时，才按 Desktop 细节处理。Windows 上如果需要拉起真实 Desktop 窗口，普通 `Start-Process 'C:\Program Files\Pencil\Pencil.exe'` 秒退且没有 `pencil-desktop` transport 时，改用 Shell/Explorer 启动：
+Desktop 客户端当前不作为默认或自动 fallback。只有用户明确要求重新调试 Desktop 主窗口时，才按 Desktop 细节处理；否则遇到 Desktop 配置应视为需要改回插件端 MCP。Windows 上如果需要拉起真实 Desktop 窗口，普通 `Start-Process 'C:\Program Files\Pencil\Pencil.exe'` 秒退且没有 `pencil-desktop` transport 时，改用 Shell/Explorer 启动：
 
 ```powershell
 Invoke-Item 'C:\Program Files\Pencil\Pencil.exe'

@@ -24,25 +24,20 @@ function Get-AiConfigHubPencilMcpCandidates {
     $userHome = [Environment]::GetFolderPath('UserProfile')
 
     if (-not [string]::IsNullOrWhiteSpace($env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND)) {
-        $app = if ([string]::IsNullOrWhiteSpace($env:AI_CONFIG_HUB_PENCIL_MCP_APP)) { 'desktop' } else { $env:AI_CONFIG_HUB_PENCIL_MCP_APP }
+        $app = if ([string]::IsNullOrWhiteSpace($env:AI_CONFIG_HUB_PENCIL_MCP_APP)) { 'visual_studio_code' } else { $env:AI_CONFIG_HUB_PENCIL_MCP_APP }
         Add-AiConfigHubPencilCandidate $candidates $env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND $app 'AI_CONFIG_HUB_PENCIL_MCP_COMMAND'
     }
 
-    $desktopRelative = 'Pencil\resources\app.asar.unpacked\out\mcp-server-windows-x64.exe'
-    foreach ($root in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, (Join-Path $env:LOCALAPPDATA 'Programs'))) {
-        if (-not [string]::IsNullOrWhiteSpace($root)) {
-            Add-AiConfigHubPencilCandidate $candidates (Join-Path $root $desktopRelative) 'desktop' 'Pencil Desktop'
-        }
-    }
-
     $pencilMcpRoot = Join-Path $userHome '.pencil\mcp'
-    foreach ($app in @('desktop', 'visual_studio_code', 'cursor', 'windsurf')) {
+    foreach ($app in @('visual_studio_code', 'cursor', 'windsurf')) {
         Add-AiConfigHubPencilCandidate $candidates (Join-Path $pencilMcpRoot "$app\out\mcp-server-windows-x64.exe") $app "Pencil $app MCP cache"
     }
 
     if (Test-Path -LiteralPath $pencilMcpRoot) {
         Get-ChildItem -LiteralPath $pencilMcpRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            Add-AiConfigHubPencilCandidate $candidates (Join-Path $_.FullName 'out\mcp-server-windows-x64.exe') $_.Name "Pencil $($_.Name) MCP cache"
+            if ($_.Name -ne 'desktop') {
+                Add-AiConfigHubPencilCandidate $candidates (Join-Path $_.FullName 'out\mcp-server-windows-x64.exe') $_.Name "Pencil $($_.Name) MCP cache"
+            }
         }
     }
 

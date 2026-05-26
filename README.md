@@ -83,7 +83,7 @@ MCP 配置片段管理流程：
 .\scripts\sync-mcp.ps1
 ```
 
-`sync-mcp.ps1` 会在同步本机时自动发现 Pencil MCP server，并把 `pencil` 配置合并到 Claude Code / Codex 用户配置；如果本机还没有 Pencil Desktop 或对应 MCP server，只给 warning，不阻塞浏览器和脉络 MCP 同步。
+`sync-mcp.ps1` 会在同步本机时自动发现 Pencil 插件端 MCP server；Claude Code 侧用 `claude mcp add -s user` 注册 `pencil`，Codex 侧把 `pencil` 合并到用户配置。如果本机还没有可用插件端 MCP server，只给 warning，不阻塞浏览器和脉络 MCP 同步。Desktop transport 暂不作为默认路径。
 
 脉络 MCP 使用本仓库源码构建，但运行时分发到用户级目录，不指向当前项目路径。首次使用或引擎源码变更后，先同步全局运行时：
 

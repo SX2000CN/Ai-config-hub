@@ -261,7 +261,7 @@ foreach ($file in $scanFiles) {
 
 $pencilServer = Resolve-AiConfigHubPencilMcpServer
 if ($null -eq $pencilServer) {
-    Write-Warning 'Pencil MCP server was not found locally. sync-mcp.ps1 can still manage browser/context-thread MCP, but pencil-design-workflow needs Pencil Desktop or Pencil MCP support before use.'
+    Write-Warning 'Pencil plugin MCP server was not found locally. sync-mcp.ps1 can still manage browser/context-thread MCP, but pencil-design-workflow needs VS Code/Cursor Pencil MCP support before use.'
 }
 else {
     Write-Output "Pencil MCP candidate: $($pencilServer.Command) --app $($pencilServer.App)"

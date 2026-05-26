@@ -37,7 +37,7 @@
 - 2026-05-19 已实测验证：PowerShell 普通 `Start-Process 'C:\Program Files\Pencil\Pencil.exe'` 会秒退且没有 `pencil-desktop` transport；`Invoke-Item 'C:\Program Files\Pencil\Pencil.exe'` 或 `explorer.exe 'C:\Program Files\Pencil\Pencil.exe'` 可以拉起真实 Desktop 窗口并创建 `\\.\pipe\pencil-desktop`。
 - 2026-05-19 已补准直连 MCP 规则：直连模式必须确认当前会话有 Pencil MCP 工具或 `tools/list` 返回关键工具；`open_document` 必须使用 `{ path }` 参数，并用 `get_editor_state` 确认 active editor 是目标 `.pen`；`pencil interactive -a desktop` 只作为诊断或用户确认后的临时桥接。
 - 2026-05-19 已补准宿主选择规则：模型不能控制或自由选择 Desktop/插件端，只能使用当前会话实际注入的 MCP 工具；插件端不是 Desktop 失败后的降级，而是同等级可见宿主；Desktop 细节只在当前宿主为 `desktop` 或用户明确要求 Desktop 主窗口时启用。
-- 2026-05-25 已将 Pencil MCP 配置升级为 `sync-mcp.ps1` 的本机同步动作：同步时自动发现 Pencil Desktop / 插件 MCP server 并写入 Claude Code / Codex 用户配置；若目标配置已存在 `pencil`，保留当前本机配置。
+- 2026-05-25 已将 Pencil MCP 配置升级为 `sync-mcp.ps1` 的本机同步动作；晚间实测确认 Desktop transport 仍不可用而 VS Code 插件端可用，因此同步时只自动发现插件端 MCP server，并把既有 Desktop 配置替换为 VS Code / Cursor 等插件端。
 
 ## 已确认事实
 
@@ -47,7 +47,7 @@
 - `scripts/render-skills.ps1`、`scripts/check-skills.ps1`、`scripts/sync-skills.ps1` 都硬编码 `$SkillNames`。
 - 本机 Pencil CLI 已安装并登录：`pencil 0.2.6`，状态 Active。
 - 本机 `pencil interactive --help` 明确 app 模式用法：`pencil interactive --app <name> [--in <file.pen>]` 连接运行中的 Pencil app；Desktop 示例为 `pencil interactive -a desktop -i design.pen`。
-- 本机 `scripts\mcp-local.ps1` 能发现 `C:\Program Files\Pencil\resources\app.asar.unpacked\out\mcp-server-windows-x64.exe`，默认 app 为 `desktop`；如设置 `AI_CONFIG_HUB_PENCIL_MCP_COMMAND` / `AI_CONFIG_HUB_PENCIL_MCP_APP`，同步脚本会优先使用环境变量指定的 server。
+- 本机 `scripts\mcp-local.ps1` 能发现 `C:\Users\sx200\.pencil\mcp\visual_studio_code\out\mcp-server-windows-x64.exe`，默认 app 为 `visual_studio_code`；如设置 `AI_CONFIG_HUB_PENCIL_MCP_COMMAND` / `AI_CONFIG_HUB_PENCIL_MCP_APP`，同步脚本会优先使用环境变量指定的 server。
 - 本机 `pencil interactive -a desktop` 在 Desktop transport 不存在时会报 `Transport connection failed: connect ENOENT \\.\pipe\pencil-desktop`；这与 MCP server 报 `transport not connected to app: desktop` 是同类根因。
 - 已用 `pencil interactive -a desktop -i D:\Windows\桌面\Encoding\Ai-config-hub\designs\pencil\current-project-structure\design.pen` 确认当前活动编辑器为目标文件，并返回顶层节点 `ai-config-hub documentation dashboard`。
 - 已用直连 MCP server `--app desktop` 确认 `open_document({ path })` 能打开 `D:\Windows\桌面\Encoding\Ai-config-hub\designs\pencil\current-project-structure\design.pen`，`get_editor_state` 返回 active editor 为该目标文件，顶层节点为 `ai-config-hub documentation dashboard`。
