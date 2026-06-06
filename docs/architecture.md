@@ -72,7 +72,9 @@ C:\Users\sx200\.codex\AGENTS.md
 
 ### Skills
 
-每个全局 skill 使用同一条渲染和同步路径：
+每个全局 managed skill 使用同一条渲染和同步路径。注意：这是本仓库的全局 skill 分发管线；普通目标项目自己的项目级 skill，canonical 事实源应位于目标项目 `.Ai-config/skills/<skill-name>/`，`.claude/skills` 和 `.agents/skills` 只作为工具入口。
+
+
 
 ```text
 skills/shared/<skill-name>/

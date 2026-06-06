@@ -2,21 +2,31 @@
 
 ## 使用前检查
 
-- 已读取 `.Ai-config/CURRENT.md`，确认当前是否有活动任务、暂停任务、阻塞任务或待用户确认任务。
-- 已读取 `.Ai-config/skills-registry.md`，确认本 skill 的事实源、入口和状态。
-- 已读取 `.Ai-config/skills/{{skill_name}}/README.md` 和 `workflow.md`。
-- 如果存在相关任务卡，已读取 `.Ai-config/tasks/*.md` 中对应文件。
+- 已确认 `.Ai-config/skills/{{skill_name}}/` 存在，并且是本 skill 的 canonical 事实源。
+- 仅当任务有接手价值、可能跨会话、已有活动任务或属于 F3/F4 时，才读取 `.Ai-config/CURRENT.md`。
+- 已读取 `.Ai-config/skills-registry.md`，确认本 skill 的 canonical 事实源、入口和状态。
+- 已读取 `.Ai-config/skills/{{skill_name}}/README.md`，并按需读取同目录下的 `workflow.md`、`checklists.md`、`references/` 或 `templates/`。
+- 如果存在相关活动任务卡，已读取 `.Ai-config/tasks/*.md` 中对应文件。
+
+## 事实源检查
+
+- durable 规则、触发、workflow、checklist、references 和 templates 只维护在 `.Ai-config/skills/{{skill_name}}/` 下。
+- `.claude/skills/{{skill_name}}/SKILL.md`、`.agents/skills/{{skill_name}}/SKILL.md` 和可选 `.codex/skills/{{skill_name}}/SKILL.md` 只是工具入口，不承载完整规则。
+- 如果发现完整规则散落在 README、docs、脚本说明、旧版 `docs/ai/` 或工具入口中，已标记为迁移来源或支持性引用，并计划收敛到 canonical 目录。
+- `.Ai-config/skills-registry.md` 的事实源列指向 `.Ai-config/skills/{{skill_name}}/`；非 canonical 路径只写在备注中说明迁移、兼容或支持关系。
 
 ## 修改检查
 
-- 优先修改 `.Ai-config/skills/{{skill_name}}/` 下的事实源。
+- 修改规则前，先修改 `.Ai-config/skills/{{skill_name}}/` 下的事实源。
 - 工具入口只保留薄入口，不复制完整流程。
-- 修改后检查 `.claude/skills/{{skill_name}}/SKILL.md` 和 `.agents/skills/{{skill_name}}/SKILL.md` 是否仍指向同一事实源。
+- 修改后检查 `.claude/skills/{{skill_name}}/SKILL.md` 和 `.agents/skills/{{skill_name}}/SKILL.md` 是否仍指向同一 canonical 事实源。
 - 只有历史兼容或用户明确要求时，才维护 `.codex/skills/{{skill_name}}/SKILL.md`。
 
 ## 工作状态检查
 
-- 非简单任务应创建或更新 `.Ai-config/tasks/*.md` 任务卡。
+- F0/F1 小任务不创建任务卡。
+- F2 只有等待确认、验证缺失、残留风险、被打断或跨会话价值时才创建或更新任务卡。
+- F3/F4 或有明确接手价值的任务应创建或更新 `.Ai-config/tasks/*.md` 任务卡。
 - 切换任务前，应先保存旧任务状态。
 - 完成一轮工作但用户尚未确认时，应把任务保持为 `待用户确认` 或等价状态。
 - 未确认、未验证或有残留风险的任务不得直接标为 `已关闭`。

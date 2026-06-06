@@ -28,12 +28,14 @@
 
 ## Skills 约定
 
-- `.Ai-config/skills/<skill-name>/` 默认作为项目级 skill 的事实源。
-- `.claude/skills/<skill-name>/SKILL.md` 是 Claude Code 项目入口。
-- `.agents/skills/<skill-name>/SKILL.md` 是 Codex 项目入口。
+- 普通目标项目中，`.Ai-config/skills/<skill-name>/` 是项目级 skill 的 canonical 事实源。
+- `.claude/skills/<skill-name>/SKILL.md` 是 Claude Code 项目入口，不承载长期规则。
+- `.agents/skills/<skill-name>/SKILL.md` 是 Codex 项目入口，不承载长期规则。
 - `.codex/skills/<skill-name>/SKILL.md` 只在历史兼容需要时维护。
 - 工具入口只做薄入口，不复制完整项目规则。
 
 ## 本仓库说明
 
-本仓库同时维护全局规则和可同步到用户级目录的 `project-ai-config-hub` skill。该 skill 的长期事实源仍位于 `skills/shared/project-ai-config-hub/`，并通过 `scripts/render-skills.ps1` 生成 rendered 包；`.Ai-config/` 承担当前仓库的 AI 协作中枢职责。旧版 `docs/ai/` 历史副本已清理，历史记录保留在 `.Ai-config/archive/` 和相关任务卡中。
+本仓库同时维护全局规则和可同步到用户级目录的全局 managed skills。它们的长期事实源仍位于 `skills/shared/<skill-name>/`，并通过 `scripts/render-skills.ps1` 生成 rendered 包；这是本仓库的全局 skill 分发管线，不是普通目标项目的项目级 skill 事实源范式。
+
+普通目标项目使用 `project-ai-config-hub` 创建或修复项目级 skill 时，应把 durable 规则收敛到 `.Ai-config/skills/<skill-name>/`，工具入口只做薄入口。`.Ai-config/` 在本仓库中承担当前仓库的 AI 协作中枢职责。旧版 `docs/ai/` 历史副本已清理，历史记录保留在 `.Ai-config/archive/` 和相关任务卡中。

@@ -72,6 +72,8 @@
 
 事实源：`skills/shared/<skill-name>/`
 
+这里说的是本仓库维护并分发到用户级目录的全局 managed skills。普通目标项目自己的项目级 skill 不使用 `skills/shared/` 作为事实源；由 `project-ai-config-hub` 创建或修复时，其 canonical 事实源应收敛到目标项目的 `.Ai-config/skills/<skill-name>/`，工具入口只做发现和路由。
+
 skills 是这套配置的能力模块，不只是可分发包。当前全局能力包括：
 
 - `project-ai-config-hub`：在目标项目中按需创建或升级 `.Ai-config/`、任务卡和项目级 skill 中枢。
@@ -91,6 +93,7 @@ skill 的作用是把“什么时候触发、先读什么、不要做什么、�
 - `.Ai-config/CURRENT.md` 是接手入口和多任务状态总览。
 - `.Ai-config/tasks/*.md` 是有接手价值任务的无损接手卡。
 - `.Ai-config/skills-registry.md` 记录项目级 skill 或本仓库维护的全局 skill 源。
+- `.Ai-config/skills/<skill-name>/` 是普通目标项目中项目级 skill 的 canonical 事实源；README、docs、脚本说明和工具入口只能作为支持性引用、迁移来源或发现入口。
 - `.Ai-config/context-thread/` 存放当前项目的脉络索引和说明。
 
 它的设计重点是“按需”：小项目可以只有项目规则，长期项目再加入 `CURRENT.md`，多任务或跨会话时再加入任务卡。

@@ -1,6 +1,6 @@
 # 项目级 AI 配置中枢流程
 
-本 skill 是 `ai-config-hub` 的项目级分身。它不保存具体业务项目的长期规则，而是在目标项目里创建、升级、审计和修复轻量的 `.Ai-config/` 中枢、工作状态机制、项目级 skill 事实源和 Claude Code / Codex 双端入口。
+本 skill 是 `ai-config-hub` 的项目级分身。它不保存具体业务项目的长期规则，而是在目标项目里创建、升级、审计和修复轻量的 `.Ai-config/` 中枢、工作状态机制、项目级 skill canonical 事实源和 Claude Code / Codex 双端薄入口。
 
 用户不需要显式点名本 skill，但只有在请求明确涉及新增、修改、迁移、审计、修复或同步项目级 AI 配置中枢 / 项目级 skill 时，才按本流程工作。只是读取 `.Ai-config` 状态、普通业务任务恰好提到任务卡路径、F0/F1 问答或局部修复，不进入完整 audit / repair 流程。
 
@@ -11,9 +11,11 @@
 - 最小可用层：`AGENTS.md` 或 `CLAUDE.md` 加一段项目规则，适合小脚本、demo、一次性工具。
 - 接手状态层：`.Ai-config/CURRENT.md`，适合长期项目或经常跨会话继续的项目。
 - 任务卡层：`.Ai-config/tasks/`，只在任务会跨天、中断、多 AI 接手、等待确认、阻塞或有残留风险时使用。
-- Skill 层：`.Ai-config/skills/` 与 `.claude/skills` / `.agents/skills` 入口，只在项目确实有可复用专门工作流时创建。
+- Skill 层：项目级 skill 的 canonical 事实源统一放在 `.Ai-config/skills/<skill-name>/`；`.claude/skills` / `.agents/skills` 只放工具发现薄入口，只在项目确实有可复用专门工作流时创建。
 
 默认先建立足够轻的机制。只有用户要求、项目复杂度需要，或已有状态必须保留时，才升级到下一层。不要因为目标项目已经存在 `.Ai-config/`、任务卡或 skill 目录，就把普通业务任务升级成中枢审计；本 skill 也不自动拉起脉络、思维伙伴或同步流程，确需跨域时回到主任务路由判断主次。
+
+项目级 skill 事实源必须收敛：普通目标项目中，durable 的 skill 规则、触发、workflow、checklist、references 和 templates 都应归入 `.Ai-config/skills/<skill-name>/`。项目 README、docs、脚本说明、旧版 `docs/ai/`、`.claude/skills`、`.agents/skills` 和 `.codex/skills` 可以作为迁移来源、支持性引用或工具入口，但不得作为长期主事实源。
 
 ## 1. 识别当前项目
 
@@ -28,9 +30,9 @@
 - `docs/ai/`（旧版路径，仅作为迁移来源和兼容事实源；新配置写入 `.Ai-config/`）
 - `CHANGELOG.md`
 - `.github/instructions/`
-- `.claude/skills/`
-- `.agents/skills/`
-- `.codex/skills/`
+- `.claude/skills/`（工具入口或迁移来源，不作为长期事实源）
+- `.agents/skills/`（工具入口或迁移来源，不作为长期事实源）
+- `.codex/skills/`（历史兼容入口或迁移来源，不作为长期事实源）
 - `.claude-plugin/`
 - `.codex-plugin/`
 
@@ -101,17 +103,18 @@
 4. 查 `.agents/skills/<skill-name>/SKILL.md`。
 5. 必要时查历史 `.codex/skills/<skill-name>/SKILL.md`。
 
-确认事实源后，优先修改事实源，再同步检查工具入口。
+确认事实源后，优先修改 canonical 事实源，再同步检查工具入口。若发现 durable 规则散落在项目 README、docs、脚本说明、旧版 `docs/ai/` 或工具入口中，先制定事实源收敛方案，把规则迁入 `.Ai-config/skills/<skill-name>/`，再继续实质修改。
 
-修改已有 skill 时，默认先做原地更新，不要先迁移：
+修改已有 skill 时，默认先收敛事实源，再做实质更新：
 
-1. 如果事实源已经在 `.Ai-config/skills/<skill-name>/`，直接修改事实源，再同步入口和 registry。
-2. 如果完整规则还在 `.claude/skills/`、`.agents/skills` 或 `.codex/skills/`，先判断它是不是唯一事实源；只有用户明确要求迁移，或者必须先收敛到 `.Ai-config/` 才能继续时，才进入 `migrate`。
-3. 如果只改入口、说明或状态，优先修入口和 registry，不改事实源结构。
+1. 如果 canonical 事实源已经在 `.Ai-config/skills/<skill-name>/`，直接修改该目录下的事实源，再同步入口和 registry。
+2. 如果完整规则还在 `.claude/skills/`、`.agents/skills`、`.codex/skills/`、项目 README、docs、脚本说明或旧版 `docs/ai/`，把这些位置视为迁移来源或支持性引用；durable 规则变更前，应先把主事实迁入 `.Ai-config/skills/<skill-name>/`，再把工具入口改回薄入口。
+3. 只有低风险入口修复（frontmatter、description、路径、触发摘要、兼容说明）可以原地修改工具入口；不要继续往工具入口或散落文档里追加 workflow、checklists、references 或长期规则。
+4. 迁移会覆盖、删除、改名或改变非空旧事实源时，先给计划并等待确认。
 
 ## 4. 选择事实源和状态文件
 
-完整形态的默认事实源和状态文件：
+完整形态的默认状态文件和 canonical 事实源：
 
 ```text
 .Ai-config/
@@ -123,13 +126,15 @@
 .Ai-config/skills/<skill-name>/
 ```
 
+其中 `.Ai-config/skills/<skill-name>/` 是普通目标项目中项目级 skill 的 canonical 事实源。其他项目文档可以被引用为证据或背景，但不能作为 registry 中的长期事实源路径。
+
 `.Ai-config/CURRENT.md` 是 AI 接手入口和多任务状态总览；具体任务事实保存在 `.Ai-config/tasks/*.md`。它不是完整日志、日报或完成记录。
 
 轻量项目可以只有 `.Ai-config/CURRENT.md`。任务卡、archive 和 registry 都是按需层，不是健康项目的硬性标志。
 
-如果已有某个工具目录承载完整规则，应先识别真实事实源，再迁移到共享目录。迁移后，工具目录中的 `SKILL.md` 只保留薄入口。
+如果已有某个工具目录或项目文档承载完整规则，应先识别它是迁移来源还是支持性引用，再把 durable 规则收敛到 `.Ai-config/skills/<skill-name>/`。迁移后，工具目录中的 `SKILL.md` 只保留薄入口。
 
-不要把项目规则散落复制到多个工具目录。不要把目标项目主 README 强行写成固定 agent 接手入口；主 README 只作为项目概览，接手入口应在 `.Ai-config/CURRENT.md`。
+不要把项目规则散落复制到多个工具目录、README 或 docs。不要把目标项目主 README 强行写成固定 agent 接手入口；主 README 只作为项目概览，接手入口应在 `.Ai-config/CURRENT.md`。
 
 ## 5. 旧状态迁移
 
@@ -164,9 +169,11 @@
 
 - frontmatter。
 - 简短触发说明。
-- 明确的共享事实源路径。
+- 明确的 canonical 事实源路径：`.Ai-config/skills/<skill-name>/`。
 - 必读文件顺序。
 - 安全边界和确认条件。
+
+工具入口不承载 durable 规则、workflow、checklist、references 或 templates；如果入口需要引用外部项目文档，应先在 `.Ai-config/skills/<skill-name>/` 中登记或摘要，再由入口指向 canonical 事实源。
 
 ## 7. 计划和确认
 
@@ -208,10 +215,10 @@
 - `.Ai-config/CURRENT.md` 是否是接手入口和多任务状态总览。
 - `.Ai-config/tasks/` 是否按需创建，任务卡是否保留目标、上下文、已尝试/排除、验证、风险和下一步。
 - 是否把未确认、未验证或有残留风险的任务直接关闭；这类任务应保持 `待用户确认`、`等待验证`、`阻塞` 或 `暂停`。
-- 工具入口指向的共享文件是否存在。
-- 是否存在多个互相冲突的事实源。
-- `.Ai-config/skills-registry.md` 是否记录了新增或迁移的项目 skill。
-- 修改已有项目级 skill 后，双端入口和 registry 仍指向同一事实源。
+- 工具入口指向的 canonical 事实源 `.Ai-config/skills/<skill-name>/` 是否存在。
+- 是否存在多个互相冲突的事实源，或把 README、docs、脚本说明、`.claude/skills`、`.agents/skills`、`.codex/skills` 当成长期事实源。
+- `.Ai-config/skills-registry.md` 是否记录了新增或迁移的项目 skill，且普通项目级 skill 的事实源列指向 `.Ai-config/skills/<skill-name>/`。
+- 修改已有项目级 skill 后，双端入口和 registry 仍指向同一 canonical 事实源。
 - 是否把计划中能力误写为已完成。
 - 是否把主 README 误写成固定 agent 接手入口。
 - 是否包含明显敏感信息。

@@ -22,11 +22,12 @@
 - 任务卡目录位于 `.Ai-config/tasks/`，任务说明位于 `.Ai-config/tasks/README.md`，但不是所有项目的必需文件。
 - `.Ai-config/archive/` 仅作为可选长期整理目录，不是日常关闭任务的必需步骤。
 - 项目级 skill 清单位于 `.Ai-config/skills-registry.md`，只在存在项目级 skill 或用户要求登记时创建。
-- 共享事实源位于 `.Ai-config/skills/<skill-name>/` 或项目已有等价目录，只在确有可复用项目工作流时创建。
+- 项目级 skill 的 canonical 事实源位于 `.Ai-config/skills/<skill-name>/`，只在确有可复用项目工作流时创建。
+- 项目已有目录、README、docs、脚本说明、旧版 `docs/ai/` 或工具入口只能作为迁移来源、支持性引用或兼容入口，不得作为长期 skill 事实源。
 - `.claude/skills/<skill-name>/SKILL.md` 只是 Claude Code 工具入口。
 - `.agents/skills/<skill-name>/SKILL.md` 只是 Codex 工具入口。
 - `.codex/skills/<skill-name>/SKILL.md` 只在需要兼容时存在。
-- 工具入口明确列出共享事实源路径和必读文件。
+- 工具入口明确列出 `.Ai-config/skills/<skill-name>/` canonical 事实源路径和必读文件。
 
 ## 工作状态质量
 
@@ -43,6 +44,8 @@
 ## 内容质量
 
 - 文档描述真实状态，明确区分已完成、计划中、暂时方案和推断。
+- durable 的项目级 skill 规则、触发、workflow、checklist、references 和 templates 已收敛到 `.Ai-config/skills/<skill-name>/`。
+- 支持性项目 docs 由 `.Ai-config/skills/<skill-name>/` 内的主文件索引，不反过来让工具入口直接引用一堆散落文档。
 - 不复制大段业务流程到多个工具入口。
 - 不写入真实 token、密钥、密码、生产凭证。
 - 高风险操作有确认要求。
@@ -51,8 +54,9 @@
 ## 实施后
 
 - frontmatter 有稳定 `name` 和清晰 `description`。
-- 工具入口指向的文件真实存在。
-- 不存在多个互相冲突的事实源。
+- 工具入口指向的 `.Ai-config/skills/<skill-name>/` canonical 事实源真实存在。
+- 不存在多个互相冲突的事实源；非 canonical 完整规则已标记为迁移来源、支持性引用或兼容入口。
+- `.Ai-config/skills-registry.md` 的事实源列指向 `.Ai-config/skills/<skill-name>/`；普通目标项目不得把 README、docs、`.claude/skills`、`.agents/skills` 或 `.codex/skills` 登记为长期事实源。
 - `.Ai-config/CURRENT.md` 已按需创建或刷新；若没有创建，原因是任务没有持续接手价值。
 - `.Ai-config/tasks/README.md` 已按需创建。
 - `.Ai-config/tasks/*.md` 已按需创建或迁移，且可让后续 AI 无损接手。

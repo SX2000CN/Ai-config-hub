@@ -58,12 +58,12 @@ AGENTS.md / CLAUDE.md
 
 - 先识别项目已有文档、AI 规则和 skill 入口，再设计目录结构。
 - 按风险和接手价值分层启用配置，不把完整 `.Ai-config/` 结构当作所有项目的默认负担。
-- `.Ai-config/` 是项目级 AI 配置中枢，`.Ai-config/skills/<skill-name>/` 是具体 skill 事实源。
-- 旧版 `docs/ai/` 只作为迁移来源和兼容事实源；新配置统一写入 `.Ai-config/`。
+- `.Ai-config/` 是项目级 AI 配置中枢，`.Ai-config/skills/<skill-name>/` 是普通目标项目中项目级 skill 的 canonical 事实源。
+- 旧版 `docs/ai/`、项目 README / docs、脚本说明和工具入口只作为迁移来源、支持性引用或兼容入口；durable skill 规则统一写入 `.Ai-config/skills/<skill-name>/`。
 - `.Ai-config/CURRENT.md` 是 AI 接手入口和多任务状态总览；只有有接手价值的任务才保存在 `.Ai-config/tasks/*.md`。
 - 目标项目的主 README 只作为项目概览，不应被模板强行写成固定 agent 接手入口。
 - 共享事实源描述真实项目状态，不把计划写成已完成。
-- 工具入口必须明确指向共享事实源，不能复制完整规则。
+- 工具入口必须明确指向 `.Ai-config/skills/<skill-name>/` canonical 事实源，不能复制完整规则，也不能直接串联散落在项目各处的事实文件。
 - 覆盖、迁移、删除、写入全局目录和高风险操作前，必须先列计划并等待确认。
 - 不把真实密钥、Token、服务器密码或生产凭证写入 skill、模板或普通文档。
 

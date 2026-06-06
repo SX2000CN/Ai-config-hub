@@ -22,8 +22,8 @@
 
 - `.Ai-config/CURRENT.md` 应提供当前项目自己的接手导航，不强制把主 README 作为固定第一入口。
 - `.Ai-config/tasks/*.md` 用于保存跨会话、被打断、等待确认、阻塞或有残留风险任务的目标、上下文、已尝试/已排除、验证、风险和下一步。
-- `.Ai-config/skills/<skill-name>/` 是具体 skill 的事实源。
-- `.claude/skills/<skill-name>/SKILL.md` 是 Claude Code 工具入口。
-- `.agents/skills/<skill-name>/SKILL.md` 是 Codex 工具入口。
+- `.Ai-config/skills/<skill-name>/` 是具体项目级 skill 的 canonical 事实源。
+- `.claude/skills/<skill-name>/SKILL.md` 是 Claude Code 工具入口，不承载长期规则。
+- `.agents/skills/<skill-name>/SKILL.md` 是 Codex 工具入口，不承载长期规则。
 - `.codex/skills/<skill-name>/SKILL.md` 只在历史兼容需要时维护。
 - 工具入口只做薄入口，不复制完整业务规则。
