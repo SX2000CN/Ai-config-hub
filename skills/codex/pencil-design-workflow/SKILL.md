@@ -1,6 +1,6 @@
 ---
 name: pencil-design-workflow
-description: 将设计先行请求作为轻量闸门路由到当前可用的可见 Pencil MCP 宿主；仅在用户明确要求无头、批量、后台或不看过程时才进入 Pencil CLI/headless。
+description: 将明确的设计先行请求作为轻量闸门路由到当前可用的可见 Pencil MCP 宿主；仅在用户明确要求无头、批量、后台或不看过程时才进入 Pencil CLI/headless。
 ---
 
 # Pencil 设计先行工作流
@@ -24,7 +24,8 @@ description: 将设计先行请求作为轻量闸门路由到当前可用的可�
 关键规则：
 
 - 用户说“做设计图”“先做设计”“先设计确认后写代码”等设计先行意图时自动使用，不要求用户显式说 Pencil 或 pencli。
-- 局部 UI bugfix、小样式修复、已有界面明确错误修复不使用本 skill。
+- 局部 UI bugfix、小样式修复、已有界面明确错误修复、根据已有设计直接写代码或纯网页截图 review 不使用本 skill。
+- 级联边界：本 skill 只负责设计先行闸门和 Pencil 证据交接；设计确认后不自动进入 `global-frontend-design` 或代码实现，除非用户明确要求。
 - 设计请求默认必须使用当前会话已注入的可见 Pencil MCP 宿主；不需要用户额外说“我要看着做”。
 - VS Code / Cursor 插件端是当前默认可见宿主；Pencil Desktop 暂停作为默认路径，宿主由运行环境注入，模型不能假装能自由切换。
 - 只有用户明确要求批量、无头、后台、自动化或不需要看过程时，才使用 Pencil CLI / headless。

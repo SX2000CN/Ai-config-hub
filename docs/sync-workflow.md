@@ -2,15 +2,22 @@
 
 本文记录全局规则、skills 和 MCP 配置片段的本机同步流程。所有同步脚本默认先 dry-run，只有显式 `-Apply` 才写入真实全局目录。
 
-## 全局同步前总检查
+## 分层验证与全局同步前总检查
 
-同步任一真实用户级配置前，优先运行：
+先按本次改动影响的管线做最小相关验证：
+
+- 只改全局规则：运行 `render.ps1`、`check.ps1`、`sync.ps1` dry-run。
+- 只改 skills：运行 `render-skills.ps1`、`check-skills.ps1`、`sync-skills.ps1` dry-run。
+- 只改 MCP 配置片段：运行 `render-mcp.ps1`、`check-mcp.ps1`、`sync-mcp.ps1` dry-run。
+- 只改 context-thread runtime：运行引擎测试和 `sync-context-thread-runtime.ps1` dry-run。
+
+跨管线改动、发布 / 审计式验证，或准备同步任一真实用户级配置前，再运行总检查：
 
 ```powershell
 .\scripts\check-all.ps1
 ```
 
-该脚本会依次执行规则、skills、MCP 配置片段的 render、check 和 dry-run。若只检查单个管线，也应至少运行对应的 render、check、sync dry-run，并确认输出中的 `would update` / `missing target` 与本次预期一致。
+该脚本会依次执行规则、skills、MCP 配置片段的 render、check 和 dry-run。确认输出中的 `would update` / `missing target` 与本次预期一致后，才考虑后续 `-Apply`。
 
 ## 全局规则
 
