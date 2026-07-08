@@ -6,3 +6,6 @@
 - VS Code 插件模式下，当前文件、选区、诊断信息、inline diff 和 plan review 可能作为上下文提供；这些上下文可作为快速输入，修改前仍应以实际文件内容和当前任务路由为准。
 - 如需配置 Claude Code settings、hooks、权限、MCP 或环境变量，应优先使用相关配置工具或直接维护 settings.json，并保持用户级、项目级、本地级配置边界清晰；写入用户级或共享配置按 F4 处理，先 dry-run / 说明影响并确认。
 - 联网核实资料时优先使用内置 WebFetch；只要内置 WebFetch 报错或无法访问（无论具体原因），立即改用 `mcp__local-webfetch__fetch` 兜底重试（如果该 MCP 可用），不要重复重试内置工具或直接放弃。不要默认绕开内置工具直接用 local-webfetch。
+- Windows 11 双 Shell：PowerShell 工具底层为 `powershell.exe`（5.1），只接受 PowerShell 语法，不支持 `&&`（用 `; if ($?) {}`）、`tail`/`grep`/`head`（用 `Select-Object`/`Select-String`/`Get-Content`）、`/dev/null`（用 `$null`）；Bash 工具和 Monitor 工具底层均为 `/usr/bin/bash`，只接受 POSIX sh 语法，Monitor 脚本语法错误不产生任何 stdout 事件，模型将永久挂起——两个工具严禁传入对方语法。
+- 短命令（预期 30s 内完成）优先同步执行直接拿结果，不要以"等待通知"结束发言。
+- 后台任务不继承当前会话新刷新的 PATH；刚安装的 CLI 在后台任务里使用完整路径，或任务开头显式刷新 `$env:Path`。

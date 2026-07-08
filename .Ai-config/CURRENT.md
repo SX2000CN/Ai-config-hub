@@ -28,6 +28,7 @@
 | global-thinking-partner 输出规格统一 | 统一镜头数量与输出条数口径（1-4）；触发条件收敛到 trigger-boundaries.md 单一来源 | `check-skills.ps1` 通过 |
 | 移除 OpenCode 支持 | 删除相关规则、模板、skill 目录；更新渲染同步脚本 | `check.ps1`、`check-skills.ps1` 通过 |
 | 新增本地 WebFetch MCP server | 新增 `local-webfetch` MCP，补充 Claude Code 兜底规则；修复 `check-mcp.ps1` 遗漏的分组注册 | `check-mcp.ps1` 通过 |
+| context-thread 遍历算法优化 | `traverseDFS` 改迭代栈、`getImpactRecursive` 去除冗余 DB 读、`findPath` O(n²) 路径复制改为父指针 O(n)；新增 3 个 traversal 测试；删除 `context-thread-tools.md` 重复文档 | 构建零错误，6 个测试通过 |
 
 ## 最近关闭
 
