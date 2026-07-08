@@ -23,7 +23,6 @@ foreach ($skillName in $SkillNames) {
         Source = Join-Path $RenderedRoot "codex\$skillName"
         Target = Join-Path $UserHome ".agents\skills\$skillName"
     }
-
     if ($IncludeCodexLegacy) {
         $Targets += @{
             SkillName = $skillName

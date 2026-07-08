@@ -74,8 +74,6 @@ C:\Users\sx200\.codex\AGENTS.md
 
 每个全局 managed skill 使用同一条渲染和同步路径。注意：这是本仓库的全局 skill 分发管线；普通目标项目自己的项目级 skill，canonical 事实源应位于目标项目 `.Ai-config/skills/<skill-name>/`，`.claude/skills` 和 `.agents/skills` 只作为工具入口。
 
-
-
 ```text
 skills/shared/<skill-name>/
         +
@@ -148,6 +146,24 @@ plus local-discovered mcp_servers.pencil
 C:\Users\sx200\.codex\config.toml
 ```
 
+`local-webfetch` 是仅交付给 Claude Code 的独立 MCP group（`Targets = @('ClaudeCode')`），渲染时不进入 Codex 的 fragment：
+
+```text
+tool-configs/mcp/shared/local-webfetch.json
+        ↓
+scripts/sync-local-webfetch-runtime.ps1 -Apply
+        ↓
+C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\
+        ↓
+tool-configs/mcp/rendered/claude-code.mcp.json
+        ↓
+merge managed mcpServers.local-webfetch
+        ↓
+C:\Users\sx200\.claude.json
+```
+
+`local-webfetch` server 的 command 指向 `node C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\index.js`。它在本机进程中直接发起 HTTP 请求，绕开 Claude Code 内置 `WebFetch` 工具在云端发起请求、不认本机代理/VPN 的限制；Codex CLI 本身在本机运行，不需要它。
+
 ### 当前工作状态
 
 ```text
@@ -168,6 +184,7 @@ AI 接手入口和多任务状态总览
 - rendered 文件保留在仓库中，方便审阅最终效果。
 - 同步真实全局规则文件必须显式执行 `sync.ps1 -Apply`。
 - 同步真实全局 MCP 配置片段必须显式执行 `sync-mcp.ps1 -Apply`；完整 Claude Code / Codex 用户配置仍不自动管理，只合并明确托管的 MCP server 和本机自动发现的 Pencil MCP。
+- MCP group 默认渲染同步到全部工具（Claude Code、Codex）；只有当某个 group 解决的是单一工具特有的问题时，才用 `Targets` 字段限定交付范围（例如 `local-webfetch` 只解决 Claude Code 云端 WebFetch 绕开本机网络的问题），避免给不需要它的工具徒增无用配置。
 - Codex 完整 `config.toml` 不作为仓库事实源，只提供安全示例模板和托管 MCP 片段。
 - skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件。
 - skill rendered 包通过 `render-skills.ps1` 为每个已登记全局 skill 生成，不应手工作为长期事实源编辑。

@@ -125,7 +125,8 @@ MCP 配置片段管理流程：
 - 已支持 Claude Code 和 Codex 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
 - 已支持五个全局 skill 的源码化、渲染、检查和 dry-run 同步流程；新增或变更的用户级安装需执行 `sync-skills.ps1 -Apply`。
-- 已支持浏览器视觉验证 MCP、脉络 MCP 和 Pencil MCP 的检查与 dry-run 安全合并同步流程；其中 Pencil MCP 按本机安装自动发现，真实用户级配置需执行 `sync-mcp.ps1 -Apply`。
+- 已支持浏览器视觉验证 MCP、脉络 MCP、本地 WebFetch MCP 和 Pencil MCP 的检查与 dry-run 安全合并同步流程；其中 Pencil MCP 按本机安装自动发现，真实用户级配置需执行 `sync-mcp.ps1 -Apply`。
 - 脉络 MCP 的源码维护在 `tools/context-thread-engine/`，运行时由 `scripts/sync-context-thread-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`，MCP 配置通过 `node` 启动该用户级 runtime，不依赖当前仓库路径或全局 `context-thread` 命令。
+- `local-webfetch` MCP 只交付给 Claude Code：源码维护在 `tools/local-webfetch/`，运行时由 `scripts/sync-local-webfetch-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\`。它在本机进程中直接发起 HTTP 请求，解决 Claude Code 内置 `WebFetch` 工具云端发起、绕开本机代理/VPN 的问题；Codex CLI 本身在本机运行，不受这个限制，因此不渲染同步给它（通过 MCP group 的 `Targets` 字段限定）。
 - Pencil 设计先行和真实浏览器 MCP 截图检查链路已完成过验证；对应一次性夹具产物已清理，不作为长期项目资产保留。
 - Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。

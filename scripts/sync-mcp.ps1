@@ -24,9 +24,20 @@ $McpGroups = @(
         Name = 'context-thread'
         Servers = @('context-thread')
         LegacyServers = @()
+    },
+    @{
+        Name = 'local-webfetch'
+        Servers = @('local-webfetch')
+        LegacyServers = @()
+        Targets = @('ClaudeCode')
     }
 )
 $LocalMcpServers = @('pencil')
+
+function Test-GroupTargetsTool($Group, $ToolName) {
+    if ($null -eq $Group.Targets -or @($Group.Targets).Count -eq 0) { return $true }
+    return @($Group.Targets) -contains $ToolName
+}
 
 if (-not $ClaudeCode -and -not $Codex) {
     $ClaudeCode = $true
@@ -41,22 +52,26 @@ if ($Codex -and -not (Test-Path -LiteralPath $CodexSource)) {
     throw "Missing rendered MCP source: $CodexSource. Run scripts\render-mcp.ps1 first."
 }
 
-function Get-ManagedServers() {
+function Get-ManagedServers($ToolName) {
     $servers = New-Object System.Collections.Generic.List[string]
     foreach ($group in $McpGroups) {
+        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
         foreach ($serverName in $group.Servers) {
             $servers.Add($serverName)
         }
-        foreach ($serverName in $group.LegacyServers) {
-            $servers.Add($serverName)
+        if ($null -ne $group.LegacyServers) {
+            foreach ($serverName in $group.LegacyServers) {
+                $servers.Add($serverName)
+            }
         }
     }
     return @($servers)
 }
 
-function Get-ActiveManagedServers() {
+function Get-ActiveManagedServers($ToolName) {
     $servers = New-Object System.Collections.Generic.List[string]
     foreach ($group in $McpGroups) {
+        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
         foreach ($serverName in $group.Servers) {
             $servers.Add($serverName)
         }
@@ -144,8 +159,8 @@ function Test-ClaudePencilServerUsesDesktop($Server) {
 }
 
 function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
-    $managedServers = Get-ManagedServers
-    $activeManagedServers = Get-ActiveManagedServers
+    $managedServers = Get-ManagedServers 'ClaudeCode'
+    $activeManagedServers = Get-ActiveManagedServers 'ClaudeCode'
     $source = Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath | ConvertFrom-Json
     $sourceServers = $source.mcpServers
     if ($null -eq $sourceServers) {
@@ -318,6 +333,7 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     $newBlocks = New-Object System.Collections.Generic.List[string]
 
     foreach ($group in $McpGroups) {
+        if (-not (Test-GroupTargetsTool $group 'Codex')) { continue }
         $sourceBlock = Get-CodexGroupBlock $sourceContent $group.Name
         $newBlocks.Add($sourceBlock)
 
@@ -371,6 +387,7 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     }
 
     foreach ($group in $McpGroups) {
+        if (-not (Test-GroupTargetsTool $group 'Codex')) { continue }
         $actions.Add("append managed $($group.Name) MCP block")
     }
 

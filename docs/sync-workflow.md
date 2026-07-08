@@ -63,6 +63,12 @@
 - 如果手动改过真实全局文件，应先把差异同步回本项目源文件，再重新渲染。
 - 完整 `C:\Users\sx200\.codex\config.toml` 不作为仓库事实源；只有 MCP 配置片段流程会合并明确托管的 server section。
 
+## 注意事项
+
+- 不要直接编辑 rendered 文件作为长期源头；应修改 `rules/` 下的源文件。
+- 如果手动改过真实全局文件，应先把差异同步回本项目源文件，再重新渲染。
+- 完整 `C:\Users\sx200\.codex\config.toml` 不作为仓库事实源；只有 MCP 配置片段流程会合并明确托管的 server section。
+
 ## Skills
 
 1. 修改源文件：
@@ -126,6 +132,7 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 1. 修改源文件：
    - `tool-configs/mcp/shared/browser-visual.json`
    - `tool-configs/mcp/shared/context-thread.json`
+   - `tool-configs/mcp/shared/local-webfetch.json`：本地网络 WebFetch MCP，让抓取网页请求走本机代理 / VPN，而不是云端 Claude Code 后端；只交付给 Claude Code（见下方 `Targets` 字段说明）。
 
    `pencil` MCP 不写入 `tool-configs/mcp/shared/`，因为它依赖本机 Pencil Desktop / 插件安装路径。它由 `scripts\mcp-local.ps1` 在同步本机时自动发现；Claude Code 侧通过 `claude mcp add -s user` 注册，Codex 侧合并到真实用户配置。
 
@@ -137,6 +144,15 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 ```
 
 默认运行时位置：`C:\Users\sx200\.ai-config-hub\mcp\context-thread\`。
+
+如果改动了 `tools/local-webfetch/`，同样先同步该 runtime：
+
+```powershell
+.\scripts\sync-local-webfetch-runtime.ps1
+.\scripts\sync-local-webfetch-runtime.ps1 -Apply
+```
+
+默认运行时位置：`C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\`。
 
 3. 渲染输出：
 
@@ -180,6 +196,7 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 
 - `tool-configs/mcp/rendered/claude-code.mcp.json` → 合并 `mcpServers.chrome-devtools` / `mcpServers.playwright` 到 `C:\Users\sx200\.claude.json`
 - `tool-configs/mcp/rendered/claude-code.mcp.json` → 合并 `mcpServers.context-thread` 到 `C:\Users\sx200\.claude.json`
+- `tool-configs/mcp/rendered/claude-code.mcp.json` → 合并 `mcpServers.local-webfetch` 到 `C:\Users\sx200\.claude.json`（仅 Claude Code；Codex 渲染时跳过这个 group）
 - `tool-configs/mcp/rendered/codex.mcp.toml` → 合并托管 `browser-visual` 和 `context-thread` blocks 到 `C:\Users\sx200\.codex\config.toml`
 - `scripts\mcp-local.ps1` → 本机发现 Pencil MCP server 后，`sync-mcp.ps1` 通过 `claude mcp add -s user pencil ...` 注册 Claude Code 的 `pencil`，并合并 `[mcp_servers.pencil]` 到 Codex 用户配置。
 
@@ -187,8 +204,9 @@ MCP 配置片段只管理明确命名的非敏感 server，不保存或覆盖完
 
 - 不要提交完整 `C:\Users\sx200\.claude.json` 或 `C:\Users\sx200\.codex\config.toml`。
 - `sync-mcp.ps1` 默认 dry-run；只有显式 `-Apply` 才写真实用户配置。
-- Claude Code 的 `chrome-devtools`、`playwright` 和 `context-thread` 仍合并到 `C:\Users\sx200\.claude.json`；`pencil` 不再直接写 `.claude.json`，改用 Claude Code 官方 MCP 命令注册。为避免正在运行的 Claude Code 会话用旧配置覆盖新注册，持久同步 `pencil` 时应完全退出 Claude Code 后，从普通终端运行 `sync-mcp.ps1 -Apply -ClaudeCode`。
+- Claude Code 的 `chrome-devtools`、`playwright`、`context-thread` 和 `local-webfetch` 仍合并到 `C:\Users\sx200\.claude.json`；`pencil` 不再直接写 `.claude.json`，改用 Claude Code 官方 MCP 命令注册。为避免正在运行的 Claude Code 会话用旧配置覆盖新注册，持久同步 `pencil` 时应完全退出 Claude Code 后，从普通终端运行 `sync-mcp.ps1 -Apply -ClaudeCode`。
 - Codex 同步使用 `# >>> ai-config-hub managed mcp: <group>` marker block，只替换托管 block 或同名 server section，保留其他私有配置。
+- 每个 MCP group 可以在 `render-mcp.ps1`/`check-mcp.ps1`/`sync-mcp.ps1` 里加 `Targets` 字段（如 `Targets = @('ClaudeCode')`），限定该 group 只渲染同步到指定工具；省略该字段时默认交付给全部工具（Claude Code、Codex），这是 `browser-visual` 和 `context-thread` 的行为。`local-webfetch` 显式限定 `Targets = @('ClaudeCode')`，因为它解决的是 Claude Code 内置 `WebFetch` 工具在云端发起请求、绕开本机代理/VPN 的问题；Codex CLI 本身在本机运行，不存在这个问题，因此不需要这个 MCP server。
 - Pencil MCP 是同步本机的本地自动配置项：优先发现 `AI_CONFIG_HUB_PENCIL_MCP_COMMAND`，再发现 `~\.pencil\mcp\<app>\out\mcp-server-windows-x64.exe` 中的 VS Code / Cursor 等插件端。Desktop transport 暂不自动发现；如果现有用户配置仍指向 Desktop，`sync-mcp.ps1` 会替换为可发现的插件端。发现失败只给 warning，不阻塞 browser/context-thread MCP 校验；真正执行设计请求前仍要在当前会话确认 Pencil MCP 工具和目标画布可用。
 - `context-thread` MCP 配置声明的是 `node C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js serve --mcp`；源码仍由本仓库维护，运行时由 `sync-context-thread-runtime.ps1 -Apply` 分发。本项目不依赖 npm 全局 `context-thread` 命令，也不自动初始化项目 `.Ai-config/context-thread/` 索引。`check-mcp.ps1` 会在 runtime 缺失时给出 warning，但不阻塞浏览器 MCP 校验。
 - 每个目标项目的 context-thread 索引都是项目本地文件，默认位置是 `.Ai-config/context-thread/context-thread.db`。全局 MCP runtime 存在不等于目标项目已经有索引；复杂任务按需初始化，L0/L1 无索引时直接回退到普通文件搜索和读取。

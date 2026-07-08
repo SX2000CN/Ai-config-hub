@@ -1,15 +1,15 @@
 # 当前工作状态
 
-更新时间：2026-06-07
+更新时间：2026-06-09
 当前活动任务：无
 整体状态：空闲；有历史待确认项，但不阻塞新任务。
 
 ## 一眼看结论
 
 - 当前没有正在推进、暂停或阻塞的任务。
-- 本仓库近期重点是让 AI 配置更快、更精准：快速路由、单 skill 默认、反触发和分层验证已完成，并已同步到本机 Claude Code / Codex 规则与 managed skills。
-- MCP 配置本轮只做 dry-run 检查，未执行 `sync-mcp.ps1 -Apply`；如需同步 MCP，单独确认后再做。
-- 历史待确认项主要是“用户试用后确认是否关闭任务卡”，不是必须先处理的阻塞项。
+- 本仓库近期重点是让 AI 配置更快、更精准：快速路由、单 skill 默认、反触发和分层验证已完成，并已同步到本机 Claude Code / Codex 规则、managed skills 与 MCP 托管片段。
+- OpenCode 支持已于 2026-07-08 移除：删除 `rules/tools/opencode.md`、`templates/AGENTS.md.opencode.tpl`、`skills/opencode/` 等文件，并更新渲染和同步脚本移除相关逻辑。
+- 历史待确认项主要是"用户试用后确认是否关闭任务卡"，不是必须先处理的阻塞项。
 - 新任务按 F0-F4 快速路由处理；F0/F1 小任务不要因为本文件存在而启动完整状态流程。
 
 ## 当前待确认
@@ -38,7 +38,7 @@
 
 | 事项 | 结果 | 证据 |
 |---|---|---|
-| 快速路由与精准能力调度改造 | 已更新规则源、skill 源、状态说明和 rendered 产物，并同步到本机 Claude Code / Codex 规则与 managed skills；未同步 MCP 配置 | `check-all.ps1` 通过；`sync.ps1 -Apply`、`sync-skills.ps1 -Apply` 已执行；同步后 dry-run 均为 `unchanged` |
+| 快速路由与精准能力调度改造 | 已更新规则源、skill 源、状态说明和 rendered 产物，并同步到本机 Claude Code / Codex 规则、managed skills 与 MCP 托管片段 | `check-all.ps1` 通过；`sync.ps1 -Apply`、`sync-skills.ps1 -Apply`、`sync-mcp.ps1 -Apply` 已执行；同步后规则、skills、Claude Code MCP dry-run 均为 `unchanged`，Codex MCP 内容校验为 `unchanged` |
 | 脉络更新审计 | 当前仓库索引 up to date；用户级 runtime 与仓库源指纹一致 | `scripts/context-thread.ps1 sync .`、MCP `context_thread_status` |
 | AI 配置更新审计 | 规则、skills、MCP 片段曾完成渲染和 dry-run 复查 | 历史记录见相关任务卡 |
 | 浏览器视觉验证 MCP | `chrome-devtools` / `playwright` 已纳入本机同步流程 | `.Ai-config/tasks/2026-05-18-browser-visual-mcp.md` |

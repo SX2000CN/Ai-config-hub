@@ -14,8 +14,19 @@ $McpGroups = @(
         Name = 'context-thread'
         SourcePath = Join-Path $Root 'tool-configs\mcp\shared\context-thread.json'
         RequiredServers = @('context-thread')
+    },
+    @{
+        Name = 'local-webfetch'
+        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\local-webfetch.json'
+        RequiredServers = @('local-webfetch')
+        Targets = @('ClaudeCode')
     }
 )
+
+function Test-GroupTargetsTool($Group, $ToolName) {
+    if ($null -eq $Group.Targets -or @($Group.Targets).Count -eq 0) { return $true }
+    return @($Group.Targets) -contains $ToolName
+}
 
 function Write-Text($Path, $Content) {
     $parent = Split-Path -Parent $Path
@@ -122,6 +133,7 @@ foreach ($group in $McpGroups) {
 
 $claudeServers = [ordered]@{}
 foreach ($group in $McpGroups) {
+    if (-not (Test-GroupTargetsTool $group 'ClaudeCode')) { continue }
     $source = $groupSources[$group.Name]
     foreach ($serverName in $group.RequiredServers) {
         $server = $source.servers.$serverName
@@ -132,7 +144,7 @@ foreach ($group in $McpGroups) {
         }
 
         $entry.command = [string]$server.command
-        $entry.args = Get-ServerArgs $server
+        $entry.args = @(Get-ServerArgs $server)
         $claudeServers[$serverName] = $entry
     }
 }
@@ -145,6 +157,7 @@ Write-Text $ClaudeOutput $claudeJson
 
 $codexLines = New-Object System.Collections.Generic.List[string]
 foreach ($group in $McpGroups) {
+    if (-not (Test-GroupTargetsTool $group 'Codex')) { continue }
     $source = $groupSources[$group.Name]
     $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
     $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
