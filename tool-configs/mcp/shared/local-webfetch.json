@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "local-webfetch": {
+      "type": "stdio",
+      "command": "node",
+      "args": [],
+      "runtime_entry": "~\\.ai-config-hub\\mcp\\local-webfetch\\index.js",
+      "startup_timeout_ms": 20000
+    }
+  }
+}
