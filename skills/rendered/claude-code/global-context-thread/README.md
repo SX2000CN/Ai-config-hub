@@ -14,5 +14,4 @@
 ## 文件说明
 
 - `workflow.md`：核心触发、路由和退出规则。
-- `references/context-thread-tools.md`：context-thread 工具选择表和反模式。
 - `references/workflow-relation-index.md`：非代码任务关系索引格式。

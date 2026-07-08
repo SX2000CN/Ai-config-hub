@@ -34,18 +34,12 @@ context-thread MCP 可用时，先用 `context_thread_status` 判断索引是否
 
 索引自动更新只在 MCP server 已运行、项目已初始化、文件 watcher 可用且变更文件类型受支持时成立。MCP 没启动、watcher 被禁用或平台不支持时，不会自动同步；这不是失败，小任务直接回退，大任务按需手动 sync。
 
-## 3. 代码任务使用顺序
+## 3. 代码任务工具选择
 
-- 了解功能、区域或修复入口：先用 `context_thread_context`。
-- 查符号位置：用 `context_thread_search`。
-- 查谁调用某符号：用 `context_thread_callers`。
-- 查某符号调用什么：用 `context_thread_callees`。
-- 评估改动影响面：用 `context_thread_impact`。
-- 看单个符号细节：用 `context_thread_node`。
-- 一次查看多个相关源码：用一次 `context_thread_explore`。
-- 看索引文件树或健康状态：用 `context_thread_files` / `context_thread_status`。
+context-thread MCP 可用时，工具选择和常见用法链路已在 MCP server 自带指南里说明（`context_thread_status` 可确认 server 是否在线）。这里只补充两条不在 server 指南里的规则：
 
-只在需要确认真实文本、最新修改、配置细节、测试内容或文档语义时再读文件。刚修改文件后不要马上依赖旧索引判断最终事实。
+- 刚修改文件后，不要立刻依赖索引判断最终事实；watcher debounce 约 2 秒，修改后的关系要等下一轮同步才反映。
+- 只在需要确认真实文本、最新修改、配置细节、测试内容或文档语义时再读文件；其他情况优先用 context-thread 减少文件读取。
 
 ## 4. 非代码任务关系索引
 
