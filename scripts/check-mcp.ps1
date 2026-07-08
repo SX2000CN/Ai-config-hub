@@ -15,9 +15,20 @@ $McpGroups = @(
         Name = 'context-thread'
         SourcePath = Join-Path $Root 'tool-configs\mcp\shared\context-thread.json'
         RequiredServers = @('context-thread')
+    },
+    @{
+        Name = 'local-webfetch'
+        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\local-webfetch.json'
+        RequiredServers = @('local-webfetch')
+        Targets = @('ClaudeCode')
     }
 )
 $Failed = $false
+
+function Test-GroupTargetsTool($Group, $ToolName) {
+    if ($null -eq $Group.Targets -or @($Group.Targets).Count -eq 0) { return $true }
+    return @($Group.Targets) -contains $ToolName
+}
 
 function Fail($Message) {
     Write-Output "ERROR: $Message"
@@ -32,9 +43,10 @@ function Get-PropertyNames($Object) {
     return @($Object.PSObject.Properties | ForEach-Object { $_.Name })
 }
 
-function Get-ManagedServers() {
+function Get-ManagedServers($ToolName) {
     $servers = New-Object System.Collections.Generic.List[string]
     foreach ($group in $McpGroups) {
+        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
         foreach ($serverName in $group.RequiredServers) {
             $servers.Add($serverName)
         }
@@ -109,7 +121,8 @@ foreach ($group in $McpGroups) {
 }
 
 if (-not $Failed) {
-    $managedServers = Get-ManagedServers
+    $claudeManagedServers = Get-ManagedServers 'ClaudeCode'
+    $codexManagedServers = Get-ManagedServers 'Codex'
 
     foreach ($group in $McpGroups) {
         try {
@@ -157,14 +170,14 @@ if (-not $Failed) {
         }
 
         $claudeServerNames = Get-PropertyNames $claude.mcpServers
-        foreach ($serverName in $managedServers) {
+        foreach ($serverName in $claudeManagedServers) {
             if ($claudeServerNames -notcontains $serverName) {
                 Fail "Missing Claude rendered server: $serverName"
             }
         }
 
         foreach ($serverName in $claudeServerNames) {
-            if ($managedServers -notcontains $serverName) {
+            if ($claudeManagedServers -notcontains $serverName) {
                 Fail "Unexpected Claude rendered server: $serverName"
             }
         }
@@ -175,6 +188,7 @@ if (-not $Failed) {
 
     $codexContent = Get-Content -Raw -Encoding UTF8 -LiteralPath $CodexPath
     foreach ($group in $McpGroups) {
+        if (-not (Test-GroupTargetsTool $group 'Codex')) { continue }
         $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
         $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
         if (-not $codexContent.Contains($startMarker) -or -not $codexContent.Contains($endMarker)) {
@@ -182,7 +196,7 @@ if (-not $Failed) {
         }
     }
 
-    foreach ($serverName in $managedServers) {
+    foreach ($serverName in $codexManagedServers) {
         if ($codexContent -notmatch "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\]$") {
             Fail "Missing Codex rendered server section: $serverName"
         }
