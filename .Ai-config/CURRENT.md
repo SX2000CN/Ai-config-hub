@@ -1,57 +1,43 @@
 # 当前工作状态
 
-更新时间：2026-06-09
+更新时间：2026-07-08
 当前活动任务：无
-整体状态：空闲；有历史待确认项，但不阻塞新任务。
+整体状态：空闲，无阻塞项。
 
 ## 一眼看结论
 
 - 当前没有正在推进、暂停或阻塞的任务。
-- 本仓库近期重点是让 AI 配置更快、更精准：快速路由、单 skill 默认、反触发和分层验证已完成，并已同步到本机 Claude Code / Codex 规则、managed skills 与 MCP 托管片段。
-- OpenCode 支持已于 2026-07-08 移除：删除 `rules/tools/opencode.md`、`templates/AGENTS.md.opencode.tpl`、`skills/opencode/` 等文件，并更新渲染和同步脚本移除相关逻辑。
-- 历史待确认项主要是"用户试用后确认是否关闭任务卡"，不是必须先处理的阻塞项。
-- 新任务按 F0-F4 快速路由处理；F0/F1 小任务不要因为本文件存在而启动完整状态流程。
+- 本次审计（2026-07-08）清理了 4 张超过 30 天未跟进的"待用户确认"任务卡（全部标记为已关闭/未跟进关闭，详见"最近关闭"），并按 `.Ai-config/CURRENT.md` 的新形态约束规则重写本文件：移除项目结构表和 F0-F4 规则复述，改为链接引用。
+- 新任务按 F0-F4 快速路由处理（规则见 `rules/shared/core.md`），本文件不复述分级细节。
 
 ## 当前待确认
 
-| 优先级 | 事项 | 用户需要确认什么 | 建议下一步 |
-|---|---|---|---|
-| 高 | 快速路由与精准能力调度改造 | Claude Code / Codex 日常使用是否明显更快，反触发是否过强或过弱 | 已同步本机规则和 managed skills；试用后决定是否继续微调或关闭相关任务 |
-| 中 | `.Ai-config/tasks/2026-05-24-context-thread.md` | `global-context-thread`、context-thread MCP、用户级 runtime 和项目索引是否符合日常使用预期 | 确认后关闭或继续记录优化点 |
-| 中 | `.Ai-config/tasks/2026-05-24-ai-config-path-migration.md` | 根目录 `.Ai-config/` 取代旧版 `docs/ai/` 后，迁移和清理范围是否 OK | 确认后关闭迁移任务 |
-| 中 | `.Ai-config/tasks/2026-05-19-ai-config-lightweight.md` | 轻量化规则在真实工作中是否足够快且不丢质量 | 根据试用结果关闭或继续微调 |
-| 低 | `.Ai-config/tasks/2026-05-18-pencil-design-workflow.md` | Pencil 设计先行短闸门和可见 MCP 宿主规则是否符合预期 | 设计任务中继续试用，确认后关闭 |
+- 暂无。
 
 ## 快速接手导航
 
-| 你要做什么 | 先读哪里 | 备注 |
-|---|---|---|
-| 普通问答 / 小修 | 不必读本文件 | 直接按 F0/F1 处理 |
-| 改全局规则 | `rules/shared/core.md`、`rules/tools/`、`templates/` | 验证用规则单管线 render/check/dry-run |
-| 改全局 skill | `skills/shared/<skill>/`、`skills/claude-code/<skill>/`、`skills/codex/<skill>/` | 不直接改 `skills/rendered/`，先改源再渲染 |
-| 改同步流程 | `docs/sync-workflow.md`、`scripts/render*.ps1`、`scripts/check*.ps1`、`scripts/sync*.ps1` | `check-all.ps1` 只作为跨管线 / Apply 前总闸门 |
-| 改 MCP / Pencil / browser 工具接入 | `tool-configs/mcp/`、`scripts/mcp-local.ps1`、`docs/sync-workflow.md` | 用户级写入必须先 dry-run 并确认 |
-| 改脉络引擎 | `docs/context-thread/README.md`、`tools/context-thread-engine/` | 需要关系判断时先查 context-thread 状态 |
-| 理解整体架构 | `docs/architecture.md`、`docs/ai-config-design.md` | README 只作为概览入口 |
+改全局规则、skill、同步流程、MCP 接入或理解整体架构，见 [README.md](../README.md) 的"文档层级"和"维护和分发命令"章节；不在本文件重复列出。
 
 ## 最近完成
 
 | 事项 | 结果 | 证据 |
 |---|---|---|
-| 快速路由与精准能力调度改造 | 已更新规则源、skill 源、状态说明和 rendered 产物，并同步到本机 Claude Code / Codex 规则、managed skills 与 MCP 托管片段 | `check-all.ps1` 通过；`sync.ps1 -Apply`、`sync-skills.ps1 -Apply`、`sync-mcp.ps1 -Apply` 已执行；同步后规则、skills、Claude Code MCP dry-run 均为 `unchanged`，Codex MCP 内容校验为 `unchanged` |
-| 脉络更新审计 | 当前仓库索引 up to date；用户级 runtime 与仓库源指纹一致 | `scripts/context-thread.ps1 sync .`、MCP `context_thread_status` |
-| AI 配置更新审计 | 规则、skills、MCP 片段曾完成渲染和 dry-run 复查 | 历史记录见相关任务卡 |
-| 浏览器视觉验证 MCP | `chrome-devtools` / `playwright` 已纳入本机同步流程 | `.Ai-config/tasks/2026-05-18-browser-visual-mcp.md` |
-| 初始化项目 AI 配置中枢 | 已由用户确认完成 | `.Ai-config/archive/2026-05-09-init-ai-config-hub.md` |
+| project-ai-config-hub 自我特例分支拆分 | 移除 workflow.md 中硬编码的"本仓库特例"分支，改为新建仓库根目录 `CLAUDE.md` 承载；skill 恢复面向任意项目的通用性 | `check-skills.ps1` 通过 |
+| project-ai-config-hub 轻量化机制补强 | `current-state.md.tpl` 加入形态约束（禁止复述规则、待确认表 30 天清理规则）；`design-checklist.md` 加入腐化检查项 | `check-skills.ps1` 通过 |
+| core.md 分级表述精简 | 合并 §1/§2/§7 重复的 F0-F4 列举；修正 §7 触发条件逻辑回归；统一 §4 术语；补充 V/F 档位映射说明 | `check.ps1` 通过 |
+| global-thinking-partner 输出规格统一 | 统一镜头数量与输出条数口径（1-4）；触发条件收敛到 trigger-boundaries.md 单一来源 | `check-skills.ps1` 通过 |
+| 移除 OpenCode 支持 | 删除相关规则、模板、skill 目录；更新渲染同步脚本 | `check.ps1`、`check-skills.ps1` 通过 |
+| 新增本地 WebFetch MCP server | 新增 `local-webfetch` MCP，补充 Claude Code 兜底规则；修复 `check-mcp.ps1` 遗漏的分组注册 | `check-mcp.ps1` 通过 |
+
+## 最近关闭
+
+| 任务卡 | 关闭原因 |
+|---|---|
+| `.Ai-config/tasks/2026-05-18-pencil-design-workflow.md` | 30 天未跟进，功能已交付并同步，视为验证通过 |
+| `.Ai-config/tasks/2026-05-19-ai-config-lightweight.md` | 30 天未跟进，轻量化方向已在后续多轮迭代中验证可用 |
+| `.Ai-config/tasks/2026-05-24-ai-config-path-migration.md` | 30 天未跟进，`.Ai-config/` 迁移已稳定运行 |
+| `.Ai-config/tasks/2026-05-24-context-thread.md` | 30 天未跟进，脉络索引已在多次会话中正常使用 |
 
 ## 暂停 / 阻塞
 
 - 暂无。
-
-## 状态规则摘要
-
-- F0/F1：简单问答、一次性命令、一轮内完成且无残留风险的小修复，不读取、创建或更新任务卡。
-- F2：只有出现等待确认、验证缺失、残留风险、被打断或跨会话价值时才记录状态。
-- F3/F4：按接手价值读取和更新 `.Ai-config/tasks/*.md`；用户级写入、迁移、删除或共享状态变更必须先确认。
-- 切换任务前，先保存当前任务状态，不覆盖旧任务卡。
-- 未确认、未验证或有残留风险的任务不要直接关闭；保持 `待用户确认`、`等待验证`、`暂停` 或 `阻塞`。

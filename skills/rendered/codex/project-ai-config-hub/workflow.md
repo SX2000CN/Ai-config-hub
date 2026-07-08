@@ -51,7 +51,9 @@
 - `audit`：审计事实源、入口、敏感信息、工作状态和文档一致性。
 - `repair`：修复入口指向、registry、工作状态、过期路径和轻量不一致。
 
-如果目标项目就是 `ai-config-hub` 本仓库，且用户说“更新项目 AI 配置”“更新项目配置”“让项目 AI 配置和全局配置匹配”“全局已同步，现在更新项目配置”等，默认按 `audit` + `repair` 处理，不要先让用户在通用更新类型中选择。先做低风险只读判断：优先读取 `.Ai-config/CURRENT.md`、`.Ai-config/skills-registry.md`、相关任务卡；如果 `.Ai-config/` 还不存在但存在旧版 `docs/ai/`，把 `docs/ai/` 当作迁移来源读取，再迁移到 `.Ai-config/`。同时对比 `rules/rendered/*` 与用户级全局规则文件、`skills/rendered/*` 与用户级全局 skill 目录。若 rendered/global 已一致，只刷新项目内 AI 状态文档；若不一致，先报告差异，再询问以项目源为准同步全局，还是以本机全局为准反向整理项目源。
+如果 `.Ai-config/` 还不存在但存在旧版 `docs/ai/`，把 `docs/ai/` 当作迁移来源读取，再迁移到 `.Ai-config/`。
+
+本 skill 是面向任意目标项目的通用流程，不识别"当前项目是不是 ai-config-hub 自己"这件事。如果目标项目自己的根目录 `CLAUDE.md` 或 `AGENTS.md` 里有更具体的项目专属指引（例如本仓库自己的 `CLAUDE.md` 定义了"更新项目 AI 配置"在这个仓库里的特殊含义），先读那份文件，它优先于本 skill 的通用判断。
 
 ## 3. 明确需求
 
@@ -177,7 +179,7 @@
 
 ## 7. 计划和确认
 
-只读审计可以直接执行。对 `ai-config-hub` 本仓库执行 rendered/global 一致性对比、刷新 `.Ai-config/CURRENT.md` 和任务卡状态这类低风险项目状态追平，也可以直接执行；如果要把本机全局内容反向覆盖项目源文件，或要执行 `sync.ps1 -Apply`、`sync-skills.ps1 -Apply` 写入用户级目录，则必须先确认。
+只读审计可以直接执行，包括刷新 `.Ai-config/CURRENT.md` 和任务卡状态这类低风险项目状态追平。写入用户级全局目录（例如执行 `sync.ps1 -Apply`、`sync-skills.ps1 -Apply`）或反向覆盖项目源文件，必须先确认；目标项目自己的 `CLAUDE.md` / `AGENTS.md` 若定义了更具体的免确认边界，以那份文件为准。
 
 以下情况必须先输出计划并等待用户确认：
 
@@ -209,20 +211,6 @@
 - 只有 `CURRENT.md` 的轻量项目，应能说明当前活动任务、是否需要任务卡、后续应读哪里。
 - 完整中枢项目再检查任务卡、archive、registry 和多端入口。
 
-完整检查包括：
-
-- frontmatter 是否完整。
-- `.Ai-config/CURRENT.md` 是否是接手入口和多任务状态总览。
-- `.Ai-config/tasks/` 是否按需创建，任务卡是否保留目标、上下文、已尝试/排除、验证、风险和下一步。
-- 是否把未确认、未验证或有残留风险的任务直接关闭；这类任务应保持 `待用户确认`、`等待验证`、`阻塞` 或 `暂停`。
-- 工具入口指向的 canonical 事实源 `.Ai-config/skills/<skill-name>/` 是否存在。
-- 是否存在多个互相冲突的事实源，或把 README、docs、脚本说明、`.claude/skills`、`.agents/skills`、`.codex/skills` 当成长期事实源。
-- `.Ai-config/skills-registry.md` 是否记录了新增或迁移的项目 skill，且普通项目级 skill 的事实源列指向 `.Ai-config/skills/<skill-name>/`。
-- 修改已有项目级 skill 后，双端入口和 registry 仍指向同一 canonical 事实源。
-- 是否把计划中能力误写为已完成。
-- 是否把主 README 误写成固定 agent 接手入口。
-- 是否包含明显敏感信息。
-- Claude Code / Codex 当前官方路径是否都覆盖。
-- 历史 `.codex/skills` 是否仅作为兼容入口。
+完整检查清单以 `references/design-checklist.md` 为唯一权威，这里不重复列举；重点关注该文件"实施后"和"工作状态腐化检查"两节。
 
 根据项目已有习惯运行最小相关验证，例如 `git diff --check`、lint、typecheck、测试、脚本 dry-run 或自检命令。
