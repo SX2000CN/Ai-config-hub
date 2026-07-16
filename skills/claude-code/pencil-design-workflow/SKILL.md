@@ -1,6 +1,6 @@
 ---
 name: pencil-design-workflow
-description: 将明确的设计先行请求作为轻量闸门路由到当前可用的可见 Pencil MCP 宿主；仅在用户明确要求无头、批量、后台或不看过程时才进入 Pencil CLI/headless。
+description: 将明确要求先产出或迭代 .pen 设计稿的请求路由到当前可见的 IDE 插件 Pencil MCP，并在确认设计后 handoff 给前端实现；已有设计直接编码、局部 UI 修复和普通截图 review 不使用。
 when_to_use: 用户要先生成或迭代设计图、设计稿、mockup、wireframe、视觉方案，要求确认设计后再写代码，明确提到 Pencil、pencli、Pencil CLI、.pen、Pencil MCP、Pencil Desktop、VS Code/Cursor Pencil 插件，或要求审查 Pencil 设计稿/导出图/设计到代码一致性时使用；局部 UI bugfix、已有界面小样式修复、根据已有设计直接写代码、纯网页截图 review 时不要使用。
 ---
 

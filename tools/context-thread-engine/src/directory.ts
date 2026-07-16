@@ -6,6 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 
 /**
  * Project AI config directory name
@@ -16,6 +17,40 @@ export const AI_CONFIG_DIR = '.Ai-config';
  * ContextThread data directory name under .Ai-config
  */
 export const CONTEXT_THREAD_DIR = 'context-thread';
+
+const DATABASE_FILENAME = 'context-thread.db';
+
+function buildGitignore(trackDb: boolean): string {
+  const databasePolicy = trackDb
+    ? '# context-thread.db is intentionally trackable for this project.'
+    : `# The database is ignored by default because rich and legacy indexes may\n# contain extracted source details. Use --track-db only after choosing this intentionally.\n${DATABASE_FILENAME}`;
+
+  return `# ContextThread persistence policy
+${databasePolicy}
+
+# SQLite runtime sidecar files
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Cache
+cache/
+
+# Logs
+*.log
+
+# Locks
+*.lock
+
+# Hook markers
+.dirty
+`;
+}
+
+export interface DatabaseTrackingStatus {
+  ignored: boolean;
+  tracked: boolean;
+}
 
 /**
  * Get the .Ai-config/context-thread directory path for a project
@@ -72,7 +107,10 @@ export function findNearestContextThreadRoot(startPath: string): string | null {
  * Create the .Ai-config/context-thread directory structure
  * Note: Only throws if context-thread.db already exists, not just if .Ai-config/context-thread/ exists.
  */
-export function createDirectory(projectRoot: string): void {
+export function createDirectory(
+  projectRoot: string,
+  options: { trackDb?: boolean } = {}
+): void {
   const contextThreadDir = getContextThreadDir(projectRoot);
   const dbPath = path.join(contextThreadDir, 'context-thread.db');
 
@@ -85,32 +123,70 @@ export function createDirectory(projectRoot: string): void {
   // Create main directory (if it doesn't exist)
   fs.mkdirSync(contextThreadDir, { recursive: true });
 
-  // Create .gitignore inside .Ai-config/context-thread (if it doesn't exist)
-  const gitignorePath = path.join(contextThreadDir, '.gitignore');
-  if (!fs.existsSync(gitignorePath)) {
-    const gitignoreContent = `# ContextThread runtime files
-# context-thread.db may be committed as a project structural fact source.
+  // Initialization is an explicit policy choice, so refresh the managed
+  // .gitignore even when the directory existed before the database did.
+  configureDatabaseTracking(projectRoot, options.trackDb ?? false);
+}
 
-# SQLite runtime sidecar files
-*.db-wal
-*.db-shm
-*.db-journal
+/** Configure whether the durable database itself is eligible for Git tracking. */
+export function configureDatabaseTracking(projectRoot: string, trackDb: boolean): void {
+  const contextThreadDir = getContextThreadDir(projectRoot);
+  fs.mkdirSync(contextThreadDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(contextThreadDir, '.gitignore'),
+    buildGitignore(trackDb),
+    'utf-8'
+  );
+}
 
-# Cache
-cache/
-
-# Logs
-*.log
-
-# Locks
-*.lock
-
-# Hook markers
-.dirty
-`;
-
-    fs.writeFileSync(gitignorePath, gitignoreContent, 'utf-8');
+/** Read Git tracking state without changing either Git or .gitignore. */
+export function getDatabaseTrackingStatus(projectRoot: string): DatabaseTrackingStatus {
+  const gitignorePath = path.join(getContextThreadDir(projectRoot), '.gitignore');
+  let ignored = false;
+  try {
+    const lines = fs.readFileSync(gitignorePath, 'utf-8').split(/\r?\n/);
+    ignored = lines.some((line) => {
+      const trimmed = line.trim();
+      return trimmed === DATABASE_FILENAME || trimmed === `/${DATABASE_FILENAME}`;
+    });
+  } catch {
+    ignored = false;
   }
+
+  try {
+    execFileSync(
+      'git',
+      ['check-ignore', '--no-index', '-q', '--', `${AI_CONFIG_DIR}/${CONTEXT_THREAD_DIR}/${DATABASE_FILENAME}`],
+      {
+        cwd: projectRoot,
+        stdio: ['ignore', 'ignore', 'ignore'],
+        timeout: 5000,
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
+      }
+    );
+    ignored = true;
+  } catch {
+    // Not ignored or not a Git repository; retain the managed-file fallback.
+  }
+
+  let tracked = false;
+  try {
+    execFileSync(
+      'git',
+      ['ls-files', '--error-unmatch', '--', `${AI_CONFIG_DIR}/${CONTEXT_THREAD_DIR}/${DATABASE_FILENAME}`],
+      {
+        cwd: projectRoot,
+        stdio: ['ignore', 'ignore', 'ignore'],
+        timeout: 5000,
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
+      }
+    );
+    tracked = true;
+  } catch {
+    tracked = false;
+  }
+
+  return { ignored, tracked };
 }
 
 /**
@@ -232,7 +308,10 @@ export function ensureSubdirectory(projectRoot: string, subdirName: string): str
 /**
  * Check if the .Ai-config/context-thread directory has valid structure
  */
-export function validateDirectory(projectRoot: string): {
+export function validateDirectory(
+  projectRoot: string,
+  options: { repair?: boolean } = {}
+): {
   valid: boolean;
   errors: string[];
 } {
@@ -249,12 +328,12 @@ export function validateDirectory(projectRoot: string): {
     return { valid: false, errors };
   }
 
-  // Auto-repair missing .gitignore (non-critical file)
+  // Auto-repair missing .gitignore only for writable callers. A read-only open
+  // must be observational, including when this non-critical file is absent.
   const gitignorePath = path.join(contextThreadDir, '.gitignore');
-  if (!fs.existsSync(gitignorePath)) {
+  if (!fs.existsSync(gitignorePath) && options.repair !== false) {
     try {
-      const gitignoreContent = `# ContextThread runtime files\n# context-thread.db may be committed as a project structural fact source.\n\n# SQLite runtime sidecar files\n*.db-wal\n*.db-shm\n*.db-journal\n\n# Cache\ncache/\n\n# Logs\n*.log\n\n# Locks\n*.lock\n\n# Hook markers\n.dirty\n`;
-      fs.writeFileSync(gitignorePath, gitignoreContent, 'utf-8');
+      fs.writeFileSync(gitignorePath, buildGitignore(false), 'utf-8');
     } catch {
       // Non-fatal: warn but don't block
       errors.push('.gitignore missing in .Ai-config/context-thread directory and could not be created');

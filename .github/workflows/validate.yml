@@ -1,0 +1,52 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-preflight:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 22.19.0
+          - 24.x
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: |
+            tools/context-thread-engine/package-lock.json
+            tools/local-webfetch/package-lock.json
+            tools/browser-mcp-runtime/package-lock.json
+
+      - name: Install context-thread dependencies
+        shell: powershell
+        run: npm ci --prefix tools/context-thread-engine
+
+      - name: Install local-webfetch dependencies
+        shell: powershell
+        run: npm ci --prefix tools/local-webfetch
+
+      - name: Install browser MCP runtime dependencies
+        shell: powershell
+        run: npm ci --prefix tools/browser-mcp-runtime
+
+      - name: Run complete non-mutating preflight
+        shell: powershell
+        run: .\scripts\check-all.ps1
+
+      - name: Verify preflight did not modify tracked files
+        shell: powershell
+        run: git diff --exit-code

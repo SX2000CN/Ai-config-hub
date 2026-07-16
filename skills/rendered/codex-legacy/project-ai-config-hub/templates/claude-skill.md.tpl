@@ -15,7 +15,7 @@ canonical 事实源：`.Ai-config/skills/{{skill_name}}/`
 
 ## 读取顺序
 
-1. 仅当任务有接手价值、可能跨会话、已有活动任务或属于 F3/F4 时，读取 `.Ai-config/CURRENT.md`。
+1. 仅当任务有接手价值、可能跨会话、已有活动任务、影响多个模块或涉及高风险写入时，读取 `.Ai-config/CURRENT.md`。
 2. 如果存在相关活动任务卡，再读取 `.Ai-config/tasks/*.md` 中对应文件。
 3. 读取 `.Ai-config/skills/{{skill_name}}/README.md`。
 4. 按 README 指引读取同目录下的 `workflow.md`、`checklists.md`、`references/` 或 `templates/`。

@@ -3,7 +3,7 @@
 ## 使用前检查
 
 - 已确认 `.Ai-config/skills/{{skill_name}}/` 存在，并且是本 skill 的 canonical 事实源。
-- 仅当任务有接手价值、可能跨会话、已有活动任务或属于 F3/F4 时，才读取 `.Ai-config/CURRENT.md`。
+- 仅当任务有接手价值、可能跨会话、已有活动任务、影响多个模块或涉及高风险写入时，才读取 `.Ai-config/CURRENT.md`。
 - 已读取 `.Ai-config/skills-registry.md`，确认本 skill 的 canonical 事实源、入口和状态。
 - 已读取 `.Ai-config/skills/{{skill_name}}/README.md`，并按需读取同目录下的 `workflow.md`、`checklists.md`、`references/` 或 `templates/`。
 - 如果存在相关活动任务卡，已读取 `.Ai-config/tasks/*.md` 中对应文件。
@@ -24,9 +24,9 @@
 
 ## 工作状态检查
 
-- F0/F1 小任务不创建任务卡。
-- F2 只有等待确认、验证缺失、残留风险、被打断或跨会话价值时才创建或更新任务卡。
-- F3/F4 或有明确接手价值的任务应创建或更新 `.Ai-config/tasks/*.md` 任务卡。
+- 简单问答、一次性命令和一轮内完成的小任务不创建任务卡。
+- 等待确认、验证缺失、残留风险、被打断或有跨会话价值时创建或更新任务卡。
+- 跨模块、高风险写入或有明确接手价值的任务应创建或更新 `.Ai-config/tasks/*.md` 任务卡。
 - 切换任务前，应先保存旧任务状态。
 - 完成一轮工作但用户尚未确认时，应把任务保持为 `待用户确认` 或等价状态。
 - 未确认、未验证或有残留风险的任务不得直接标为 `已关闭`。

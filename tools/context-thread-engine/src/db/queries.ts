@@ -20,6 +20,35 @@ import {
 import { safeJsonParse } from '../utils';
 import { kindBonus, nameMatchBonus, scorePathRelevance } from '../search/query-utils';
 import { parseQuery, boundedEditDistance } from '../search/query-parser';
+import { ContentMode } from '../content-mode';
+
+function mergeSearchFilters<T>(
+  optionValues: T[] | undefined,
+  queryValues: T[]
+): { values: T[] | undefined; emptyIntersection: boolean } {
+  const optionSet = optionValues && optionValues.length > 0
+    ? new Set(optionValues)
+    : null;
+  const querySet = queryValues.length > 0
+    ? new Set(queryValues)
+    : null;
+
+  if (!optionSet) {
+    return {
+      values: querySet ? Array.from(querySet) : optionValues,
+      emptyIntersection: false,
+    };
+  }
+  if (!querySet) {
+    return { values: Array.from(optionSet), emptyIntersection: false };
+  }
+
+  const intersection = Array.from(optionSet).filter((value) => querySet.has(value));
+  return {
+    values: intersection,
+    emptyIntersection: intersection.length === 0,
+  };
+}
 
 /**
  * Database row types (snake_case from SQLite)
@@ -145,6 +174,7 @@ function rowToFileRecord(row: FileRow): FileRecord {
  */
 export class QueryBuilder {
   private db: SqliteDatabase;
+  private contentMode: ContentMode;
 
   // Node cache for frequently accessed nodes (LRU-style, max 1000 entries)
   private nodeCache: Map<string, Node> = new Map();
@@ -182,8 +212,19 @@ export class QueryBuilder {
     getAllNodeNames?: SqliteStatement;
   } = {};
 
-  constructor(db: SqliteDatabase) {
+  constructor(db: SqliteDatabase, contentMode: ContentMode = 'rich') {
     this.db = db;
+    this.contentMode = contentMode;
+  }
+
+  setContentMode(contentMode: ContentMode): void {
+    this.contentMode = contentMode;
+    // Cached rows may still contain rich fields after a downgrade.
+    this.nodeCache.clear();
+  }
+
+  getContentMode(): ContentMode {
+    return this.contentMode;
   }
 
   // ===========================================================================
@@ -241,15 +282,15 @@ export class QueryBuilder {
       endLine: node.endLine ?? 0,
       startColumn: node.startColumn ?? 0,
       endColumn: node.endColumn ?? 0,
-      docstring: node.docstring ?? null,
-      signature: node.signature ?? null,
+      docstring: this.contentMode === 'rich' ? node.docstring ?? null : null,
+      signature: this.contentMode === 'rich' ? node.signature ?? null : null,
       visibility: node.visibility ?? null,
       isExported: node.isExported ? 1 : 0,
       isAsync: node.isAsync ? 1 : 0,
       isStatic: node.isStatic ? 1 : 0,
       isAbstract: node.isAbstract ? 1 : 0,
-      decorators: node.decorators ? JSON.stringify(node.decorators) : null,
-      typeParameters: node.typeParameters ? JSON.stringify(node.typeParameters) : null,
+      decorators: this.contentMode === 'rich' && node.decorators ? JSON.stringify(node.decorators) : null,
+      typeParameters: this.contentMode === 'rich' && node.typeParameters ? JSON.stringify(node.typeParameters) : null,
       updatedAt: node.updatedAt ?? Date.now(),
     });
   }
@@ -315,15 +356,15 @@ export class QueryBuilder {
       endLine: node.endLine ?? 0,
       startColumn: node.startColumn ?? 0,
       endColumn: node.endColumn ?? 0,
-      docstring: node.docstring ?? null,
-      signature: node.signature ?? null,
+      docstring: this.contentMode === 'rich' ? node.docstring ?? null : null,
+      signature: this.contentMode === 'rich' ? node.signature ?? null : null,
       visibility: node.visibility ?? null,
       isExported: node.isExported ? 1 : 0,
       isAsync: node.isAsync ? 1 : 0,
       isStatic: node.isStatic ? 1 : 0,
       isAbstract: node.isAbstract ? 1 : 0,
-      decorators: node.decorators ? JSON.stringify(node.decorators) : null,
-      typeParameters: node.typeParameters ? JSON.stringify(node.typeParameters) : null,
+      decorators: this.contentMode === 'rich' && node.decorators ? JSON.stringify(node.decorators) : null,
+      typeParameters: this.contentMode === 'rich' && node.typeParameters ? JSON.stringify(node.typeParameters) : null,
       updatedAt: node.updatedAt ?? Date.now(),
     });
   }
@@ -541,14 +582,11 @@ export class QueryBuilder {
     // to FTS unchanged. Filters compose with the SearchOptions arg —
     // both are applied (intersection-style).
     const parsed = parseQuery(query);
-    const mergedKinds =
-      parsed.kinds.length > 0
-        ? Array.from(new Set([...(options.kinds ?? []), ...parsed.kinds]))
-        : options.kinds;
-    const mergedLanguages =
-      parsed.languages.length > 0
-        ? Array.from(new Set([...(options.languages ?? []), ...parsed.languages]))
-        : options.languages;
+    const mergedKinds = mergeSearchFilters(options.kinds, parsed.kinds);
+    const mergedLanguages = mergeSearchFilters(options.languages, parsed.languages);
+    if (mergedKinds.emptyIntersection || mergedLanguages.emptyIntersection) {
+      return [];
+    }
     const pathFilters = parsed.pathFilters;
     const nameFilters = parsed.nameFilters;
     // The text portion drives FTS/LIKE; if all the user typed was
@@ -556,8 +594,8 @@ export class QueryBuilder {
     // so synthesise an empty-text path that returns everything matching
     // the filters.
     const text = parsed.text;
-    const kinds = mergedKinds;
-    const languages = mergedLanguages;
+    const kinds = mergedKinds.values;
+    const languages = mergedLanguages.values;
 
     // First try FTS5 with prefix matching
     let results = text
@@ -1028,7 +1066,7 @@ export class QueryBuilder {
       source: edge.source,
       target: edge.target,
       kind: edge.kind,
-      metadata: edge.metadata ? JSON.stringify(edge.metadata) : null,
+      metadata: this.contentMode === 'rich' && edge.metadata ? JSON.stringify(edge.metadata) : null,
       line: edge.line ?? null,
       col: edge.column ?? null,
       provenance: edge.provenance ?? null,
@@ -1224,7 +1262,7 @@ export class QueryBuilder {
       referenceKind: ref.referenceKind,
       line: ref.line,
       col: ref.column,
-      candidates: ref.candidates ? JSON.stringify(ref.candidates) : null,
+      candidates: this.contentMode === 'rich' && ref.candidates ? JSON.stringify(ref.candidates) : null,
       filePath: ref.filePath ?? '',
       language: ref.language ?? 'unknown',
     });
@@ -1480,6 +1518,10 @@ export class QueryBuilder {
     this.db.prepare(
       'INSERT INTO project_metadata (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
     ).run(key, value, Date.now());
+  }
+
+  deleteMetadata(key: string): void {
+    this.db.prepare('DELETE FROM project_metadata WHERE key = ?').run(key);
   }
 
   /**

@@ -1,0 +1,20 @@
+{
+    "mcpServers":  {
+                       "local-webfetch":  {
+                                              "type":  "stdio",
+                                              "command":  "node",
+                                              "args":  [
+                                                           "~\\.ai-config-hub\\mcp\\local-webfetch\\index.js"
+                                                       ]
+                                          },
+                       "context-thread":  {
+                                              "type":  "stdio",
+                                              "command":  "node",
+                                              "args":  [
+                                                           "~\\.ai-config-hub\\mcp\\context-thread\\dist\\bin\\context-thread.js",
+                                                           "serve",
+                                                           "--mcp"
+                                                       ]
+                                          }
+                   }
+}

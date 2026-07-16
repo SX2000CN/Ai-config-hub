@@ -1,122 +1,123 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [switch]$Apply,
-    [switch]$IncludeCodexLegacy
+    [switch]$IncludeCodexLegacy,
+    [string]$UserHome
 )
 
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$RenderedRoot = Join-Path $Root 'skills\rendered'
-$SkillNames = @('project-ai-config-hub', 'global-frontend-design', 'global-thinking-partner', 'global-context-thread', 'pencil-design-workflow')
-$UserHome = [Environment]::GetFolderPath('UserProfile')
+$ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
+. (Join-Path $PSScriptRoot 'lib\deploy.ps1')
 
-$Targets = @()
-foreach ($skillName in $SkillNames) {
-    $Targets += @{
-        SkillName = $skillName
-        Source = Join-Path $RenderedRoot "claude-code\$skillName"
-        Target = Join-Path $UserHome ".claude\skills\$skillName"
+$Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
+$ResolvedUserHome = Resolve-AiConfigHubUserHome $UserHome
+$SkillDefinitions = if ($null -ne $Manifest.Skills.Definitions -and @($Manifest.Skills.Definitions).Count -gt 0) {
+    @($Manifest.Skills.Definitions)
+}
+else {
+    @($Manifest.Skills.Names | ForEach-Object { [pscustomobject]@{ Name = [string]$_ } })
+}
+
+$TargetDefinitions = foreach ($definition in $Manifest.Skills.Targets) {
+    if ([string]$definition.Name -eq 'CodexLegacy' -and -not $IncludeCodexLegacy) {
+        continue
     }
-    $Targets += @{
-        SkillName = $skillName
-        Source = Join-Path $RenderedRoot "codex\$skillName"
-        Target = Join-Path $UserHome ".agents\skills\$skillName"
-    }
-    if ($IncludeCodexLegacy) {
-        $Targets += @{
-            SkillName = $skillName
-            Source = Join-Path $RenderedRoot "codex-legacy\$skillName"
-            Target = Join-Path $UserHome ".codex\skills\$skillName"
-        }
+    $definition
+}
+
+$Targets = New-Object System.Collections.Generic.List[object]
+foreach ($definition in $TargetDefinitions) {
+    foreach ($skillDefinition in $SkillDefinitions) {
+        $skillName = [string]$skillDefinition.Name
+        $Targets.Add([pscustomobject]@{
+            Name = "$($definition.Name)-$skillName"
+            SkillName = [string]$skillName
+            Source = Join-Path (Join-Path $Root ([string]$definition.RenderedRoot)) ([string]$skillName)
+            Target = Join-Path (Join-Path $ResolvedUserHome ([string]$definition.UserRelativeRoot)) ([string]$skillName)
+        }) | Out-Null
     }
 }
 
+if ($Apply) {
+    Invoke-AiConfigHubPreflight $Root $ResolvedUserHome -IncludeCodexLegacy:$IncludeCodexLegacy
+}
+
+$Changes = New-Object System.Collections.Generic.List[object]
 foreach ($item in $Targets) {
-    if (-not (Test-Path -LiteralPath $item.Source)) {
+    if (-not (Test-Path -LiteralPath $item.Source -PathType Container)) {
         throw "Missing rendered source: $($item.Source). Run scripts\render-skills.ps1 first."
     }
-}
+    Assert-AiConfigHubPathInside $item.Target $ResolvedUserHome $item.Name | Out-Null
 
-function Get-DirectoryFingerprint($Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return ''
+    $fingerprintBefore = Get-AiConfigHubPathFingerprint $item.Target
+    $sourceFingerprint = Get-AiConfigHubPathFingerprint $item.Source
+    $targetPathExists = Test-Path -LiteralPath $item.Target
+    $targetExists = Test-Path -LiteralPath $item.Target -PathType Container
+    if ($targetPathExists -and -not $targetExists) {
+        Write-Output "would stop: target is not a directory`t$($item.Source) -> $($item.Target)"
+        if ($Apply) {
+            throw "Refusing to replace non-directory skill target: $($item.Target)"
+        }
+        continue
     }
-
-    $files = Get-ChildItem -LiteralPath $Path -Recurse -File | Sort-Object FullName
-    $parts = foreach ($file in $files) {
-        $relative = $file.FullName.Substring((Resolve-Path -LiteralPath $Path).Path.Length).TrimStart('\')
-        $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash
-        "$relative`t$hash"
+    $targetFingerprint = Get-AiConfigHubPathFingerprint $item.Target
+    $managed = -not $targetExists -or (Test-AiConfigHubManagedSkillTarget $item.Target $item.SkillName)
+    $fingerprintAfter = Get-AiConfigHubPathFingerprint $item.Target
+    if ($fingerprintBefore -ne $fingerprintAfter) {
+        throw "Skill target changed while planning; retry the sync: $($item.Target)"
     }
-
-    return ($parts -join "`n")
-}
-
-function Test-ManagedTarget($Path, $SkillName) {
-    $skillFile = Join-Path $Path 'SKILL.md'
-    if (-not (Test-Path -LiteralPath $skillFile)) {
-        return $false
+    $status = if (-not $targetExists) {
+        'missing target'
     }
-
-    $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $skillFile
-    $managedMarker = "<!-- ai-config-hub-managed: $SkillName -->"
-    if ($content.Contains($managedMarker)) {
-        return $true
+    elseif (-not $managed) {
+        'would stop: existing unmanaged target'
     }
+    elseif ($sourceFingerprint -eq $targetFingerprint) {
+        'unchanged'
+    }
+    else {
+        'would update managed target'
+    }
+    Write-Output "$status`t$($item.Source) -> $($item.Target)"
 
-    return $content -match "(?m)^name:\s*$([regex]::Escape($SkillName))\s*$"
+    if (-not $managed) {
+        if ($Apply) {
+            throw "Refusing to overwrite unmanaged existing skill target: $($item.Target)"
+        }
+        continue
+    }
+    if ($sourceFingerprint -ne $targetFingerprint) {
+        $Changes.Add([pscustomobject]@{
+            Name = $item.Name
+            SkillName = $item.SkillName
+            Source = $item.Source
+            Target = $item.Target
+            ExpectedFingerprint = $fingerprintAfter
+        }) | Out-Null
+    }
 }
 
 if (-not $Apply) {
-    Write-Output 'Dry run only. Re-run with -Apply to sync global skill directories after backups.'
-    foreach ($item in $Targets) {
-        $sourceFingerprint = Get-DirectoryFingerprint $item.Source
-        $targetExists = Test-Path -LiteralPath $item.Target
-        $targetFingerprint = if ($targetExists) { Get-DirectoryFingerprint $item.Target } else { '' }
-        $status = if (-not $targetExists) {
-            'missing target'
-        } elseif (-not (Test-ManagedTarget $item.Target $item.SkillName)) {
-            'would stop: existing unmanaged target'
-        } elseif ($sourceFingerprint -eq $targetFingerprint) {
-            'unchanged'
-        } else {
-            'would update managed target'
-        }
-        Write-Output "$status`t$($item.Source) -> $($item.Target)"
-    }
-    exit 0
+    Write-Output 'Dry run only. Re-run with -Apply after reviewing the full preflight output.'
+    return
 }
 
-$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+if ($Changes.Count -eq 0) {
+    Write-Output 'Global skill targets are already up to date.'
+    return
+}
 
-foreach ($item in $Targets) {
-    $target = $item.Target
-    $targetParent = Split-Path -Parent $target
-    if (-not (Test-Path -LiteralPath $targetParent)) {
-        New-Item -ItemType Directory -Force -Path $targetParent | Out-Null
+$context = New-AiConfigHubOperationContext -UserHome $ResolvedUserHome -Pipeline 'skills' -StagingRelativeRoot $Manifest.UserPaths.StagingRoot -BackupRelativeRoot $Manifest.UserPaths.BackupRoot
+try {
+    foreach ($item in $Changes) {
+        $staged = Copy-AiConfigHubStagedDirectory $context $item.Name $item.Source
+        Install-AiConfigHubStagedDirectory $context $item.Name $staged $item.Target -ExpectedFingerprint $item.ExpectedFingerprint | Out-Null
+        Write-Output "Synced: $($item.Source) -> $($item.Target)"
     }
-
-    if (Test-Path -LiteralPath $target) {
-        if (-not (Test-ManagedTarget $target $item.SkillName)) {
-            throw "Refusing to overwrite unmanaged existing skill target: $target"
-        }
-
-        $backupBase = Split-Path -Parent $targetParent
-        $backupRoot = Join-Path $backupBase 'ai-config-hub-skill-backups'
-        if (-not (Test-Path -LiteralPath $backupRoot)) {
-            New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
-        }
-
-        $backup = Join-Path $backupRoot "$($item.SkillName).$timestamp.bak"
-        Copy-Item -LiteralPath $target -Destination $backup -Recurse -Force
-        Write-Output "Backup created: $backup"
-    }
-
-    if (Test-Path -LiteralPath $target) {
-        Remove-Item -LiteralPath $target -Recurse -Force
-    }
-
-    Copy-Item -LiteralPath $item.Source -Destination $target -Recurse -Force
-    Write-Output "Synced: $($item.Source) -> $target"
+    Complete-AiConfigHubOperation $context
+}
+catch {
+    Throw-AiConfigHubOperationFailure $context $_
 }

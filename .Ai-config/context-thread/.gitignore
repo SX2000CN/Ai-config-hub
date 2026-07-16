@@ -1,5 +1,5 @@
-# ContextThread runtime files
-# context-thread.db may be committed as a project structural fact source.
+# ContextThread persistence policy
+# context-thread.db is intentionally trackable for this project.
 
 # SQLite runtime sidecar files
 *.db-wal

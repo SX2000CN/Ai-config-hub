@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "skill": "global-thinking-partner",
+  "cases": [
+    {
+      "id": "explicit-open-brainstorm",
+      "prompt": "我只有一个模糊的内部知识产品想法，先陪我发散一下，不要急着给方案。",
+      "expectedActivation": "explicit-visible",
+      "expectedMode": "collaborative-exploration",
+      "must": ["build-on-user-model", "new-angle", "continue-dialogue"],
+      "mustNot": ["fixed-four-lenses", "premature-recommendation"]
+    },
+    {
+      "id": "challenge-architecture",
+      "prompt": "挑战一下我把所有业务能力做成插件的想法，看看有哪些隐含假设。",
+      "expectedActivation": "explicit-visible",
+      "expectedMode": "collaborative-exploration",
+      "must": ["surface-assumptions", "disconfirming-evidence", "contextual-tradeoff"],
+      "mustNot": ["generic-checklist"]
+    },
+    {
+      "id": "scenario-second-order",
+      "prompt": "推演一下默认开启所有 MCP 后，今天、一个月后和规模变大后的影响。",
+      "expectedActivation": "explicit-visible",
+      "expectedMode": "scenario-simulation",
+      "must": ["timeline", "stakeholders", "second-order-effects", "failure-and-recovery"],
+      "mustNot": ["single-step-analysis"]
+    },
+    {
+      "id": "no-action-baseline",
+      "prompt": "我们是不是一定要做这个自动化？也分析一下什么都不做。",
+      "expectedActivation": "explicit-visible",
+      "expectedMode": "collaborative-exploration",
+      "must": ["no-action-baseline", "opportunity-cost", "reversibility"],
+      "mustNot": ["assume-feature-required"]
+    },
+    {
+      "id": "decision-synthesis",
+      "prompt": "前面已经讨论够了，现在帮我在 A 和 B 之间做结论。",
+      "expectedActivation": "explicit-visible",
+      "expectedMode": "decision-synthesis",
+      "must": ["recommendation", "tradeoff", "change-my-mind-signal", "reversible-next-step"],
+      "mustNot": ["reopen-unbounded-brainstorm"]
+    },
+    {
+      "id": "implicit-complex-sanity",
+      "prompt": "实现一个会迁移现有配置格式的兼容层。",
+      "expectedActivation": "implicit-silent",
+      "expectedMode": "quick-calibration",
+      "must": ["surface-only-material-blind-spot"],
+      "mustNot": ["visible-framework-without-material-finding", "block-implementation"]
+    },
+    {
+      "id": "simple-bug-no-trigger",
+      "prompt": "把这个变量名拼写错误修掉并跑相关测试。",
+      "expectedActivation": "none",
+      "expectedMode": "none",
+      "must": ["direct-execution"],
+      "mustNot": ["brainstorm", "questionnaire"]
+    },
+    {
+      "id": "domain-skill-composition",
+      "prompt": "审计这套 AI 配置，同时帮我想想有没有更简单的治理方式。",
+      "expectedActivation": "explicit-visible-secondary",
+      "expectedMode": "collaborative-exploration",
+      "must": ["project-ai-config-primary", "thinking-partner-composable"],
+      "mustNot": ["replace-domain-workflow"]
+    }
+  ]
+}

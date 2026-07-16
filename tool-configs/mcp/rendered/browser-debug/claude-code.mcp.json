@@ -1,0 +1,21 @@
+{
+    "mcpServers":  {
+                       "local-webfetch":  {
+                                              "type":  "stdio",
+                                              "command":  "node",
+                                              "args":  [
+                                                           "~\\.ai-config-hub\\mcp\\local-webfetch\\index.js"
+                                                       ]
+                                          },
+                       "chrome-devtools":  {
+                                               "type":  "stdio",
+                                               "command":  "node",
+                                               "args":  [
+                                                            "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
+                                                            "chrome-devtools",
+                                                            "--no-performance-crux",
+                                                            "--no-usage-statistics"
+                                                        ]
+                                           }
+                   }
+}

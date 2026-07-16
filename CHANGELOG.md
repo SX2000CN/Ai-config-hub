@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-07-16
+
+- 重构共享全局规则，移除 F0-F4 / V0-V4 双矩阵流程税，明确平台约束不可被用户授权覆盖、当前范围内可逆操作默认推进、tracked 文件禁止真实凭证，以及未纳入请求的资产只列清理候选。
+- 将 `global-thinking-partner` 升级为可组合 reasoning mode：支持快速校准、协作探索、情景推演和决策收敛，移除固定镜头、固定条数、强制推荐和 `thinking-brief`，新增对话示例、推理动作、`decision-summary`、8 个场景与定性 rubric；独立前向测试为 15/16，无硬失败。
+- 将 managed manifest 升级到 schema v2，登记 skill 路由契约和 `core`、`code-intel`、`browser`、`browser-debug`、`design`、`full` 六个 MCP profile；新增 schema v1 兼容、锁定 browser runtime、profile 切换 ownership 保护和 Source/Readiness/Smoke doctor。Runtime hash 覆盖完整执行 payload、`package.json`、lockfile 以及 lockfile 登记的生产依赖，可发现已锁定浏览器包的内容篡改或缺失。
+- 将 local-webfetch 升级到 `1.0.2`，补齐特殊用途 IPv4/IPv6、DNS fail-closed、逐跳重定向复验、HTTPS 降级阻断、5 MB 流式上限、总 timeout、固定直连地址和不可信外部内容边界；dispatcher 清理也受同一总 deadline 约束，最终 20/20 测试通过。
+- 将 context-thread 升级到 `0.9.6`，新增默认 `structure` / 显式 `rich` 内容策略、legacy-rich 兼容、默认忽略/显式跟踪数据库、零写入只读、隐私迁移备份与 staging 重建，并修正只读 journal 状态误报；schema v5 安装 6 个持久化 structure guards，约束旧版或不了解内容策略的 writer，当前仓库索引已重建为 structure 模式。
+- 扩充 Windows CI 与完整预检，覆盖三个 runtime 测试集、同步事务、MCP profiles/doctor、全部用户级 dry-run、敏感信息和 tracked 文件零修改检查；用户后续授权后已将三套 runtime、规则、当前 skills 和默认 `core` MCP profile 应用到用户级目录，未提交或推送。
+- 补充旧版 Claude `cmd /c` 与 Codex 无 marker 直连 MCP 的精确 ownership migration signature，使默认 `core` profile 能移除历史 ai-config-hub context/browser 注册，同时继续保护真正的同名自有配置。
+- 完成全局 Apply 后的 Codex 宿主重启验收：新会话已载入新规则与 skills，Codex MCP 清单仅保留用户自有 `node_repl`，连续 15 秒未出现旧 context-thread watcher；最终完整预检、core Smoke、全局一致性 dry-run 和 structure 索引状态全部通过。
+
+## 2026-07-15
+
+- 将 context-thread 升级到 `0.9.5`：新增 `git_state_v1` Git 基线与脏路径跟踪，修复过滤条件交集，落实 SQLite 真只读模式，统一 Node.js `>=22.19.0 <25.0.0` 门禁，并让 CLI/MCP 版本从 package 元数据读取。
+- 将 local-webfetch 升级到 `1.0.1`，统一 Node.js 支持范围；浏览器 MCP 精确锁定 `chrome-devtools-mcp@1.6.0` 与 `@playwright/mcp@0.0.78`，render/check 阻止 `@latest` 回流。
+- 新增 `config/managed-assets.psd1` 作为规则、skills、MCP 和 runtime 的统一资产清单；render 支持非写入 `-Check`，`check-all.ps1` 覆盖引擎测试、runtime 校验、同步安全测试、全仓敏感信息扫描和全部 dry-run。
+- 重构所有用户级同步为 preflight-first 的 staging/备份/严格切换事务，支持 `-UserHome` 隔离测试、目标指纹并发保护、类型冲突拒绝和失败全量回滚；Claude MCP 与 Pencil CLI 注册共用同一事务。
+- 新增根 `AGENTS.md` Codex 薄入口，统一 F0-F4 / V0-V4 术语并更新架构、同步和 context-thread 文档；新增 Windows CI，在 Node 22.19.0 与 24.x 上验证完整预检不会修改 tracked 文件。
+
 ## 2026-05-25
 
 - 将项目文档重心从分发系统调整为 AI 配置本体，新增 `docs/ai-config-design.md`，并把脉络设计、实现和场景文档整理到 `docs/context-thread/`。
@@ -11,7 +30,7 @@
 ## 2026-05-24
 
 - 将本仓库项目级 AI 配置中枢从旧版 `docs/ai/` 迁移到根目录 `.Ai-config/`，旧路径仅保留兼容提示；`.Ai-config/context-thread/` 作为脉络项目索引目录并加入忽略。
-- 引入轻量结构化事实层：新增 `global-context-thread` skill，用 context-thread 承接复杂代码关系，用 `.Ai-config` 任务卡关系索引承接非代码复杂工作流，同时保持 L0/L1 小任务不升级。
+- 引入轻量结构化事实层：新增 `global-context-thread` skill，用 context-thread 承接复杂代码关系，用 `.Ai-config` 任务卡关系索引承接非代码复杂工作流，同时保持 F0/F1 小任务不升级。
 - 新增 `context-thread` MCP 配置组，并把脉络引擎运行时分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`；MCP 配置通过 `node` 启动用户级 runtime，不再指向当前仓库路径，runtime 缺失时仅 warning，不阻塞浏览器 MCP。
 - 在共享规则中加入短版“结构化事实优先”原则，并给任务卡模板增加可选 `关系索引` 区块。
 

@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "chrome-devtools": {
+      "package": "chrome-devtools-mcp@1.6.0",
+      "type": "stdio",
+      "command": "node",
+      "args": [],
+      "runtime_entry": "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
+      "script_args": ["chrome-devtools", "--no-performance-crux", "--no-usage-statistics"],
+      "startup_timeout_ms": 20000
+    }
+  }
+}

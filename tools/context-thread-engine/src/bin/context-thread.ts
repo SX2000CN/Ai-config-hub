@@ -27,8 +27,14 @@ import { getContextThreadDir, isInitialized } from '../directory';
 import { createShimmerProgress } from '../ui/shimmer-progress';
 import { getGlyphs } from '../ui/glyphs';
 
-import { buildNode25BlockBanner, buildNodeTooOldBanner, MIN_NODE_MAJOR } from './node-version-check';
+import {
+  buildNode25BlockBanner,
+  buildNodeTooOldBanner,
+  getNodeVersionCompatibility,
+} from './node-version-check';
 import { relaunchWithWasmRuntimeFlagsIfNeeded } from '../extraction/wasm-runtime-flags';
+import { PACKAGE_VERSION } from '../package-info';
+import { parseContentMode } from '../content-mode';
 
 // Lazy-load heavy modules to keep CLI startup fast.
 async function loadContextThread(): Promise<typeof import('../index')> {
@@ -58,8 +64,8 @@ const importESM = new Function('specifier', 'return import(specifier)') as
 // Hard-exit before any WASM work; allow override via env var for users
 // who patched V8 themselves or want to test a future fix.
 const nodeVersion = process.versions.node;
-const nodeMajor = parseInt(nodeVersion.split('.')[0] ?? '0', 10);
-if (nodeMajor >= 25) {
+const nodeCompatibility = getNodeVersionCompatibility(nodeVersion);
+if (nodeCompatibility === 'too-new') {
   process.stderr.write(buildNode25BlockBanner(nodeVersion) + '\n');
   if (!process.env.CONTEXT_THREAD_ALLOW_UNSAFE_NODE) {
     process.exit(1);
@@ -69,7 +75,7 @@ if (nodeMajor >= 25) {
 // Enforce the supported Node floor. `engines` in package.json only *warns* on
 // install (unless engine-strict), so hard-block here to actually keep users off
 // unsupported versions. Mirrors the 25+ block above. See package.json `engines`.
-if (nodeMajor < MIN_NODE_MAJOR) {
+if (nodeCompatibility === 'too-old') {
   process.stderr.write(buildNodeTooOldBanner(nodeVersion) + '\n');
   if (!process.env.CONTEXT_THREAD_ALLOW_UNSAFE_NODE) {
     process.exit(1);
@@ -97,11 +103,6 @@ process.on('unhandledRejection', (reason) => {
 function main() {
 
 const program = new Command();
-
-// Version from package.json
-const packageJson = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8')
-);
 
 // =============================================================================
 // ANSI Color Helpers (avoid chalk ESM issues)
@@ -135,7 +136,7 @@ const chalk = {
 program
   .name('context-thread')
   .description('Code intelligence and knowledge graph for any codebase')
-  .version(packageJson.version);
+  .version(PACKAGE_VERSION);
 
 // =============================================================================
 // Helper Functions
@@ -405,7 +406,14 @@ program
   .description('Initialize ContextThread in a project directory')
   .option('-i, --index', 'Run initial indexing after initialization')
   .option('-v, --verbose', 'Show detailed worker lifecycle and memory info')
-  .action(async (pathArg: string | undefined, options: { index?: boolean; verbose?: boolean }) => {
+  .option('--content-mode <mode>', 'Persistence policy: structure (default) or rich', 'structure')
+  .option('--track-db', 'Allow context-thread.db to be tracked by Git')
+  .action(async (pathArg: string | undefined, options: {
+    index?: boolean;
+    verbose?: boolean;
+    contentMode: string;
+    trackDb?: boolean;
+  }) => {
     const projectPath = path.resolve(pathArg || process.cwd());
     const clack = await importESM('@clack/prompts');
 
@@ -420,8 +428,15 @@ program
       }
 
       const { default: ContextThread } = await loadContextThread();
-      const cg = await ContextThread.init(projectPath, { index: false });
+      const contentMode = parseContentMode(options.contentMode);
+      const cg = await ContextThread.init(projectPath, {
+        index: false,
+        contentMode,
+        trackDb: options.trackDb ?? false,
+      });
       clack.log.success(`Initialized in ${projectPath}`);
+      clack.log.info(`Content mode: ${contentMode}`);
+      clack.log.info(`Database tracking: ${options.trackDb ? 'allowed' : 'ignored by default'}`);
 
       if (options.index) {
         let result: IndexResult;
@@ -662,11 +677,12 @@ program
       }
 
       const { default: ContextThread } = await loadContextThread();
-      const cg = await ContextThread.open(projectPath);
+      const cg = await ContextThread.open(projectPath, { readOnly: true });
       const stats = cg.getStats();
       const changes = cg.getChangedFiles();
       const backend = cg.getBackend();
       const journalMode = cg.getJournalMode();
+      const privacy = cg.getPrivacyStatus();
 
       // JSON output mode
       if (options.json) {
@@ -679,6 +695,11 @@ program
           dbSizeBytes: stats.dbSizeBytes,
           backend,
           journalMode,
+          contentMode: privacy.contentMode,
+          contentModeLabel: privacy.contentModeLabel,
+          legacyRich: privacy.legacyRich,
+          databaseIgnored: privacy.databaseIgnored,
+          databaseTracked: privacy.databaseTracked,
           nodesByKind: stats.nodesByKind,
           languages: Object.entries(stats.filesByLanguage).filter(([, count]) => count > 0).map(([lang]) => lang),
           pendingChanges: {
@@ -715,6 +736,13 @@ program
         ? chalk.green('wal')
         : chalk.yellow(`${journalMode || 'unknown'} ${getGlyphs().dash} WAL inactive; reads can block on writes`);
       console.log(`  Journal:   ${journalLabel}`);
+      console.log(`  Content:   ${privacy.contentModeLabel}`);
+      const trackingLabel = privacy.databaseTracked
+        ? 'tracked'
+        : privacy.databaseIgnored
+          ? 'ignored'
+          : 'untracked (not ignored)';
+      console.log(`  DB Git:    ${trackingLabel}`);
       console.log();
 
       // Node breakdown
@@ -759,6 +787,79 @@ program
       cg.destroy();
     } catch (err) {
       error(`Failed to get status: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+/**
+ * context-thread privacy [path]
+ */
+program
+  .command('privacy [path]')
+  .description('Inspect or change persisted content and database tracking policy')
+  .option('--content-mode <mode>', 'Set persistence policy: structure or rich')
+  .option('--track-db', 'Allow context-thread.db to be tracked by Git')
+  .option('--ignore-db', 'Ignore context-thread.db in Git')
+  .option('-j, --json', 'Output as JSON')
+  .action(async (pathArg: string | undefined, options: {
+    contentMode?: string;
+    trackDb?: boolean;
+    ignoreDb?: boolean;
+    json?: boolean;
+  }) => {
+    const projectPath = resolveProjectPath(pathArg);
+
+    try {
+      if (!isInitialized(projectPath)) {
+        throw new Error(`ContextThread not initialized in ${projectPath}`);
+      }
+      if (options.trackDb && options.ignoreDb) {
+        throw new Error('--track-db and --ignore-db cannot be used together');
+      }
+
+      const mutating = Boolean(options.contentMode || options.trackDb || options.ignoreDb);
+      const { default: ContextThread } = await loadContextThread();
+      const cg = await ContextThread.open(projectPath, { readOnly: !mutating });
+      let transition: Awaited<ReturnType<typeof cg.setContentMode>> | undefined;
+
+      if (options.contentMode) {
+        transition = await cg.setContentMode(parseContentMode(options.contentMode));
+        if (transition.contentMode !== options.contentMode) {
+          throw new Error('Rich rebuild failed; the database was returned to structure mode');
+        }
+      }
+      if (options.trackDb) cg.setDatabaseTracking(true);
+      if (options.ignoreDb) cg.setDatabaseTracking(false);
+
+      const status = cg.getPrivacyStatus();
+      const output = {
+        projectPath,
+        ...status,
+        changed: mutating,
+        rebuilt: transition?.rebuilt ?? false,
+      };
+
+      if (options.json) {
+        console.log(JSON.stringify(output));
+      } else {
+        console.log(chalk.bold('\nContextThread Privacy\n'));
+        console.log(chalk.cyan('Project:'), projectPath);
+        console.log(chalk.cyan('Content mode:'), status.contentModeLabel);
+        console.log(
+          chalk.cyan('Database Git:'),
+          status.databaseTracked
+            ? 'tracked'
+            : status.databaseIgnored
+              ? 'ignored'
+              : 'untracked (not ignored)'
+        );
+        if (transition?.rebuilt) {
+          success(`Completed full ${transition.contentMode} rebuild`);
+        }
+      }
+      cg.destroy();
+    } catch (err) {
+      error(`Privacy command failed: ${err instanceof Error ? err.message : String(err)}`);
       process.exit(1);
     }
   });

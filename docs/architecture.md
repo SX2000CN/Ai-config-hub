@@ -2,7 +2,7 @@
 
 `ai-config-hub` 的架构先是一套 AI 编程协作配置，再是一套把配置交付到工具中的分发系统。
 
-配置本体负责规定 AI 如何工作：什么时候轻量处理、什么时候升级、什么时候使用 skills、什么时候读取 `.Ai-config` 或脉络索引、什么时候验证和交接。分发系统负责把这些配置渲染、检查并同步到 Claude Code、Codex 等工具中。
+配置本体负责规定 AI 如何工作：默认怎样直接推进、何时扩大证据范围、怎样组合 skills、何时读取 `.Ai-config` 或脉络索引、何时验证和交接。分发系统负责把这些配置渲染、检查并同步到 Claude Code、Codex 等工具中。
 
 设计总览见：[AI 配置设计与实现](ai-config-design.md)。
 脉络作为结构化事实层的详细设计见：[context-thread/](context-thread/README.md)。
@@ -26,7 +26,7 @@ skills/shared/<skill-name>/
 .Ai-config/context-thread/context-thread.db + 任务卡关系索引
         ↓
 工具桥接层
-tool-configs/ + tools/context-thread-engine/ + 按需临时验证产物
+config/managed-assets.psd1 + tool-configs/ + tools/context-thread-engine/ + 按需临时验证产物
         ↓
 分发与验证层
 render / check / sync 脚本
@@ -34,13 +34,13 @@ render / check / sync 脚本
 
 各层职责：
 
-- 核心行为层：定义默认轻量、按风险升级、文档同步、验证、敏感信息和版本控制边界。
+- 核心行为层：定义默认直接推进、证据扩展、授权与平台边界、比例验证、敏感信息和版本控制规则。
 - 工具适配层：处理 Claude Code、Codex 等工具差异，不复制通用原则。
-- 可复用能力层：把项目中枢、前端设计、思维伙伴、脉络和 Pencil workflow 做成 skills。
+- 可复用能力层：把项目中枢和前端实现作为领域 skills，把思维伙伴作为 reasoning mode，把脉络和 Pencil 作为工具路由 skills。
 - 项目状态层：在具体项目中保存当前工作状态、任务卡和接手入口。
 - 结构化事实层：用脉络索引和任务卡关系索引辅助复杂关系判断。
-- 工具桥接层：提供 MCP、本地引擎能力，以及按需生成的临时浏览器 / Pencil 验证产物。
-- 分发与验证层：让配置可审阅、可检查、可安全同步。
+- 工具桥接层：由单一 manifest 登记托管目标，提供 MCP、本地引擎能力，以及按需生成的临时浏览器 / Pencil 验证产物。
+- 分发与验证层：提供非修改 preflight、staging、原子替换、统一备份和失败回滚，让配置可审阅、可检查、可安全同步。
 
 ## 数据流
 
@@ -102,6 +102,8 @@ C:\Users\sx200\.agents\skills\<skill-name>\
 - `global-context-thread`
 - `pencil-design-workflow`
 
+路由元数据维护在 `config/managed-assets.psd1`：显式点名和平台强制触发优先，领域 skill 主导交付，`global-thinking-partner` 可作为辅助 reasoning mode，工具路由 skill 只在对应能力确实需要时加入。`skills/evals/routes.json` 保存路由正例、反例和 handoff 场景。
+
 可选历史兼容目标：
 
 ```text
@@ -114,55 +116,66 @@ C:\Users\sx200\.codex\skills\<skill-name>\
 
 MCP 配置只管理明确命名的非敏感片段，不保存完整用户配置。
 
+`config/managed-assets.psd1` schema v2 统一登记规则目标、五个 skills、四个 MCP server 定义、六个 profiles、三套 runtime、doctor 元数据和用户目录相对路径；schema v1 由加载器先规范化。`tool-configs/mcp/shared/*.json` 继续作为单 server 命令和参数的唯一事实源。
+
 ```text
-tool-configs/mcp/shared/browser-visual.json
+tool-configs/mcp/shared/playwright.json
+tool-configs/mcp/shared/chrome-devtools.json
 tool-configs/mcp/shared/context-thread.json
-scripts/mcp-local.ps1
-        ↓
-scripts/sync-context-thread-runtime.ps1 -Apply
-        ↓
-C:\Users\sx200\.ai-config-hub\mcp\context-thread\
-        ↓
-tool-configs/mcp/rendered/claude-code.mcp.json
-        ↓
-merge managed mcpServers.chrome-devtools/playwright/context-thread
-plus local-discovered mcpServers.pencil
-        ↓
-C:\Users\sx200\.claude.json
-```
-
-`context-thread` server 的 command 指向 `node C:\Users\sx200\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js serve --mcp`。源码仍在 `tools/context-thread-engine/` 中维护，MCP 启动不再依赖当前仓库路径。
-
-```text
-tool-configs/mcp/shared/browser-visual.json
-tool-configs/mcp/shared/context-thread.json
-scripts/mcp-local.ps1
-        ↓
-tool-configs/mcp/rendered/codex.mcp.toml
-        ↓
-merge managed browser-visual/context-thread blocks
-plus local-discovered mcp_servers.pencil
-        ↓
-C:\Users\sx200\.codex\config.toml
-```
-
-`local-webfetch` 是仅交付给 Claude Code 的独立 MCP group（`Targets = @('ClaudeCode')`），渲染时不进入 Codex 的 fragment：
-
-```text
 tool-configs/mcp/shared/local-webfetch.json
+scripts/mcp-local.ps1
+        ↓
+core / code-intel / browser / browser-debug / design / full
+        ↓
+scripts/render-mcp.ps1
+        ↓
+core: tool-configs/mcp/rendered/*.json|toml
+others: tool-configs/mcp/rendered/<profile>/*
+        ↓
+scripts/mcp-doctor.ps1
+        ↓
+Source / Readiness / Smoke
+```
+
+运行时分成三套：
+
+```text
+tools/local-webfetch/
         ↓
 scripts/sync-local-webfetch-runtime.ps1 -Apply
         ↓
 C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\
+
+tools/context-thread-engine/
         ↓
-tool-configs/mcp/rendered/claude-code.mcp.json
+scripts/sync-context-thread-runtime.ps1 -Apply
         ↓
-merge managed mcpServers.local-webfetch
+C:\Users\sx200\.ai-config-hub\mcp\context-thread\
+
+tools/browser-mcp-runtime/
         ↓
-C:\Users\sx200\.claude.json
+scripts/sync-browser-mcp-runtime.ps1 -Apply
+        ↓
+C:\Users\sx200\.ai-config-hub\mcp\browser\
 ```
 
-`local-webfetch` server 的 command 指向 `node C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\index.js`。它在本机进程中直接发起 HTTP 请求，绕开 Claude Code 内置 `WebFetch` 工具在云端发起请求、不认本机代理/VPN 的限制；Codex CLI 本身在本机运行，不需要它。
+三套 runtime 都通过 staging、生产依赖安装、smoke 和原子切换分发，Node.js 支持范围统一为 `>=22.19.0 <25.0.0`。浏览器 runtime 精确固定 `@playwright/mcp@0.0.78` 与 `chrome-devtools-mcp@1.6.0`，启动时不下载依赖。
+
+```text
+selected rendered profile
+        ↓
+scripts/sync-mcp.ps1 -Profile <name>
+        ↓
+Claude: merge confirmed managed mcpServers + Pencil CLI transaction
+Codex: replace confirmed managed marker blocks + optional Pencil
+        ↓
+C:\Users\sx200\.claude.json
+C:\Users\sx200\.codex\config.toml
+```
+
+默认 `core` 只给 Claude Code 启用 local-webfetch，Codex 不注册 managed MCP。`code-intel`、`browser`、`browser-debug`、`design` 分别增加 context-thread、Playwright、Chrome DevTools、Pencil；`full` 聚合全部。Profile 切换只删除能够用 marker 或 current/legacy 精确签名确认归属的 inactive server，同名用户配置不会被静默覆盖。
+
+`mcp-doctor.ps1` 报告 profile、source/install 版本与 hash、漂移、runtime 路径、工具数量和 PreferredFor 冲突。可比较 hash 覆盖 runtime 的完整执行 payload、`package.json`、lockfile 和 lockfile 登记的生产依赖，忽略日志与缓存，因此已锁定包的内容修改或缺失会被 Readiness 识别。Apply 前运行所选 profile 的 Smoke；required runtime 不可用时阻断，`-AllowDegraded` 只能跳过 optional server。Smoke 在 Readiness 基础上增加本地 entry probe、initialize + `tools/list` 和预期工具数校验，默认不联网。
 
 ### 当前工作状态
 
@@ -182,9 +195,10 @@ AI 接手入口和多任务状态总览
 - 共享规则只写一份，避免 Claude Code 和 Codex 长期漂移。
 - 工具专属内容放在 `rules/tools/`，不污染通用规则。
 - rendered 文件保留在仓库中，方便审阅最终效果。
+- render 脚本的 `-Check` 模式只比较源文件与 rendered 产物，不写 tracked 文件；跨管线预检由 `check-all.ps1` 统一执行。
 - 同步真实全局规则文件必须显式执行 `sync.ps1 -Apply`。
 - 同步真实全局 MCP 配置片段必须显式执行 `sync-mcp.ps1 -Apply`；完整 Claude Code / Codex 用户配置仍不自动管理，只合并明确托管的 MCP server 和本机自动发现的 Pencil MCP。
-- MCP group 默认渲染同步到全部工具（Claude Code、Codex）；只有当某个 group 解决的是单一工具特有的问题时，才用 `Targets` 字段限定交付范围（例如 `local-webfetch` 只解决 Claude Code 云端 WebFetch 绕开本机网络的问题），避免给不需要它的工具徒增无用配置。
+- MCP 通过 profile 控制能力面；默认 `core` 只给 Claude Code 启用 local-webfetch，Codex core 不注册 managed MCP。代码脉络、两类浏览器和 Pencil 分别由 `code-intel`、`browser`、`browser-debug`、`design` 启用，`full` 只用于明确需要全部能力的场景。
 - Codex 完整 `config.toml` 不作为仓库事实源，只提供安全示例模板和托管 MCP 片段。
 - skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件。
 - skill rendered 包通过 `render-skills.ps1` 为每个已登记全局 skill 生成，不应手工作为长期事实源编辑。
@@ -193,3 +207,5 @@ AI 接手入口和多任务状态总览
 - `.Ai-config/CURRENT.md` 是项目级 AI 接手入口和多任务状态总览，不是完整日志或完成记录；具体任务事实保存在 `.Ai-config/tasks/*.md`，未确认或有风险的任务不得直接丢弃。
 - `project-ai-config-hub` 的 rendered skill 包会带托管标记，便于 `sync-skills.ps1` 区分历史安装和本仓库产物。
 - `.codex\skills` 只作为历史兼容目标，Codex 当前官方路径优先使用 `.agents\skills`。
+- 所有 `sync*.ps1 -Apply` 在写入前自动运行完整预检，并只允许把目标解析到当前或显式 `-UserHome` 内部。
+- 用户级部署先写入 `~/.ai-config-hub/staging/<pipeline>/<operation-id>/`，验证后再切换；原目标备份到 `~/.ai-config-hub/backups/<pipeline>/<operation-id>/`。同一管线中途失败时回滚本次已更新目标，历史备份保留。

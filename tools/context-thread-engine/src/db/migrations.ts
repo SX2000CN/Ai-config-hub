@@ -5,11 +5,12 @@
  */
 
 import { SqliteDatabase } from './sqlite-adapter';
+import { installStructureContentGuards } from './structure-guards';
 
 /**
  * Current schema version
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /**
  * Migration definition
@@ -63,6 +64,13 @@ const migrations: Migration[] = [
         DROP INDEX IF EXISTS idx_edges_source;
         DROP INDEX IF EXISTS idx_edges_target;
       `);
+    },
+  },
+  {
+    version: 5,
+    description: 'Enforce structure content policy for legacy database writers',
+    up: (db) => {
+      installStructureContentGuards(db);
     },
   },
 ];

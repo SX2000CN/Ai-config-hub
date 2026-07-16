@@ -5,6 +5,8 @@
  * knowledge graph from any codebase.
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import {
   Node,
@@ -30,6 +32,8 @@ import {
   removeDirectory,
   validateDirectory,
   getContextThreadDir,
+  configureDatabaseTracking,
+  getDatabaseTrackingStatus,
 } from './directory';
 import {
   ExtractionOrchestrator,
@@ -48,6 +52,14 @@ import { GraphTraverser, GraphQueryManager } from './graph';
 import { ContextBuilder, createContextBuilder } from './context';
 import { Mutex, FileLock } from './utils';
 import { FileWatcher, WatchOptions } from './sync';
+import { ConfigError } from './errors';
+import {
+  ContentMode,
+  ContentModeLabel,
+  ContentModeState,
+  DEFAULT_CONTENT_MODE,
+  parseContentMode,
+} from './content-mode';
 
 // Re-export types for consumers
 export * from './types';
@@ -79,6 +91,14 @@ export {
 export { Mutex, FileLock, processInBatches, debounce, throttle, MemoryMonitor } from './utils';
 export { FileWatcher, WatchOptions } from './sync';
 export { MCPServer } from './mcp';
+export {
+  ContentMode,
+  ContentModeLabel,
+  ContentModeState,
+  CONTENT_MODE_METADATA_KEY,
+  DEFAULT_CONTENT_MODE,
+  parseContentMode,
+} from './content-mode';
 
 /**
  * Options for initializing a new ContextThread project
@@ -89,6 +109,17 @@ export interface InitOptions {
 
   /** Progress callback for indexing */
   onProgress?: (progress: IndexProgress) => void;
+
+  /** Persist only structural fields by default; opt into rich source details explicitly. */
+  contentMode?: ContentMode;
+
+  /** Make context-thread.db eligible for Git tracking (default: ignored). */
+  trackDb?: boolean;
+}
+
+export interface InitSyncOptions {
+  contentMode?: ContentMode;
+  trackDb?: boolean;
 }
 
 /**
@@ -116,6 +147,21 @@ export interface IndexOptions {
   verbose?: boolean;
 }
 
+export interface PrivacyStatus {
+  contentMode: ContentMode;
+  contentModeLabel: ContentModeLabel;
+  legacyRich: boolean;
+  databaseIgnored: boolean;
+  databaseTracked: boolean;
+}
+
+export interface ContentModeTransitionResult {
+  previousMode: ContentModeLabel;
+  contentMode: ContentMode;
+  rebuilt: boolean;
+  indexResult?: IndexResult;
+}
+
 /**
  * Main ContextThread class
  *
@@ -130,6 +176,7 @@ export class ContextThread {
   private graphManager: GraphQueryManager;
   private traverser: GraphTraverser;
   private contextBuilder: ContextBuilder;
+  private readOnly: boolean;
 
   // Mutex for preventing concurrent indexing operations (in-process)
   private indexMutex = new Mutex();
@@ -148,6 +195,7 @@ export class ContextThread {
     this.db = db;
     this.queries = queries;
     this.projectRoot = projectRoot;
+    this.readOnly = db.isReadOnly();
     this.fileLock = new FileLock(
       path.join(getContextThreadDir(projectRoot), 'context-thread.lock')
     );
@@ -185,12 +233,13 @@ export class ContextThread {
     }
 
     // Create directory structure
-    createDirectory(resolvedRoot);
+    const contentMode = parseContentMode(options.contentMode ?? DEFAULT_CONTENT_MODE);
+    createDirectory(resolvedRoot, { trackDb: options.trackDb ?? false });
 
     // Initialize database
     const dbPath = getDatabasePath(resolvedRoot);
-    const db = DatabaseConnection.initialize(dbPath);
-    const queries = new QueryBuilder(db.getDb());
+    const db = DatabaseConnection.initialize(dbPath, { contentMode });
+    const queries = new QueryBuilder(db.getDb(), db.getContentModeState().mode);
 
     const instance = new ContextThread(db, queries, resolvedRoot);
 
@@ -205,7 +254,7 @@ export class ContextThread {
   /**
    * Initialize synchronously (without indexing)
    */
-  static initSync(projectRoot: string): ContextThread {
+  static initSync(projectRoot: string, options: InitSyncOptions = {}): ContextThread {
     const resolvedRoot = path.resolve(projectRoot);
 
     // Check if already initialized
@@ -214,12 +263,13 @@ export class ContextThread {
     }
 
     // Create directory structure
-    createDirectory(resolvedRoot);
+    const contentMode = parseContentMode(options.contentMode ?? DEFAULT_CONTENT_MODE);
+    createDirectory(resolvedRoot, { trackDb: options.trackDb ?? false });
 
     // Initialize database
     const dbPath = getDatabasePath(resolvedRoot);
-    const db = DatabaseConnection.initialize(dbPath);
-    const queries = new QueryBuilder(db.getDb());
+    const db = DatabaseConnection.initialize(dbPath, { contentMode });
+    const queries = new QueryBuilder(db.getDb(), db.getContentModeState().mode);
 
     return new ContextThread(db, queries, resolvedRoot);
   }
@@ -235,21 +285,28 @@ export class ContextThread {
     await initGrammars();
     const resolvedRoot = path.resolve(projectRoot);
 
+    if (options.readOnly && options.sync) {
+      throw new ConfigError('Cannot sync while opening ContextThread in read-only mode.', {
+        operation: 'open(sync)',
+        readOnly: true,
+      });
+    }
+
     // Check if initialized
     if (!isInitialized(resolvedRoot)) {
       throw new Error(`ContextThread not initialized in ${resolvedRoot}. Run init() first.`);
     }
 
     // Validate directory structure
-    const validation = validateDirectory(resolvedRoot);
+    const validation = validateDirectory(resolvedRoot, { repair: options.readOnly !== true });
     if (!validation.valid) {
       throw new Error(`Invalid ContextThread directory: ${validation.errors.join(', ')}`);
     }
 
     // Open database
     const dbPath = getDatabasePath(resolvedRoot);
-    const db = DatabaseConnection.open(dbPath);
-    const queries = new QueryBuilder(db.getDb());
+    const db = DatabaseConnection.open(dbPath, { readOnly: options.readOnly });
+    const queries = new QueryBuilder(db.getDb(), db.getContentModeState().mode);
 
     const instance = new ContextThread(db, queries, resolvedRoot);
 
@@ -264,7 +321,7 @@ export class ContextThread {
   /**
    * Open synchronously (without sync)
    */
-  static openSync(projectRoot: string): ContextThread {
+  static openSync(projectRoot: string, options: OpenOptions = {}): ContextThread {
     const resolvedRoot = path.resolve(projectRoot);
 
     // Check if initialized
@@ -273,15 +330,15 @@ export class ContextThread {
     }
 
     // Validate directory structure
-    const validation = validateDirectory(resolvedRoot);
+    const validation = validateDirectory(resolvedRoot, { repair: options.readOnly !== true });
     if (!validation.valid) {
       throw new Error(`Invalid ContextThread directory: ${validation.errors.join(', ')}`);
     }
 
     // Open database
     const dbPath = getDatabasePath(resolvedRoot);
-    const db = DatabaseConnection.open(dbPath);
-    const queries = new QueryBuilder(db.getDb());
+    const db = DatabaseConnection.open(dbPath, { readOnly: options.readOnly });
+    const queries = new QueryBuilder(db.getDb(), db.getContentModeState().mode);
 
     return new ContextThread(db, queries, resolvedRoot);
   }
@@ -310,6 +367,166 @@ export class ContextThread {
     return this.projectRoot;
   }
 
+  private assertWritable(operation: string): void {
+    if (this.readOnly) {
+      throw new ConfigError(
+        `Cannot ${operation} while ContextThread is opened in read-only mode.`,
+        { operation, readOnly: true }
+      );
+    }
+  }
+
+  private rebindDatabase(db: DatabaseConnection): void {
+    this.db = db;
+    this.queries = new QueryBuilder(db.getDb(), db.getContentModeState().mode);
+    this.readOnly = db.isReadOnly();
+    this.orchestrator = new ExtractionOrchestrator(this.projectRoot, this.queries);
+    this.resolver = createResolver(this.projectRoot, this.queries);
+    this.graphManager = new GraphQueryManager(this.queries);
+    this.traverser = new GraphTraverser(this.queries);
+    this.contextBuilder = createContextBuilder(
+      this.projectRoot,
+      this.queries,
+      this.traverser
+    );
+  }
+
+  private reopenWritableDatabase(): void {
+    const dbPath = this.db.getPath();
+    this.db.close();
+    this.rebindDatabase(DatabaseConnection.open(dbPath));
+  }
+
+  getContentModeState(): ContentModeState {
+    return this.db.getContentModeState();
+  }
+
+  getPrivacyStatus(): PrivacyStatus {
+    const mode = this.db.getContentModeState();
+    const tracking = getDatabaseTrackingStatus(this.projectRoot);
+    return {
+      contentMode: mode.mode,
+      contentModeLabel: mode.label,
+      legacyRich: mode.legacy,
+      databaseIgnored: tracking.ignored,
+      databaseTracked: tracking.tracked,
+    };
+  }
+
+  setDatabaseTracking(trackDb: boolean): void {
+    this.assertWritable('change database tracking policy');
+    configureDatabaseTracking(this.projectRoot, trackDb);
+  }
+
+  /**
+   * Change the durable content policy. Downgrades scrub in place and compact the
+   * database; upgrades rebuild every file because structure indexes no longer
+   * contain the optional source-derived fields needed by rich mode.
+   */
+  async setContentMode(
+    requestedMode: ContentMode,
+    options: IndexOptions = {}
+  ): Promise<ContentModeTransitionResult> {
+    this.assertWritable('change content mode');
+    const mode = parseContentMode(requestedMode);
+
+    return this.indexMutex.withLock(async () => {
+      try {
+        this.fileLock.acquire();
+      } catch (error) {
+        throw new ConfigError('Could not acquire the ContextThread write lock.', {
+          operation: 'change content mode',
+          cause: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      const previous = this.db.getContentModeState();
+      try {
+        if (mode === 'rich' && previous.mode === 'rich' && !previous.legacy) {
+          return { previousMode: previous.label, contentMode: mode, rebuilt: false };
+        }
+
+        if (mode === 'structure') {
+          try {
+            this.db.transitionToStructure();
+          } catch (error) {
+            // Reopening releases SQLite's exclusive privacy-transition lock and
+            // refreshes in-memory mode state even when preflight/finalization
+            // failed. The original error remains the user-facing failure.
+            try {
+              this.reopenWritableDatabase();
+            } catch (reopenError) {
+              throw new ConfigError('Privacy transition failed and the database could not be reopened.', {
+                transitionError: error instanceof Error ? error.message : String(error),
+                reopenError: reopenError instanceof Error ? reopenError.message : String(reopenError),
+              });
+            }
+            throw error;
+          }
+          this.reopenWritableDatabase();
+          return { previousMode: previous.label, contentMode: 'structure', rebuilt: false };
+        }
+
+        // Explicitly adopting rich on a legacy-rich database records the choice
+        // but does not rewrite otherwise equivalent data.
+        if (previous.legacy) {
+          this.db.setContentMode('rich');
+          this.queries.setContentMode('rich');
+          return { previousMode: previous.label, contentMode: 'rich', rebuilt: false };
+        }
+
+        const stagingDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), 'context-thread-rich-stage-')
+        );
+        const stagingDbPath = path.join(stagingDir, 'context-thread.db');
+        let stagingContext: ContextThread | null = null;
+        try {
+          const stagingDb = DatabaseConnection.initialize(stagingDbPath, {
+            contentMode: 'rich',
+          });
+          const stagingQueries = new QueryBuilder(stagingDb.getDb(), 'rich');
+          stagingContext = new ContextThread(stagingDb, stagingQueries, this.projectRoot);
+
+          const result = await stagingContext.runIndexAll(options);
+          const complete = result.success &&
+            !result.errors.some((error) => error.severity === 'error');
+          if (!complete) {
+            return {
+              previousMode: previous.label,
+              contentMode: 'structure',
+              rebuilt: true,
+              indexResult: result,
+            };
+          }
+
+          // Closing checkpoints the staging WAL. Only after a complete build do
+          // we replace the live graph, and that replacement is one transaction.
+          stagingContext.close();
+          stagingContext = null;
+          this.db.replaceGraphFrom(stagingDbPath, 'rich');
+          this.queries.setContentMode('rich');
+          this.resolver.initialize();
+          return {
+            previousMode: previous.label,
+            contentMode: 'rich',
+            rebuilt: true,
+            indexResult: result,
+          };
+        } finally {
+          try { stagingContext?.close(); } catch { /* preserve the primary result/error */ }
+          fs.rmSync(stagingDir, {
+            recursive: true,
+            force: true,
+            maxRetries: 3,
+            retryDelay: 50,
+          });
+        }
+      } finally {
+        this.fileLock.release();
+      }
+    });
+  }
+
   // ===========================================================================
   // Indexing
   // ===========================================================================
@@ -320,6 +537,7 @@ export class ContextThread {
    * Uses a mutex to prevent concurrent indexing operations.
    */
   async indexAll(options: IndexOptions = {}): Promise<IndexResult> {
+    this.assertWritable('index files');
     return this.indexMutex.withLock(async () => {
       try {
         this.fileLock.acquire();
@@ -327,39 +545,46 @@ export class ContextThread {
         return { success: false, filesIndexed: 0, filesSkipped: 0, filesErrored: 0, nodesCreated: 0, edgesCreated: 0, errors: [{ message: 'Could not acquire file lock - another process may be indexing', severity: 'error' as const }], durationMs: 0 };
       }
       try {
-        const result = await this.orchestrator.indexAll(options.onProgress, options.signal, options.verbose);
-
-        // Resolve references to create call/import/extends edges
-        if (result.success && result.filesIndexed > 0) {
-          // Get count without loading all refs into memory
-          const unresolvedCount = this.queries.getUnresolvedReferencesCount();
-
-          options.onProgress?.({
-            phase: 'resolving',
-            current: 0,
-            total: unresolvedCount,
-          });
-
-          await this.resolveReferencesBatched((current, total) => {
-            options.onProgress?.({
-              phase: 'resolving',
-              current,
-              total,
-            });
-          });
-        }
-
-        // Refresh planner stats + checkpoint the WAL after bulk writes.
-        // Cheap and non-blocking; never load-bearing for correctness.
-        if (result.success && result.filesIndexed > 0) {
-          this.db.runMaintenance();
-        }
-
-        return result;
+        return await this.runIndexAll(options);
       } finally {
         this.fileLock.release();
       }
     });
+  }
+
+  private async runIndexAll(options: IndexOptions): Promise<IndexResult> {
+    const result = await this.orchestrator.indexAll(
+      options.onProgress,
+      options.signal,
+      options.verbose
+    );
+
+    // Resolve references to create call/import/extends edges. Reset caches first
+    // because a full index can replace every node ID visible to the resolver.
+    if (result.success && result.filesIndexed > 0) {
+      this.resolver.initialize();
+      const unresolvedCount = this.queries.getUnresolvedReferencesCount();
+
+      options.onProgress?.({
+        phase: 'resolving',
+        current: 0,
+        total: unresolvedCount,
+      });
+
+      await this.resolveReferencesBatched((current, total) => {
+        options.onProgress?.({
+          phase: 'resolving',
+          current,
+          total,
+        });
+      });
+    }
+
+    if (result.success && result.filesIndexed > 0) {
+      this.db.runMaintenance();
+    }
+
+    return result;
   }
 
   /**
@@ -368,6 +593,7 @@ export class ContextThread {
    * Uses a mutex to prevent concurrent indexing operations.
    */
   async indexFiles(filePaths: string[]): Promise<IndexResult> {
+    this.assertWritable('index specific files');
     return this.indexMutex.withLock(async () => {
       try {
         this.fileLock.acquire();
@@ -388,6 +614,7 @@ export class ContextThread {
    * Uses a mutex to prevent concurrent indexing operations.
    */
   async sync(options: IndexOptions = {}): Promise<SyncResult> {
+    this.assertWritable('sync files');
     return this.indexMutex.withLock(async () => {
       try {
         this.fileLock.acquire();
@@ -474,6 +701,7 @@ export class ContextThread {
    * @returns true if watching started successfully
    */
   watch(options: WatchOptions = {}): boolean {
+    this.assertWritable('watch files for automatic sync');
     if (this.watcher?.isActive()) return true;
 
     this.watcher = new FileWatcher(
@@ -534,6 +762,7 @@ export class ContextThread {
    * - Name-based symbol matching
    */
   resolveReferences(onProgress?: (current: number, total: number) => void): ResolutionResult {
+    this.assertWritable('resolve references');
     // Get all unresolved references from the database
     const unresolvedRefs = this.queries.getUnresolvedReferences();
     return this.resolver.resolveAndPersist(unresolvedRefs, onProgress);
@@ -544,6 +773,7 @@ export class ContextThread {
    * Processes chunks of unresolved refs, persisting results after each batch.
    */
   async resolveReferencesBatched(onProgress?: (current: number, total: number) => void): Promise<ResolutionResult> {
+    this.assertWritable('resolve references in batches');
     return this.resolver.resolveAndPersistBatched(onProgress);
   }
 
@@ -921,6 +1151,7 @@ export class ContextThread {
    * Optimize the database (vacuum and analyze)
    */
   optimize(): void {
+    this.assertWritable('optimize the database');
     this.db.optimize();
   }
 
@@ -928,6 +1159,7 @@ export class ContextThread {
    * Clear all data from the graph
    */
   clear(): void {
+    this.assertWritable('clear the graph');
     this.queries.clear();
   }
 
@@ -946,6 +1178,7 @@ export class ContextThread {
    * WARNING: This permanently deletes all ContextThread data for the project.
    */
   uninitialize(): void {
+    this.assertWritable('uninitialize the project');
     this.close();
     removeDirectory(this.projectRoot);
   }

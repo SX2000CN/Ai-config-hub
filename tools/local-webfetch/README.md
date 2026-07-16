@@ -33,4 +33,23 @@ MCP 配置通过 `node` 启动该用户级 runtime，不依赖本仓库路径。
 
 ## 代理支持
 
-server 启动时调用 `setGlobalDispatcher(new EnvHttpProxyAgent())`，让 Node 全局 `fetch` 读取 `HTTP_PROXY`/`HTTPS_PROXY` 环境变量。VPN 虚拟网卡模式走系统路由层，无需额外配置，全局 `fetch` 会自然经过它。
+每一跳请求都会创建独立的 `EnvHttpProxyAgent`，让 `fetch` 读取 `HTTP_PROXY`/`HTTPS_PROXY` 环境变量。VPN 虚拟网卡模式走系统路由层，无需额外配置。
+
+## 安全边界
+
+- 仅允许无凭证的 `http` / `https` URL。
+- 每次请求和每一跳重定向前都会解析并检查全部 DNS 结果，拒绝 IPv4 / IPv6 私网、loopback、link-local、保留地址和内部 hostname。
+- 重定向由 server 手动处理，最多 5 跳；不会先访问重定向目标再做校验。
+- 响应体按流读取，解码前最多接收 5 MB；超限会立即取消读取。
+- `timeout` 覆盖 DNS、重定向、响应头、响应体和 dispatcher 清理的完整周期。
+- 返回内容会单独标记为不可信外部数据，不能作为系统、开发者或用户指令执行。
+
+目标 hostname 必须能由本机 DNS 解析，即使请求最终通过代理发送；仅能由代理解析的内部域名会被拒绝。显式配置的 HTTP/HTTPS 代理属于本机可信网络边界。直接连接固定使用该跳预先验证过的地址，避免校验和建连之间再次解析目标；代理模式下目标域名通常由代理解析，server 无法验证代理最终连接到的 IP，因此不要把不受信任的代理用于此 MCP。
+
+## 测试
+
+```powershell
+npm test
+```
+
+测试通过注入 DNS 和 fetch 实现覆盖地址、重定向、流式大小限制与总超时，不访问公网或 localhost。

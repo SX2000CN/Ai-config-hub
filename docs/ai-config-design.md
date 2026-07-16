@@ -26,14 +26,14 @@
 
 | 问题 | 配置解法 | 主要实现位置 |
 | --- | --- | --- |
-| AI 容易把简单任务做重 | L0-L3 风险分层，默认最小流程，按风险升级 | `rules/shared/core.md` |
+| AI 容易把简单任务做重 | 默认直接推进，只在事实、影响面、接手或外部写入需要时增加流程 | `rules/shared/core.md` |
 | 不同工具行为不一致 | 共享核心规则 + 工具专属补充 | `rules/shared/`、`rules/tools/` |
 | AI 幻觉或读错项目状态 | 优先真实文件、当前文档、结构化事实源和验证结果 | `rules/shared/core.md`、`.Ai-config/`、`global-context-thread` |
 | 长期任务被中断后难接手 | `CURRENT.md` 总览 + 按需任务卡 | `.Ai-config/CURRENT.md`、`.Ai-config/tasks/`、`project-ai-config-hub` |
 | 复杂代码关系靠全文搜索太重 | 脉络索引负责代码结构关系，必要时再读文件确认 | `global-context-thread`、`tools/context-thread-engine/` |
 | 非代码流程关系缺少轻量结构 | 任务卡中的 `关系索引` 记录对象、依赖、状态、证据和下一步 | `.Ai-config/tasks/`、`global-context-thread` |
 | 前端 UI 容易泛化、缺少设计判断 | 前端设计 skill 先建立产品化视觉方向，再实现和验证 | `global-frontend-design` |
-| 复杂方案容易过早收敛 | 思维伙伴 skill 做低副作用发散、失败模式和简化路径检查 | `global-thinking-partner` |
+| 复杂方案容易过早收敛 | 思维伙伴以多轮协作探索、情景推演和延迟收敛补充用户思考 | `global-thinking-partner` |
 | 设计先行流程容易断在工具选择 | Pencil workflow skill 负责选择可见宿主、验证 `.pen` 和导出证据 | `pencil-design-workflow` |
 | 敏感信息和全局配置容易误提交 | 敏感信息规则、私有目录边界和同步脚本 dry-run | `rules/shared/core.md`、`docs/secrets-policy.md`、`scripts/` |
 
@@ -45,7 +45,7 @@
 
 这一层规定 AI 的默认工作方式：
 
-- 按 L0-L3 判断任务深度。
+- 默认直接推进，按证据缺口扩大上下文，按行为影响和写入管线选择验证强度。
 - 工作前按需理解项目，不读无关文档。
 - 代码、文档和用户说明冲突时，以真实文件、运行结果和当前用户说明为准。
 - 影响长期理解的变更才同步文档。
@@ -78,11 +78,11 @@ skills 是这套配置的能力模块，不只是可分发包。当前全局能�
 
 - `project-ai-config-hub`：在目标项目中按需创建或升级 `.Ai-config/`、任务卡和项目级 skill 中枢。
 - `global-frontend-design`：处理前端创建、重设计和 review 的设计质量、状态覆盖、响应式和验证。
-- `global-thinking-partner`：在复杂设计、规则、自动化和架构判断前做低副作用思维扩展。
+- `global-thinking-partner`：可与领域 skill 组合的 reasoning mode，负责脑暴、假设挑战、情景和二阶影响推演，以及按需决策收敛。
 - `global-context-thread`：在复杂代码关系、配置关系和工作流关系中使用结构化事实源缩小上下文。
 - `pencil-design-workflow`：把设计先行请求路由到可见 Pencil 工作流，并保留 `.pen` 和导出图证据。
 
-skill 的作用是把“什么时候触发、先读什么、不要做什么、如何验证”沉淀成可复用流程。
+skill 分为领域交付、reasoning mode 和工具路由三类。显式点名和平台强制触发优先；领域 skill 主导交付，思考伙伴可以组合，工具路由只在对应能力确实需要时启用。
 
 ### 4. 项目状态层
 
@@ -107,7 +107,7 @@ skill 的作用是把“什么时候触发、先读什么、不要做什么、�
 
 这一层解决“AI 不应该靠大范围搜索和长文档硬猜关系”的问题。
 
-代码关系由脉络索引提供，例如文件、符号、调用、依赖和影响面。非代码关系仍留在任务卡中，例如产品流程、配置治理、发布链路、设计流程、任务依赖和等待确认状态。
+代码关系由脉络索引提供，例如文件、符号、调用、依赖和影响面。新索引默认使用 `structure` 内容模式并忽略数据库跟踪，避免把 docstring、signature、decorator、type parameter 等源码派生文本额外持久化；需要富文本搜索时显式启用 `rich`。非代码关系仍留在任务卡中。
 
 结构化事实层只辅助定位和判断。最终结论仍要以当前文件、文档、用户说明和验证结果为准。
 
@@ -119,7 +119,7 @@ skill 的作用是把“什么时候触发、先读什么、不要做什么、�
 - `tools/context-thread-engine/`
 - 按需生成的临时浏览器验证页面、截图、Pencil `.pen` 和导出图
 
-这一层让 AI 可以使用外部或本地工具能力，例如浏览器视觉验证、脉络 MCP、Pencil 设计验证。它提供工具入口，但不决定 AI 的工作原则。
+这一层让 AI 可以使用外部或本地工具能力。MCP 通过 `core`、`code-intel`、`browser`、`browser-debug`、`design` 和 `full` profiles 控制默认能力面，并由 doctor 检查 runtime、版本、安装漂移和工具握手。
 
 ### 7. 分发与验证层
 
@@ -135,7 +135,7 @@ skill 的作用是把“什么时候触发、先读什么、不要做什么、�
 这一层的职责是把配置交付到真实工具中：
 
 ```text
-配置源文件 -> rendered 产物 -> check -> dry-run -> sync -Apply -> 用户级工具目录
+配置源文件 -> rendered 产物 -> 非修改 preflight -> dry-run -> sync -Apply（staging / 备份 / 回滚）-> 用户级工具目录
 ```
 
 它回答“怎样安全同步”，不回答“这套 AI 配置为什么这样设计”。因此分发系统应围绕配置设计服务，而不是反过来让项目文档只剩分发流程。
@@ -143,7 +143,7 @@ skill 的作用是把“什么时候触发、先读什么、不要做什么、�
 ## 一次任务中如何运行
 
 1. AI 先读取工具注入的规则内容。
-2. 规则按 L0-L3 判断任务深度。
+2. 规则先按当前事实直接推进，只有上下文、影响面或写入风险需要时才扩大流程，并按改动管线选择验证。
 3. 如果任务触发某个 skill，再按 skill 读取最少必要材料。
 4. 如果涉及复杂代码关系或工作流关系，优先使用脉络索引或任务卡关系索引缩小范围。
 5. AI 读取当前真实文件确认细节。

@@ -1,6 +1,6 @@
 ---
 name: global-context-thread
-description: 在调用链、影响面、模块关系或复杂工作流关系确实需要结构化事实源时使用 context-thread、.Ai-config 任务卡等工具，同时保持 F0/F1 小任务轻量。
+description: 在调用链、影响面、模块关系或复杂工作流关系确实需要结构化事实源时，路由到 context-thread 或 .Ai-config 关系索引；它只辅助关系定位，不主导 AI 配置修复、纯状态分析或普通局部任务。
 ---
 
 # 全局脉络
@@ -12,12 +12,11 @@ description: 在调用链、影响面、模块关系或复杂工作流关系确�
 行动前按需读取：
 
 1. `workflow.md`
-2. `references/context-thread-tools.md`
-3. `references/workflow-relation-index.md`
+2. `references/workflow-relation-index.md`
 
 关键规则：
 
-- 默认轻量：F0/F1 小任务不自动初始化 context-thread，不创建任务卡，不强迫走图谱流程。
+- 默认轻量：普通局部任务不自动初始化 context-thread，不创建任务卡，不强迫走图谱流程。
 - 反触发：明确文件的小修、纯 Markdown / 任务卡状态分析、一次精准搜索能解决的问题，不使用本 skill。
 - 级联边界：本 skill 不自动拉起 `project-ai-config-hub`、思维伙伴或任务卡更新流程；只在主任务路由确认需要时切换或叠加。
 - context-thread 只负责代码结构关系；产品需求、用户当前说明、真实文件和验证结果优先级更高。

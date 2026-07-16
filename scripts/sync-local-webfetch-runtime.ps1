@@ -1,99 +1,94 @@
 [CmdletBinding()]
 param(
-    [switch]$Apply
+    [switch]$Apply,
+    [string]$UserHome
 )
 
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$SourceRoot = Join-Path $Root 'tools\local-webfetch'
-$UserHome = [Environment]::GetFolderPath('UserProfile')
-$RuntimeRoot = Join-Path $UserHome '.ai-config-hub\mcp\local-webfetch'
-$RuntimeEntry = Join-Path $RuntimeRoot 'index.js'
+$ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
+. (Join-Path $PSScriptRoot 'lib\deploy.ps1')
 
-function Get-FullPath($Path) {
-    return [System.IO.Path]::GetFullPath($Path)
+$Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
+$Runtime = $Manifest.Runtimes | Where-Object { $_.Name -eq 'local-webfetch' } | Select-Object -First 1
+if ($null -eq $Runtime) {
+    throw 'local-webfetch runtime is not registered in config/managed-assets.psd1.'
 }
 
-function Assert-PathInside($Path, $Parent, $Label) {
-    $fullPath = Get-FullPath $Path
-    $fullParent = (Get-FullPath $Parent).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
-    if (-not $fullPath.StartsWith($fullParent, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "$Label path is outside expected parent: $fullPath"
+$ResolvedUserHome = Resolve-AiConfigHubUserHome $UserHome
+$SourceRoot = Join-Path $Root ([string]$Runtime.SourceRoot)
+$RuntimeRoot = Join-Path $ResolvedUserHome ([string]$Runtime.UserRelativeRoot)
+$RuntimeEntry = Join-Path $RuntimeRoot ([string]$Runtime.EntryRelativePath)
+Assert-AiConfigHubPathInside $RuntimeRoot $ResolvedUserHome 'local-webfetch runtime' | Out-Null
+
+foreach ($fileName in @('package.json', 'package-lock.json', 'index.js', 'fetch-core.js')) {
+    $path = Join-Path $SourceRoot $fileName
+    if (-not (Test-Path -LiteralPath $path)) {
+        throw "Missing local-webfetch runtime source: $path"
     }
 }
 
-function Require-Command($Name) {
-    $command = Get-Command $Name -ErrorAction SilentlyContinue
-    if (-not $command) {
-        throw "Required command '$Name' was not found on PATH."
-    }
-    return $command
-}
-
-if (-not (Test-Path -LiteralPath $SourceRoot)) {
-    throw "Missing local-webfetch source: $SourceRoot"
-}
-
-foreach ($fileName in @('package.json', 'package-lock.json', 'index.js')) {
-    $filePath = Join-Path $SourceRoot $fileName
-    if (-not (Test-Path -LiteralPath $filePath)) {
-        throw "Missing source file: $filePath"
-    }
-}
-
-Assert-PathInside $RuntimeRoot (Join-Path $UserHome '.ai-config-hub') 'Runtime root'
+$node = Assert-AiConfigHubNodeVersion
 
 if (-not $Apply) {
-    Write-Output 'Dry run only. Re-run with -Apply to sync the local-webfetch runtime.'
+    Write-Output 'Dry run only. Re-run with -Apply after reviewing the full preflight output.'
     Write-Output "source`t$SourceRoot"
     Write-Output "target`t$RuntimeRoot"
     Write-Output "entry`t$RuntimeEntry"
-    if (Test-Path -LiteralPath $RuntimeEntry) {
-        Write-Output "status`tinstalled runtime entry exists"
-    }
-    else {
-        Write-Output "status`truntime entry is missing"
-    }
-    Write-Output 'would copy index.js, package.json, package-lock.json, README.md'
-    Write-Output 'would install production dependencies with npm ci --omit=dev'
-    Write-Output 'would verify entry with node --check'
-    exit 0
+    Write-Output $(if (Test-Path -LiteralPath $RuntimeEntry) { "status`tinstalled runtime entry exists" } else { "status`truntime entry is missing" })
+    Write-Output 'would stage files and production dependencies, validate, then atomically swap the runtime'
+    return
 }
 
-$npm = Require-Command 'npm'
-$node = Require-Command 'node'
-
-New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
-
-foreach ($fileName in @('package.json', 'package-lock.json', 'index.js', 'README.md')) {
-    $sourceFile = Join-Path $SourceRoot $fileName
-    if (Test-Path -LiteralPath $sourceFile) {
-        Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $RuntimeRoot $fileName) -Force
-    }
+Invoke-AiConfigHubPreflight $Root $ResolvedUserHome
+$RuntimeExpectedFingerprint = Get-AiConfigHubPathFingerprint $RuntimeRoot
+if ((Test-Path -LiteralPath $RuntimeRoot) -and -not (Test-Path -LiteralPath $RuntimeRoot -PathType Container)) {
+    throw "local-webfetch runtime target exists but is not a directory: $RuntimeRoot"
+}
+$npm = Get-Command npm -ErrorAction SilentlyContinue
+if (-not $npm) {
+    throw "Required command 'npm' was not found on PATH."
 }
 
-Push-Location -LiteralPath $RuntimeRoot
+$context = New-AiConfigHubOperationContext -UserHome $ResolvedUserHome -Pipeline 'runtime-local-webfetch' -StagingRelativeRoot $Manifest.UserPaths.StagingRoot -BackupRelativeRoot $Manifest.UserPaths.BackupRoot
 try {
-    & $npm.Source ci --omit=dev
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
+    $stagedRuntime = Join-Path $context.StagingRoot 'local-webfetch'
+    New-Item -ItemType Directory -Force -Path $stagedRuntime | Out-Null
+    foreach ($fileName in @('package.json', 'package-lock.json', 'index.js', 'fetch-core.js', 'README.md')) {
+        $sourceFile = Join-Path $SourceRoot $fileName
+        if (Test-Path -LiteralPath $sourceFile) {
+            Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $stagedRuntime $fileName) -Force
+        }
     }
-}
-finally {
-    Pop-Location
-}
 
-# Syntax check only — do NOT run the entry directly; it is a stdio MCP server
-# that would hang waiting for JSON-RPC input if executed without a client.
-& $node.Source --check $RuntimeEntry
-if ($LASTEXITCODE -ne 0) {
-    throw "Syntax check failed for runtime entry: $RuntimeEntry"
-}
+    Push-Location -LiteralPath $stagedRuntime
+    try {
+        & $npm.Source ci --omit=dev
+        if ($LASTEXITCODE -ne 0) { throw "runtime npm ci failed with exit code $LASTEXITCODE" }
+    }
+    finally {
+        Pop-Location
+    }
 
-if (-not (Test-Path -LiteralPath $RuntimeEntry)) {
-    throw "Runtime sync completed but entry is missing: $RuntimeEntry"
-}
+    $stagedEntry = Join-Path $stagedRuntime ([string]$Runtime.EntryRelativePath)
+    foreach ($scriptPath in @($stagedEntry, (Join-Path $stagedRuntime 'fetch-core.js'))) {
+        & $node.Source --check $scriptPath
+        if ($LASTEXITCODE -ne 0) { throw "local-webfetch staged syntax check failed for $scriptPath with exit code $LASTEXITCODE" }
+    }
+    Push-Location -LiteralPath $stagedRuntime
+    try {
+        & $node.Source -e "import('./fetch-core.js').then((module) => { if (typeof module.fetchUrlBytes !== 'function') process.exit(1) })"
+        if ($LASTEXITCODE -ne 0) { throw "local-webfetch staged module smoke check failed with exit code $LASTEXITCODE" }
+    }
+    finally {
+        Pop-Location
+    }
 
-Write-Output "Synced local-webfetch runtime: $RuntimeRoot"
-Write-Output "Runtime entry: $RuntimeEntry"
+    Install-AiConfigHubStagedDirectory $context 'local-webfetch' $stagedRuntime $RuntimeRoot -ExpectedFingerprint $RuntimeExpectedFingerprint | Out-Null
+    Complete-AiConfigHubOperation $context
+    Write-Output "Synced local-webfetch runtime: $RuntimeRoot"
+}
+catch {
+    Throw-AiConfigHubOperationFailure $context $_
+}

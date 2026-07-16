@@ -1,34 +1,16 @@
+[CmdletBinding()]
+param([string[]]$Profile)
+
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$RenderedRoot = Join-Path $Root 'tool-configs\mcp\rendered'
-$ClaudePath = Join-Path $RenderedRoot 'claude-code.mcp.json'
-$CodexPath = Join-Path $RenderedRoot 'codex.mcp.toml'
+$ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
+. (Join-Path $PSScriptRoot 'lib\managed-assets.ps1')
 . (Join-Path $PSScriptRoot 'mcp-local.ps1')
-$McpGroups = @(
-    @{
-        Name = 'browser-visual'
-        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\browser-visual.json'
-        RequiredServers = @('chrome-devtools', 'playwright')
-    },
-    @{
-        Name = 'context-thread'
-        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\context-thread.json'
-        RequiredServers = @('context-thread')
-    },
-    @{
-        Name = 'local-webfetch'
-        SourcePath = Join-Path $Root 'tool-configs\mcp\shared\local-webfetch.json'
-        RequiredServers = @('local-webfetch')
-        Targets = @('ClaudeCode')
-    }
-)
+. (Join-Path $PSScriptRoot 'lib\validation.ps1')
+$Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
+$IsNormalizedV1 = $null -ne $Manifest.SourceSchemaVersion
 $Failed = $false
-
-function Test-GroupTargetsTool($Group, $ToolName) {
-    if ($null -eq $Group.Targets -or @($Group.Targets).Count -eq 0) { return $true }
-    return @($Group.Targets) -contains $ToolName
-}
 
 function Fail($Message) {
     Write-Output "ERROR: $Message"
@@ -36,253 +18,168 @@ function Fail($Message) {
 }
 
 function Get-PropertyNames($Object) {
-    if ($null -eq $Object) {
-        return @()
-    }
-
+    if ($null -eq $Object) { return @() }
     return @($Object.PSObject.Properties | ForEach-Object { $_.Name })
 }
 
-function Get-ManagedServers($ToolName) {
-    $servers = New-Object System.Collections.Generic.List[string]
-    foreach ($group in $McpGroups) {
-        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
-        foreach ($serverName in $group.RequiredServers) {
-            $servers.Add($serverName)
-        }
-    }
-    return @($servers)
-}
-
-function Test-RepoScript($ServerName, $Server) {
-    if ($null -eq $Server.repo_script -or [string]::IsNullOrWhiteSpace($Server.repo_script)) {
-        return
-    }
-
-    $scriptPath = Join-Path $Root ([string]$Server.repo_script)
-    if (-not (Test-Path -LiteralPath $scriptPath)) {
-        Fail "Missing repo_script for source server $ServerName`: $scriptPath"
-    }
-}
-
-function Resolve-UserPath($Path) {
-    $text = [string]$Path
-    if ($text -eq '~') {
-        return [Environment]::GetFolderPath('UserProfile')
-    }
-
-    if ($text.StartsWith('~\') -or $text.StartsWith('~/')) {
-        return Join-Path ([Environment]::GetFolderPath('UserProfile')) $text.Substring(2)
-    }
-
-    return $text
-}
-
-function Test-RuntimeEntry($ServerName, $Server) {
-    if ($null -eq $Server.runtime_entry -or [string]::IsNullOrWhiteSpace($Server.runtime_entry)) {
-        return
-    }
-
-    $runtimeEntry = Resolve-UserPath ([string]$Server.runtime_entry)
-    if (-not [System.IO.Path]::IsPathRooted($runtimeEntry)) {
-        Fail "runtime_entry for source server $ServerName must resolve to an absolute path: $runtimeEntry"
-        return
-    }
-
-    if (-not (Test-Path -LiteralPath $runtimeEntry)) {
-        Write-Warning "context-thread runtime entry was not found at $runtimeEntry. Run scripts\sync-context-thread-runtime.ps1 -Apply before starting context-thread MCP."
-    }
-}
-
 function Get-SourceServerArgs($Server) {
-    $args = @($Server.args)
-    if ($null -ne $Server.runtime_entry -and -not [string]::IsNullOrWhiteSpace($Server.runtime_entry)) {
-        $args += @(Resolve-UserPath ([string]$Server.runtime_entry))
-    }
-    if ($null -ne $Server.repo_script -and -not [string]::IsNullOrWhiteSpace($Server.repo_script)) {
-        $args += @(Join-Path $Root ([string]$Server.repo_script))
-    }
-    if ($null -ne $Server.script_args) {
-        $args += @($Server.script_args)
-    }
-    return @($args)
+    $serverArgs = @($Server.args)
+    if (-not [string]::IsNullOrWhiteSpace([string]$Server.runtime_entry)) { $serverArgs += @([string]$Server.runtime_entry) }
+    if (-not [string]::IsNullOrWhiteSpace([string]$Server.repo_script)) { $serverArgs += @(Join-Path $Root ([string]$Server.repo_script)) }
+    if ($null -ne $Server.script_args) { $serverArgs += @($Server.script_args) }
+    return @($serverArgs)
 }
 
-foreach ($path in @($ClaudePath, $CodexPath)) {
-    if (-not (Test-Path -LiteralPath $path)) {
-        Fail "Missing MCP file: $path"
-    }
-}
-
-foreach ($group in $McpGroups) {
-    if (-not (Test-Path -LiteralPath $group.SourcePath)) {
-        Fail "Missing MCP file: $($group.SourcePath)"
-    }
-}
-
-if (-not $Failed) {
-    $claudeManagedServers = Get-ManagedServers 'ClaudeCode'
-    $codexManagedServers = Get-ManagedServers 'Codex'
-
-    foreach ($group in $McpGroups) {
-        try {
-            $source = Get-Content -Raw -Encoding UTF8 -LiteralPath $group.SourcePath | ConvertFrom-Json
-            if ($null -eq $source.servers) {
-                Fail "Missing servers object in $($group.SourcePath)"
-            }
-            else {
-                $sourceNames = Get-PropertyNames $source.servers
-                foreach ($serverName in $group.RequiredServers) {
-                    if ($sourceNames -notcontains $serverName) {
-                        Fail "Missing required source server: $serverName"
-                    }
-                }
-
-                foreach ($serverName in $sourceNames) {
-                    if ($group.RequiredServers -notcontains $serverName) {
-                        Fail "Unexpected source server in $($group.Name): $serverName"
-                    }
-
-                    $server = $source.servers.$serverName
-                    if ([string]::IsNullOrWhiteSpace($server.command)) {
-                        Fail "Missing command for source server: $serverName"
-                    }
-
-                    if (@(Get-SourceServerArgs $server).Count -eq 0) {
-                        Fail "Missing args for source server: $serverName"
-                    }
-
-                    Test-RepoScript $serverName $server
-                    Test-RuntimeEntry $serverName $server
-                }
-            }
+function Test-PackagePin($ServerName, $Server, $SourcePath) {
+    $package = [string]$Server.package
+    if ([string]::IsNullOrWhiteSpace($package)) {
+        foreach ($argument in @(Get-SourceServerArgs $Server)) {
+            if ([string]$argument -match '(?i)@latest(?:$|\s)') { Fail "MCP args must not use @latest for $ServerName in $SourcePath" }
         }
-        catch {
-            Fail "Invalid source JSON $($group.SourcePath): $($_.Exception.Message)"
+        return
+    }
+    if ($package -match '(?i)@latest(?:$|\s)' -or
+        $package -notmatch '^(@[^/]+/[^@]+|[^@]+)@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+        Fail "MCP package must use an exact semver for $ServerName in $SourcePath`: $package"
+    }
+}
+
+$renderParameters = @{ Check = $true }
+if ($null -ne $Profile -and $Profile.Count -gt 0) { $renderParameters.Profile = $Profile }
+& (Join-Path $PSScriptRoot 'render-mcp.ps1') @renderParameters
+
+$sourceByDefinition = @{}
+$sourceServerNamesByDefinition = @{}
+foreach ($definition in @($Manifest.Mcp.Servers)) {
+    $definitionName = [string]$definition.Name
+    if (-not $IsNormalizedV1) {
+        foreach ($property in @('RequiresRuntime', 'Optional', 'PreferredFor', 'Doctor')) {
+            if (-not $definition.ContainsKey($property)) { Fail "Managed MCP server $definitionName is missing metadata: $property" }
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$definition.RequiresRuntime)) { Fail "Managed MCP server $definitionName must declare RequiresRuntime" }
+        if (@($definition.PreferredFor).Count -eq 0) { Fail "Managed MCP server $definitionName must declare PreferredFor" }
+        if ([string]::IsNullOrWhiteSpace([string]$definition.Doctor.Mode)) { Fail "Managed MCP server $definitionName must declare Doctor.Mode" }
+        if (-not $definition.Doctor.ContainsKey('ExpectedToolCount') -or [int]$definition.Doctor.ExpectedToolCount -lt 0) { Fail "Managed MCP server $definitionName must declare a non-negative Doctor.ExpectedToolCount" }
+    }
+
+    $sourcePath = Join-Path $Root ([string]$definition.Source)
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+        Fail "Missing MCP source: $sourcePath"
+        continue
+    }
+    try { $source = Get-Content -Raw -Encoding UTF8 -LiteralPath $sourcePath | ConvertFrom-Json }
+    catch { Fail "Invalid source JSON $sourcePath`: $($_.Exception.Message)"; continue }
+    $serverNames = @(Get-PropertyNames $source.servers)
+    if (-not $IsNormalizedV1 -and ($serverNames.Count -ne 1 -or $serverNames[0] -ne $definitionName)) {
+        Fail "Schema v2 MCP source must define exactly server '$definitionName': $sourcePath"
+        continue
+    }
+    $sourceByDefinition[$definitionName] = $source
+    $sourceServerNamesByDefinition[$definitionName] = $serverNames
+    $server = $source.servers.$definitionName
+    if ([string]::IsNullOrWhiteSpace([string]$server.command)) { Fail "Missing command for source server: $definitionName" }
+    if (@(Get-SourceServerArgs $server).Count -eq 0) { Fail "Missing args for source server: $definitionName" }
+    if (-not $IsNormalizedV1 -and [string]$server.command -match '^(?i:npx)(?:\.cmd)?$') { Fail "Managed MCP server $definitionName must not use npx" }
+    Test-PackagePin $definitionName $server $sourcePath
+    if (-not [string]::IsNullOrWhiteSpace([string]$server.runtime_entry)) {
+        $runtimeEntry = [string]$server.runtime_entry
+        if (-not ($runtimeEntry.StartsWith('~\') -or $runtimeEntry.StartsWith('~/')) -or $runtimeEntry -match '(^|[\\/])\.\.([\\/]|$)') {
+            Fail "runtime_entry for source server $definitionName must stay under the user profile: $runtimeEntry"
         }
     }
+}
 
+$browserPackagePath = Join-Path $Root 'tools\browser-mcp-runtime\package.json'
+$browserLockPath = Join-Path $Root 'tools\browser-mcp-runtime\package-lock.json'
+if (-not $IsNormalizedV1 -and $sourceByDefinition.ContainsKey('playwright') -and $sourceByDefinition.ContainsKey('chrome-devtools')) { try {
+    $browserPackage = Get-Content -Raw -Encoding UTF8 -LiteralPath $browserPackagePath | ConvertFrom-Json
+    $expectedBrowserPackages = @{
+        'chrome-devtools' = @{ Name = 'chrome-devtools-mcp'; Version = '1.6.0' }
+        'playwright' = @{ Name = '@playwright/mcp'; Version = '0.0.78' }
+    }
+    foreach ($entry in $expectedBrowserPackages.GetEnumerator()) {
+        $sourceServer = $sourceByDefinition[$entry.Key].servers.PSObject.Properties[[string]$entry.Key].Value
+        $sourcePackage = [string]$sourceServer.package
+        $expectedSpec = "$($entry.Value.Name)@$($entry.Value.Version)"
+        if ($sourcePackage -ne $expectedSpec) { Fail "MCP source package mismatch for $($entry.Key): expected $expectedSpec, found $sourcePackage" }
+        $declaredVersion = [string]$browserPackage.dependencies.PSObject.Properties[[string]$entry.Value.Name].Value
+        if ($declaredVersion -ne $entry.Value.Version) { Fail "Browser runtime dependency must pin $expectedSpec" }
+    }
+    $lockCheck = @'
+const fs = require('fs');
+const manifest = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+const lock = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const expected = { '@playwright/mcp': '0.0.78', 'chrome-devtools-mcp': '1.6.0' };
+for (const [name, version] of Object.entries(expected)) {
+  if (manifest.dependencies[name] !== version || lock.packages[`node_modules/${name}`]?.version !== version) {
+    console.error(`${name} must be pinned to ${version}`);
+    process.exit(1);
+  }
+}
+'@
+    & node -e $lockCheck $browserPackagePath $browserLockPath
+    if ($LASTEXITCODE -ne 0) { Fail 'Browser runtime package.json and lockfile pins do not match the approved versions' }
+}
+catch {
+    Fail "Invalid browser runtime package metadata: $($_.Exception.Message)"
+} }
+
+$profileNames = if ($null -eq $Profile -or $Profile.Count -eq 0) { Get-AiConfigHubMcpProfileNames $Manifest } else { @($Profile) }
+foreach ($profileName in $profileNames) {
+    $profileDefinition = Get-AiConfigHubMcpProfile $Manifest $profileName
+    $claudeDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'ClaudeCode')
+    $codexDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'Codex')
+    $expectedClaudeServers = @($claudeDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
+    $expectedCodexServers = @($codexDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
+
+    $claudePath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'ClaudeCode' $profileName
+    $codexPath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Codex' $profileName
     try {
-        $claude = Get-Content -Raw -Encoding UTF8 -LiteralPath $ClaudePath | ConvertFrom-Json
-        $topLevelNames = Get-PropertyNames $claude
-        if (@($topLevelNames).Count -ne 1 -or @($topLevelNames)[0] -ne 'mcpServers') {
-            Fail "Claude rendered fragment must contain only top-level mcpServers"
-        }
+        $claude = Get-Content -Raw -Encoding UTF8 -LiteralPath $claudePath | ConvertFrom-Json
+        $topLevelNames = @(Get-PropertyNames $claude)
+        if ($topLevelNames.Count -ne 1 -or $topLevelNames[0] -ne 'mcpServers') { Fail "Claude profile $profileName must contain only top-level mcpServers" }
+        $actualServers = @(Get-PropertyNames $claude.mcpServers)
+        if (($actualServers -join '|') -ne ($expectedClaudeServers -join '|')) { Fail "Claude profile $profileName server set mismatch: expected $($expectedClaudeServers -join ', '), found $($actualServers -join ', ')" }
+    }
+    catch { Fail "Invalid Claude rendered JSON for profile $profileName`: $($_.Exception.Message)" }
 
-        $claudeServerNames = Get-PropertyNames $claude.mcpServers
-        foreach ($serverName in $claudeManagedServers) {
-            if ($claudeServerNames -notcontains $serverName) {
-                Fail "Missing Claude rendered server: $serverName"
-            }
+    $codexContent = [string](Get-Content -Raw -Encoding UTF8 -LiteralPath $codexPath)
+    foreach ($definition in $codexDefinitions) {
+        $definitionName = [string]$definition.Name
+        foreach ($marker in @("# >>> ai-config-hub managed mcp: $definitionName", "# <<< ai-config-hub managed mcp: $definitionName")) {
+            if (-not $codexContent.Contains($marker)) { Fail "Missing Codex profile $profileName marker: $marker" }
         }
-
-        foreach ($serverName in $claudeServerNames) {
-            if ($claudeManagedServers -notcontains $serverName) {
-                Fail "Unexpected Claude rendered server: $serverName"
-            }
+        foreach ($serverName in @($sourceServerNamesByDefinition[$definitionName])) {
+            if ([regex]::Matches($codexContent, "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\]$").Count -ne 1) { Fail "Codex profile $profileName must contain one server section for $serverName" }
+            if ([regex]::Matches($codexContent, "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\.env\]$").Count -ne 1) { Fail "Codex profile $profileName must contain one env section for $serverName" }
         }
     }
-    catch {
-        Fail "Invalid Claude rendered JSON: $($_.Exception.Message)"
+    foreach ($name in @($sourceServerNamesByDefinition.Values | ForEach-Object { $_ })) {
+        if ($expectedCodexServers -notcontains $name -and $codexContent -match "(?m)^\[mcp_servers\.$([regex]::Escape($name))\]$") { Fail "Unexpected Codex profile $profileName server: $name" }
     }
-
-    $codexContent = Get-Content -Raw -Encoding UTF8 -LiteralPath $CodexPath
-    foreach ($group in $McpGroups) {
-        if (-not (Test-GroupTargetsTool $group 'Codex')) { continue }
-        $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
-        $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
-        if (-not $codexContent.Contains($startMarker) -or -not $codexContent.Contains($endMarker)) {
-            Fail "Missing Codex managed MCP markers for $($group.Name)"
-        }
-    }
-
-    foreach ($serverName in $codexManagedServers) {
-        if ($codexContent -notmatch "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\]$") {
-            Fail "Missing Codex rendered server section: $serverName"
-        }
-
-        if ($codexContent -notmatch "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\.env\]$") {
-            Fail "Missing Codex rendered env section: $serverName"
-        }
-    }
-
-    $ForbiddenCodexPatterns = @(
-        '(?m)^model\s*=',
-        '(?m)^model_provider\s*=',
-        '(?m)^base_url\s*=',
-        '(?m)^\[model_providers\.',
-        '(?m)^\[projects\.',
-        '(?i)trust_level',
-        '(?i)trusted',
-        '(?i)provider_url'
-    )
-    foreach ($pattern in $ForbiddenCodexPatterns) {
-        if ($codexContent -match $pattern) {
-            Fail "Forbidden Codex config pattern '$pattern' in rendered MCP fragment"
-        }
-    }
+    if ($codexContent -match '(?i)@latest') { Fail "Codex profile $profileName must not contain @latest" }
+    if (-not $IsNormalizedV1 -and $codexContent -match '(?i)\bnpx(?:\.cmd)?\b') { Fail "Codex profile $profileName must not contain npx" }
 }
 
-$ScanPaths = @(
-    (Join-Path $Root 'tool-configs'),
+$scanFiles = Get-AiConfigHubScanFiles -Paths @(
+    (Join-Path $Root 'tool-configs\mcp'),
+    (Join-Path $Root 'tools\browser-mcp-runtime'),
     (Join-Path $Root 'scripts\render-mcp.ps1'),
     (Join-Path $Root 'scripts\check-mcp.ps1'),
     (Join-Path $Root 'scripts\mcp-local.ps1'),
+    (Join-Path $Root 'scripts\mcp-doctor.ps1'),
     (Join-Path $Root 'scripts\sync-mcp.ps1'),
-    (Join-Path $Root 'docs'),
-    (Join-Path $Root 'README.md')
-)
-
-$SensitivePatterns = @(
-    'sk-[A-Za-z0-9_-]{16,}',
-    '(?i)api[_-]?key\s*=',
-    '(?i)token\s*=',
-    '(?i)password\s*=',
-    '(?i)secret\s*=',
-    '(?i)cookie\s*=',
-    '(?i)session\s*=',
-    '(?i)provider[_-]?url\s*=',
-    '(?i)trusted[_ -]?project',
-    '(?i)browser[_ -]?profile'
-)
-
-$scanFiles = Get-ChildItem -Path $ScanPaths -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
-    -not $_.FullName.StartsWith((Join-Path $Root 'private'), [StringComparison]::OrdinalIgnoreCase) -and
-    -not ($_.FullName -match '[\\/]node_modules[\\/]') -and
-    -not ($_.FullName -match '[\\/]dist[\\/]') -and
-    -not ($_.FullName -match '[\\/]release[\\/]') -and
-    ($_.Extension -in @('.md', '.toml', '.tpl', '.ps1', '.json', '.txt') -or $_.Name -eq '.gitignore')
-}
-
+    (Join-Path $Root 'scripts\sync-browser-mcp-runtime.ps1')
+) -Root $Root
 foreach ($file in $scanFiles) {
     $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $file.FullName
-    if ($file.FullName.StartsWith((Join-Path $Root 'tool-configs')) -and $content -match '\{\{[^}]+\}\}') {
-        Fail "Unresolved template placeholder in $($file.FullName)"
-    }
-
-    foreach ($pattern in $SensitivePatterns) {
-        if ($content -match $pattern) {
-            $isPolicyMention = $pattern -eq '(?i)trusted[_ -]?project' -and (
-                $file.FullName.EndsWith('docs\secrets-policy.md') -or
-                $file.FullName.EndsWith('README.md')
-            )
-            if (-not $isPolicyMention) {
-                Write-Warning "Potential sensitive pattern '$pattern' in $($file.FullName)"
-            }
-        }
-    }
+    if ($file.FullName.StartsWith((Join-Path $Root 'tool-configs'), [StringComparison]::OrdinalIgnoreCase) -and $content -match '\{\{[^}]+\}\}') { Fail "Unresolved template placeholder in $($file.FullName)" }
 }
+Test-AiConfigHubSensitiveContent -Files $scanFiles -Fail ${function:Fail}
 
 $pencilServer = Resolve-AiConfigHubPencilMcpServer
-if ($null -eq $pencilServer) {
-    Write-Warning 'Pencil plugin MCP server was not found locally. sync-mcp.ps1 can still manage browser/context-thread MCP, but pencil-design-workflow needs VS Code/Cursor Pencil MCP support before use.'
-}
-else {
-    Write-Output "Pencil MCP candidate: $($pencilServer.Command) --app $($pencilServer.App)"
-}
+if ($null -eq $pencilServer) { Write-Warning 'Pencil plugin MCP server was not found locally; design/full profiles will report it as degraded.' }
+else { Write-Output "Pencil MCP candidate: $($pencilServer.Command) --app $($pencilServer.App)" }
 
-if ($Failed) {
-    exit 1
-}
-
+if ($Failed) { exit 1 }
 Write-Output 'MCP check passed'

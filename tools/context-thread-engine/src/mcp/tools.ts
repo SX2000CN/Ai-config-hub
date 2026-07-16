@@ -606,7 +606,20 @@ export class ToolHandler {
     const resolvedRoot = findNearestContextThreadRoot(projectPath);
 
     if (!resolvedRoot) {
-      throw new Error(`ContextThread not initialized in ${projectPath}. Run 'context-thread init' in that project first.`);
+      // `context-thread` is not a global command — it's not on PATH and isn't
+      // published to npm. Reflect back this server's own launch argv (the
+      // real node binary + entry script it was started with) instead of a
+      // guessed/hardcoded path, so the suggested command always matches how
+      // this exact process was actually invoked, on any machine or install layout.
+      const [execPath, entryScript] = process.argv;
+      const initCommand = entryScript
+        ? `"${execPath}" "${entryScript}" init "${projectPath}" --index`
+        : `node <context-thread CLI entry> init "${projectPath}" --index`;
+      throw new Error(
+        `ContextThread not initialized in ${projectPath}.\n` +
+        'context-thread is not a global command (not on PATH, not an npm package) — run it via node with this server\'s own entry path:\n' +
+        `  ${initCommand}`
+      );
     }
 
     // If the path resolves to the default project, reuse the already-open
@@ -1448,6 +1461,7 @@ export class ToolHandler {
     const pendingModified = changes.modified.length;
     const pendingRemoved = changes.removed.length;
     const pendingTotal = pendingAdded + pendingModified + pendingRemoved;
+    const privacy = cg.getPrivacyStatus();
 
     const lines: string[] = [
       '## ContextThread Status',
@@ -1456,6 +1470,8 @@ export class ToolHandler {
       `**Total nodes:** ${stats.nodeCount}`,
       `**Total edges:** ${stats.edgeCount}`,
       `**Database size:** ${(stats.dbSizeBytes / 1024 / 1024).toFixed(2)} MB`,
+      `**Content mode:** ${privacy.contentModeLabel}`,
+      `**Database Git:** ${privacy.databaseTracked ? 'tracked' : privacy.databaseIgnored ? 'ignored' : 'untracked (not ignored)'}`,
     ];
 
     // Surface the active SQLite backend (node:sqlite, Node's built-in real

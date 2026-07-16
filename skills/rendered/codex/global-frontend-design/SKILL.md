@@ -1,6 +1,6 @@
 ---
 name: global-frontend-design
-description: 创建、重设计或审查非简单前端界面时，先建立鲜明产品化视觉方向，再用现有前端技术栈落地可维护、可访问、响应式且状态完整的 UI。
+description: 创建、重设计或审查非简单前端界面时，作为实现领域 skill 建立产品化视觉方向并落地可维护、可访问、响应式且状态完整的 UI；明确要求先做 Pencil 设计稿时先使用 pencil-design-workflow，局部样式修复不使用完整流程。
 ---
 
 # 全局前端设计

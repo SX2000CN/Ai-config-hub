@@ -1,0 +1,38 @@
+{
+    "mcpServers":  {
+                       "local-webfetch":  {
+                                              "type":  "stdio",
+                                              "command":  "node",
+                                              "args":  [
+                                                           "~\\.ai-config-hub\\mcp\\local-webfetch\\index.js"
+                                                       ]
+                                          },
+                       "context-thread":  {
+                                              "type":  "stdio",
+                                              "command":  "node",
+                                              "args":  [
+                                                           "~\\.ai-config-hub\\mcp\\context-thread\\dist\\bin\\context-thread.js",
+                                                           "serve",
+                                                           "--mcp"
+                                                       ]
+                                          },
+                       "playwright":  {
+                                          "type":  "stdio",
+                                          "command":  "node",
+                                          "args":  [
+                                                       "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
+                                                       "playwright"
+                                                   ]
+                                      },
+                       "chrome-devtools":  {
+                                               "type":  "stdio",
+                                               "command":  "node",
+                                               "args":  [
+                                                            "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
+                                                            "chrome-devtools",
+                                                            "--no-performance-crux",
+                                                            "--no-usage-statistics"
+                                                        ]
+                                           }
+                   }
+}

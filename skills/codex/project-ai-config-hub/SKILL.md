@@ -1,13 +1,13 @@
 ---
 name: project-ai-config-hub
-description: ai-config-hub 的项目级分身；当用户明确要初始化、创建、修改、迁移、审计、修复或同步项目级 AI 配置中枢或项目级 skill 时使用。
+description: ai-config-hub 的项目级分身；当交付物是初始化、创建、修改、迁移、审计、修复或同步项目级 AI 配置中枢或项目级 skill 时作为主领域 skill，普通业务任务、只读状态查询和局部修复不使用完整流程。
 ---
 
 # 项目级 AI 配置中枢
 
 <!-- ai-config-hub-managed: project-ai-config-hub -->
 
-当用户明确要求初始化、创建、迁移、审计、修复或同步项目级 AI 配置中枢，或新增、修改、迁移项目级 skill 时使用本 skill。只读了解 `.Ai-config` 状态、普通业务任务、F0/F1 问答或局部修复，不自动进入完整中枢流程。
+当用户明确要求初始化、创建、迁移、审计、修复或同步项目级 AI 配置中枢，或新增、修改、迁移项目级 skill 时使用本 skill。只读了解 `.Ai-config` 状态、普通业务任务、一次性问答或局部修复，不自动进入完整中枢流程。
 
 默认按风险和接手价值轻量启用配置：小项目可只保留项目规则或 `.Ai-config/CURRENT.md`；只有跨会话、多任务、等待确认、有残留风险或确有项目级 workflow 时，才创建任务卡、registry 或多端 skill 入口。
 
@@ -23,7 +23,7 @@ description: ai-config-hub 的项目级分身；当用户明确要初始化、�
 - 按需用 `.Ai-config/` 作为目标项目的 AI 配置中枢；不要把完整中枢当作所有项目的默认负担。
 - 项目级 skill 的 durable 规则和事实必须收敛到 `.Ai-config/skills/<skill-name>/`；`.claude/skills`、`.agents/skills`、`.codex/skills` 只作为工具入口或兼容入口，不作为长期事实源。
 - 若发现 skill 事实散落在 README、docs、脚本说明、工具入口或旧版 `docs/ai` 中，应先做事实源收敛计划，再继续修改 skill。
-- 反触发：只是读取状态、普通代码/文档任务恰好提到 `.Ai-config` 路径、F0/F1 小任务或一次性问答时，不使用完整 audit/repair 流程。
+- 反触发：只是读取状态、普通代码/文档任务恰好提到 `.Ai-config` 路径、局部任务或一次性问答时，不使用完整 audit/repair 流程。
 - 级联边界：本 skill 不自动拉起 context-thread、思维伙伴或同步流程；确需跨域时回到主任务路由判断主次。
 - 旧版 `docs/ai/` 只作为迁移来源和兼容事实源；新配置统一写入 `.Ai-config/`。
 - 只有存在项目级 skill 时，才用 `.Ai-config/skills-registry.md` 记录清单、事实源、入口和状态。

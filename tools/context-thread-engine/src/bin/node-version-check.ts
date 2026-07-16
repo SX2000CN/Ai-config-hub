@@ -25,8 +25,8 @@ export function buildNode25BlockBanner(nodeVersion: string): string {
     sep,
     'Node.js 25.x has a V8 WASM JIT (turboshaft) Zone allocator bug that',
     'crashes with `Fatal process out of memory: Zone` when ContextThread',
-    'compiles tree-sitter grammars. ContextThread WILL crash on this Node',
-    'version mid-indexing. See https://github.com/ai-config-hub/context-thread/issues/81',
+    'compiles tree-sitter grammars. Later majors remain blocked until they',
+    'are validated. See https://github.com/ai-config-hub/context-thread/issues/81',
     '',
     'Fix: install Node.js 22 LTS:',
     '  nvm install 22 && nvm use 22                          # nvm',
@@ -39,17 +39,47 @@ export function buildNode25BlockBanner(nodeVersion: string): string {
 }
 
 /**
- * Lowest supported Node.js major version. Matches the `engines` floor in
- * package.json. Below this, ContextThread relies on language features / native APIs
- * that aren't present, and the combination is untested. `engines` alone only
- * *warns* on install (unless the user set `engine-strict`), so the CLI bootstrap
- * also hard-blocks here to actually enforce the floor.
+ * Supported runtime range. The patch-level floor matters because the built-in
+ * node:sqlite implementation used by ContextThread is only supported from the
+ * selected Node 22 maintenance release onward.
  */
-export const MIN_NODE_MAJOR = 20;
+export const MIN_NODE_VERSION = '22.19.0';
+export const MAX_NODE_VERSION_EXCLUSIVE = '25.0.0';
+
+export type NodeVersionCompatibility = 'supported' | 'too-old' | 'too-new';
+
+function parseVersion(version: string): [number, number, number] | null {
+  // Accept complete stable SemVer (with an optional build suffix). Pre-release
+  // runtimes are intentionally unsupported because package `engines` ranges do
+  // not opt into them and they have not passed the WASM/SQLite compatibility CI.
+  const match = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\+[-0-9A-Za-z.]+)?$/.exec(version.trim());
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function compareVersions(
+  left: [number, number, number],
+  right: [number, number, number]
+): number {
+  for (let i = 0; i < 3; i++) {
+    const delta = left[i]! - right[i]!;
+    if (delta !== 0) return delta;
+  }
+  return 0;
+}
+
+export function getNodeVersionCompatibility(nodeVersion: string): NodeVersionCompatibility {
+  const parsed = parseVersion(nodeVersion);
+  const minimum = parseVersion(MIN_NODE_VERSION)!;
+  const maximum = parseVersion(MAX_NODE_VERSION_EXCLUSIVE)!;
+  if (!parsed || compareVersions(parsed, minimum) < 0) return 'too-old';
+  if (compareVersions(parsed, maximum) >= 0) return 'too-new';
+  return 'supported';
+}
 
 /**
  * Build the bordered banner shown when ContextThread detects a Node.js major below
- * {@link MIN_NODE_MAJOR}. Pinned via unit test so the recovery commands and the
+ * {@link MIN_NODE_VERSION}. Pinned via unit test so the recovery commands and the
  * override env var can't be silently stripped by future edits.
  *
  * Uses ASCII glyphs to stay readable on Windows OEM-codepage consoles
@@ -61,9 +91,8 @@ export function buildNodeTooOldBanner(nodeVersion: string): string {
     sep,
     `[ContextThread] Unsupported Node.js version: ${nodeVersion}`,
     sep,
-    `ContextThread requires Node.js ${MIN_NODE_MAJOR} or newer. Older versions lack`,
-    'language features and native APIs ContextThread depends on, and are not',
-    'tested or supported.',
+    `ContextThread requires Node.js ${MIN_NODE_VERSION} or newer (and below ${MAX_NODE_VERSION_EXCLUSIVE}).`,
+    'Older versions lack the supported node:sqlite runtime ContextThread depends on.',
     '',
     'Fix: install Node.js 22 LTS:',
     '  nvm install 22 && nvm use 22                          # nvm',

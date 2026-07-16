@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "playwright": {
+      "package": "@playwright/mcp@0.0.78",
+      "type": "stdio",
+      "command": "node",
+      "args": [],
+      "runtime_entry": "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
+      "script_args": ["playwright"],
+      "startup_timeout_ms": 20000
+    }
+  }
+}

@@ -44,12 +44,13 @@
   - 来源归档：`.Ai-config/archive/global-frontend-design-sources/`
 
 - `global-thinking-partner`
-  - 定位：低副作用思维扩展 skill，用于复杂 coding 决策前的方案发散、失败模式、简化路径和维护者视角检查。
+  - 定位：可组合 reasoning mode；显式触发进入多轮协作探索、假设挑战、情景和二阶影响推演，隐式触发只做静默健全性检查。
   - 共享源：`skills/shared/global-thinking-partner/`
   - Claude Code 入口源：`skills/claude-code/global-thinking-partner/SKILL.md`
   - Codex 入口源：`skills/codex/global-thinking-partner/SKILL.md`
   - rendered 包：`skills/rendered/`
-  - 约束：默认只读、手动触发优先，不负责写代码、同步、提交或推送。
+  - 约束：低副作用表示不擅自扩大授权或写入状态，不限制推理深度；用户转入实现后不阻断领域 workflow。
+  - 评测：`skills/evals/global-thinking-partner/` 保存真实 prompt 夹具和定性 rubric，CI 不调用付费模型。
 
 - `global-context-thread`
   - 定位：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析，优先查询 context-thread 或 `.Ai-config` 关系索引来缩小上下文。
@@ -59,15 +60,19 @@
   - Claude Code 入口源：`skills/claude-code/global-context-thread/SKILL.md`
   - Codex 入口源：`skills/codex/global-context-thread/SKILL.md`
   - rendered 包：`skills/rendered/`
-  - 约束：L0/L1 小任务不自动初始化索引、不创建任务卡；context-thread 只负责代码结构关系，非代码复杂工作流由任务卡关系索引承接。
+  - 约束：简单问答和普通局部任务不自动初始化索引、不创建任务卡；context-thread 只负责代码结构关系，非代码复杂工作流由任务卡关系索引承接。
 
 - `pencil-design-workflow`
-  - 定位：Pencil / `.pen` / pencli 设计先行轻量闸门 skill；设计请求默认必须走 Desktop/MCP 可视化流程，只有用户明确要求后台、无头、批量、自动化或不看过程时才按需读取 CLI/headless 细节。
+  - 定位：Pencil / `.pen` 设计先行工具路由 skill；默认使用当前会话可见的 VS Code / Cursor 插件 MCP，只有用户明确要求后台、无头、批量或不看过程时才读取 CLI/headless 细节。
   - 共享源：`skills/shared/pencil-design-workflow/`
   - Claude Code 入口源：`skills/claude-code/pencil-design-workflow/SKILL.md`
   - Codex 入口源：`skills/codex/pencil-design-workflow/SKILL.md`
   - rendered 包：`skills/rendered/`
-  - 约束：默认只读短 workflow；不抢局部 UI bugfix；Desktop/MCP 不可用时必须停下说明，不得静默降级到 CLI 或直接写前端；确认后携带 `.pen` 和导出图证据进入真实前端实现流程。
+  - 约束：不抢已有设计直接实现或局部 UI bugfix；插件 MCP 不可用时必须停下说明，不得静默切换 Desktop/CLI；确认后携带 `.pen` 和可见证据 handoff 给前端实现。
+
+## 路由契约
+
+`config/managed-assets.psd1` 为每个 managed skill 登记 `Role`、`Activation`、`ExclusiveWith`、`HandoffTo` 和排除条件，`skills/evals/routes.json` 保存正例、反例和组合场景。Codex 的 `description` 必须同时包含触发能力和关键排除条件，因为正文只会在触发后加载。
 
 ## 迭代原则
 

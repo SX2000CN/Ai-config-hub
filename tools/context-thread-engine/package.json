@@ -1,6 +1,6 @@
 {
   "name": "@ai-config-hub/context-thread",
-  "version": "0.9.4",
+  "version": "0.9.6",
   "description": "Supercharge Claude Code with semantic code intelligence. 94% fewer tool calls • 77% faster exploration • 100% local.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -47,6 +47,6 @@
     "vitest": "^4.1.7"
   },
   "engines": {
-    "node": ">=20.0.0 <25.0.0"
+    "node": ">=22.19.0 <25.0.0"
   }
 }

@@ -9,7 +9,7 @@
 ## 这套配置解决的问题
 
 - 默认轻量：简单任务不被任务卡、索引、长计划和同步流程拖重。
-- 按风险升级：跨模块、跨会话、高风险、需要接手的任务才读取更多上下文并更新状态。
+- 按证据扩展：跨模块、跨会话、高风险或需要接手时才读取更多上下文并更新状态。
 - 减少幻觉：优先当前文件、当前文档、结构化事实源和验证结果，而不是靠长上下文硬猜。
 - 多工具一致：Claude Code、Codex 和后续工具共享核心规则，只把工具差异放到专属补充。
 - 能力模块化：用 skills 沉淀前端设计、思维伙伴、脉络、Pencil 设计先行和项目 AI 配置中枢。
@@ -18,7 +18,7 @@
 
 ## 配置设计分层
 
-- 核心行为层：`rules/shared/core.md`，定义 L0-L3 风险分层、上下文读取、文档同步、验证、敏感信息和版本控制规则。
+- 核心行为层：`rules/shared/core.md`，定义默认直接推进、证据读取、授权边界、比例验证、敏感信息和版本控制规则。
 - 工具适配层：`rules/tools/` 和 `templates/`，只处理 Claude Code / Codex 差异。
 - 可复用能力层：`skills/`，维护全局 skills 的共享事实源、工具入口和 rendered 包。
 - 项目状态层：`.Ai-config/`，维护当前仓库或目标项目的 AI 接手入口、任务卡和项目级 skill 清单。
@@ -33,6 +33,7 @@ rules/shared/       通用规则源文件
 rules/tools/        工具专属补充
 rules/rendered/     渲染后的全局规则文件
 templates/          渲染模板和安全示例配置
+config/             托管规则、skills、MCP servers/profiles、runtime 和用户目标的单一清单
 scripts/            规则、skills 和 MCP 配置的渲染、检查、同步脚本
 docs/               架构、同步、安全和 skills 设计文档
 skills/             skills 共享源、工具入口和 rendered 包
@@ -60,7 +61,7 @@ private/            本机私有草稿目录，除 README 外默认忽略
 .\scripts\sync.ps1
 ```
 
-同步前总检查：
+跨管线修改或任何真实 `-Apply` 前运行非修改型完整预检：
 
 ```powershell
 .\scripts\check-all.ps1
@@ -77,13 +78,16 @@ skills 管理流程：
 MCP 配置片段管理流程：
 
 ```powershell
+.\scripts\sync-local-webfetch-runtime.ps1
+.\scripts\sync-browser-mcp-runtime.ps1
 .\scripts\sync-context-thread-runtime.ps1
 .\scripts\render-mcp.ps1
 .\scripts\check-mcp.ps1
-.\scripts\sync-mcp.ps1
+.\scripts\mcp-doctor.ps1 -Profile core -Mode Source
+.\scripts\sync-mcp.ps1 -Profile core
 ```
 
-`sync-mcp.ps1` 会在同步本机时自动发现 Pencil 插件端 MCP server；Claude Code 侧用 `claude mcp add -s user` 注册 `pencil`，Codex 侧把 `pencil` 合并到用户配置。为避免正在运行的 Claude Code 会话用旧配置覆盖新注册，持久同步 Claude Code 的 `pencil` 时应完全退出 Claude Code 后，从普通终端运行 `sync-mcp.ps1 -Apply -ClaudeCode`。如果本机还没有可用插件端 MCP server，只给 warning，不阻塞浏览器和脉络 MCP 同步。Desktop transport 暂不作为默认路径。
+MCP 按 profile 管理：`core` 默认只给 Claude Code 提供 local-webfetch，Codex 的 core 不注册 managed MCP；`code-intel`、`browser`、`browser-debug`、`design` 和 `full` 分别启用脉络、Playwright、Chrome DevTools、Pencil 和全部能力。`mcp-doctor.ps1` 用于检查 profile、runtime、版本、完整执行 payload 与生产依赖的安装漂移，以及可选 MCP 握手。Pencil 默认发现 VS Code / Cursor 插件端 server，Desktop transport 只用于用户明确要求的诊断。
 
 脉络 MCP 使用本仓库源码构建，但运行时分发到用户级目录，不指向当前项目路径。首次使用或引擎源码变更后，先同步全局运行时：
 
@@ -91,11 +95,11 @@ MCP 配置片段管理流程：
 .\scripts\sync-context-thread-runtime.ps1 -Apply
 ```
 
-默认运行时位置：`C:\Users\sx200\.ai-config-hub\mcp\context-thread\`。
+默认运行时位置：`C:\Users\sx200\.ai-config-hub\mcp\context-thread\`。context-thread 支持 Node.js `>=22.19.0 <25.0.0`；不在该范围内时 CLI 和 runtime 检查会明确阻断。
 
-脉络索引是项目级事实源，不是全局共享数据库。目标项目需要复杂代码关系分析时，再初始化自己的 `.Ai-config/context-thread/context-thread.db`；MCP 正在运行且 watcher 可用时会自动同步受支持源码变更，否则按需运行 `context-thread sync` 或直接读取当前文件确认。
+脉络索引是项目级事实源，不是全局共享数据库。新索引默认使用 `structure` 内容模式，不持久化 docstring、signature、decorator、type parameter 等富文本，数据库默认忽略；只有项目明确选择 `--track-db` 时才跟踪。目标项目需要复杂代码关系分析时再初始化索引；MCP watcher 不可用时使用目标项目 wrapper，或用 `node` 加用户级 runtime 完整路径执行 `sync`。`context-thread` 不是可直接假设存在的全局命令。
 
-确认 dry-run 结果无误后，按本次修改范围执行对应同步：
+确认 dry-run 结果无误后，按本次修改范围执行对应同步。所有同步脚本在真实写入前还会自动执行完整预检：
 
 ```powershell
 .\scripts\sync.ps1 -Apply
@@ -105,28 +109,30 @@ MCP 配置片段管理流程：
 
 ## 安全原则
 
-不要把真实 token、私钥、服务器密码、provider URL、机器本地 trusted project、生产凭证写入可追踪文件。需要记录本机私有信息时，优先放入 `private/`，并确认不会提交或公开。
+不要把真实 token、私钥、服务器密码、私有/内部或含凭证 provider URL、机器本地 trusted project、生产凭证写入可追踪文件。需要本地落盘时，使用用户明确指定、已忽略且权限受限的文件，并确认不会提交或公开。
 
 ## 当前状态
 
 配置能力：
 
-- 已形成以 `rules/shared/core.md` 为核心的 AI 工作规则：默认轻量、按风险升级、结构化事实优先、文档按需同步、敏感信息保护和验证闭环。
+- 已形成以 `rules/shared/core.md` 为核心的 AI 工作规则：默认直接推进、按证据扩展、平台约束不可绕过、文档按需同步、敏感信息保护和比例验证。
 - 已设计并接入 `.Ai-config/CURRENT.md` + `.Ai-config/tasks/` 多任务工作状态机制，用于中断、隔天继续、切换任务或切换 AI 编程工具时恢复工作现场。
-- 已将脉络作为轻量结构化事实层接入：代码关系由 context-thread 索引承接，非代码复杂工作流由 `.Ai-config` 任务卡关系索引承接，L0/L1 小任务不强制升级。
+- 已将脉络作为轻量结构化事实层接入：代码关系由 context-thread 索引承接，非代码复杂工作流由 `.Ai-config` 任务卡关系索引承接，普通局部任务不强制升级。
 - `project-ai-config-hub` 的定位是本项目的项目级分身，用来在目标项目中创建和升级 `.Ai-config/` AI 配置中枢、工作状态机制和多端项目 skills。
 - `global-frontend-design` 的定位是全局前端设计 skill，用来在前端 UI 工作中先建立鲜明视觉方向，再落地可维护、可访问、响应式且状态完整的界面。
-- `global-thinking-partner` 的定位是低副作用思维扩展 skill，用来在复杂 coding 决策前扩展方案、挑战假设、识别失败模式并寻找更简单路径。
-- `global-context-thread` 的定位是“脉络”轻量结构化事实层 skill，用来在代码关系、配置关系、影响面或复杂工作流关系分析中优先查询 context-thread 或 `.Ai-config` 关系索引，同时保持 L0/L1 小任务不升级。
-- `pencil-design-workflow` 的定位是全局 Pencil / `.pen` / pencli 设计先行路由 skill，用来在用户需要先生成或确认设计图时选择 Pencil Desktop/MCP、VS 插件谨慎模式或 CLI/headless 工作流。
+- `global-thinking-partner` 是可组合 reasoning mode：显式触发时进行自然的多轮脑暴、假设挑战和情景推演，隐式触发只做静默健全性检查。
+- `global-context-thread` 是关系工具路由 skill，只在结构化查询能明显减少搜索成本时使用，不主导领域交付。
+- `pencil-design-workflow` 是设计先行工具路由 skill，默认使用当前可见的 IDE 插件 Pencil MCP，确认设计后 handoff 给前端实现。
 
 分发和工具基础设施：
 
 - 已支持 Claude Code 和 Codex 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
 - 已支持五个全局 skill 的源码化、渲染、检查和 dry-run 同步流程；新增或变更的用户级安装需执行 `sync-skills.ps1 -Apply`。
-- 已支持浏览器视觉验证 MCP、脉络 MCP、本地 WebFetch MCP 和 Pencil MCP 的检查与 dry-run 安全合并同步流程；其中 Pencil MCP 按本机安装自动发现，真实用户级配置需执行 `sync-mcp.ps1 -Apply`。
+- 已支持 `core`、`code-intel`、`browser`、`browser-debug`、`design`、`full` MCP profiles，并通过 doctor、runtime readiness、dry-run 和事务合并控制真实用户级配置。
+- 已用 `config/managed-assets.psd1` schema v2 统一登记托管规则目标、五个 skills、四个 MCP server 定义、六个 profiles、三套 runtime 和用户目录相对路径，并保留 schema v1 规范化兼容；render 脚本支持非写入 `-Check`，`check-all.ps1` 会执行源码/rendered 一致性、三个 runtime 测试集、同步安全/profile/doctor 测试、runtime 和用户配置 dry-run、敏感信息检查及 `git diff --check`。
+- 用户级同步采用 staging 验证后再切换的事务式部署，备份统一保存在 `~/.ai-config-hub/backups/<pipeline>/<timestamp>-<guid>/`；中途失败会恢复本次管线已经更新的目标，不清理历史备份。
 - 脉络 MCP 的源码维护在 `tools/context-thread-engine/`，运行时由 `scripts/sync-context-thread-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`，MCP 配置通过 `node` 启动该用户级 runtime，不依赖当前仓库路径或全局 `context-thread` 命令。
-- `local-webfetch` MCP 只交付给 Claude Code：源码维护在 `tools/local-webfetch/`，运行时由 `scripts/sync-local-webfetch-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\`。它在本机进程中直接发起 HTTP 请求，解决 Claude Code 内置 `WebFetch` 工具云端发起、绕开本机代理/VPN 的问题；Codex CLI 本身在本机运行，不受这个限制，因此不渲染同步给它（通过 MCP group 的 `Targets` 字段限定）。
-- Pencil 设计先行和真实浏览器 MCP 截图检查链路已完成过验证；对应一次性夹具产物已清理，不作为长期项目资产保留。
+- `local-webfetch` MCP 只交付给 Claude Code：运行时对每次目标和重定向做公共网络校验，流式限制响应大小，并把抓取内容标记为不可信外部数据。显式代理被视为可信网络边界。
+- 浏览器 MCP 使用仓库锁定的 managed runtime，不在 server 启动时通过 `npx -y` 临时下载包。
 - Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。

@@ -1,10 +1,16 @@
 {
   "name": "@ai-config-hub/local-webfetch",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "description": "Local MCP server that fetches URLs from this machine's own network (respects HTTP_PROXY/HTTPS_PROXY and VPN routing), unlike the cloud-side WebFetch tool.",
   "main": "index.js",
+  "engines": {
+    "node": ">=22.19.0 <25.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "turndown": "^7.2.4",

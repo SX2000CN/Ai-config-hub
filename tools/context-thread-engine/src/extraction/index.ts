@@ -100,6 +100,10 @@ export function hashContent(content: string): string {
  */
 const MAX_FILE_SIZE = 1024 * 1024;
 
+function readOnlyGitEnv(): NodeJS.ProcessEnv {
+  return { ...process.env, GIT_OPTIONAL_LOCKS: '0' };
+}
+
 /**
  * Collect git-visible files (tracked + untracked, .gitignore-respected) from the
  * git repository rooted at `repoDir`, adding each to `files` with `prefix`
@@ -114,7 +118,7 @@ const MAX_FILE_SIZE = 1024 * 1024;
  * (See issue #193.)
  */
 function collectGitFiles(repoDir: string, prefix: string, files: Set<string>): void {
-  const gitOpts = { cwd: repoDir, encoding: 'utf-8' as const, timeout: 30000, maxBuffer: 50 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'] };
+  const gitOpts = { cwd: repoDir, encoding: 'utf-8' as const, timeout: 30000, maxBuffer: 50 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'], env: readOnlyGitEnv() };
 
   // Tracked files. --recurse-submodules pulls in files from active submodules,
   // which the index would otherwise represent only as a commit pointer.
@@ -164,7 +168,7 @@ function getGitVisibleFiles(rootDir: string): Set<string> | null {
     const gitRoot = execFileSync(
       'git',
       ['rev-parse', '--show-toplevel'],
-      { cwd: rootDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
+      { cwd: rootDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'], env: readOnlyGitEnv() }
     ).trim();
 
     if (path.resolve(gitRoot) !== path.resolve(rootDir)) {
@@ -173,7 +177,7 @@ function getGitVisibleFiles(rootDir: string): Set<string> | null {
         execFileSync(
           'git',
           ['check-ignore', '-q', path.resolve(rootDir)],
-          { cwd: rootDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
+          { cwd: rootDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'], env: readOnlyGitEnv() }
         );
         // Directory is gitignored by parent repo — fall back to filesystem walk
         return null;
@@ -190,53 +194,85 @@ function getGitVisibleFiles(rootDir: string): Set<string> | null {
   }
 }
 
-/**
- * Result of git-based change detection.
- * Returns null when git is unavailable (non-git project or command failure),
- * signaling the caller to fall back to full filesystem scan.
- */
-interface GitChanges {
-  modified: string[];  // M, MM, AM — files to re-hash + re-index
-  added: string[];     // ?? — new untracked files to index
-  deleted: string[];   // D — files to remove from DB
+/** Persisted git snapshot used to validate the incremental status fast path. */
+interface GitStateV1 {
+  head: string;
+  dirtyPaths: string[];
 }
 
+interface DetectedChanges {
+  added: string[];
+  modified: string[];
+  removed: string[];
+  filesChecked: number;
+  complete: boolean;
+}
+
+const GIT_STATE_METADATA_KEY = 'git_state_v1';
+
 /**
- * Use `git status` to detect changed files instead of scanning every file.
- * Returns null on failure so callers fall back to full scan.
+ * Capture the current commit plus every dirty source path. The previous dirty
+ * path set is persisted after successful indexing operations and unioned with
+ * this snapshot on the next incremental check. That makes a reverted tracked
+ * file and a deleted untracked file observable even though neither appears in
+ * the new `git status` output.
  */
-function getGitChangedFiles(rootDir: string): GitChanges | null {
+function getGitState(rootDir: string): GitStateV1 | null {
   try {
-    const output = execFileSync(
+    const repoPrefix = normalizePath(execFileSync(
       'git',
-      ['status', '--porcelain', '--no-renames', '--untracked-files=all'],
-      { cwd: rootDir, encoding: 'utf-8', timeout: 10000, stdio: ['pipe', 'pipe', 'pipe'] }
-    );
-
-    const modified: string[] = [];
-    const added: string[] = [];
-    const deleted: string[] = [];
-
-    for (const line of output.split('\n')) {
-      if (line.length < 4) continue; // Minimum: "XY file"
-
-      const statusCode = line.substring(0, 2);
-      const filePath = normalizePath(line.substring(3));
-
-      // Skip non-source files (git status already omits .gitignored paths).
-      if (!isSourceFile(filePath)) continue;
-
-      if (statusCode === '??') {
-        added.push(filePath);
-      } else if (statusCode.includes('D')) {
-        deleted.push(filePath);
-      } else {
-        // M, MM, AM, A (staged), etc. — treat as modified
-        modified.push(filePath);
-      }
+      ['rev-parse', '--show-prefix'],
+      { cwd: rootDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'], env: readOnlyGitEnv() }
+    ).trim());
+    let head = '(unborn)';
+    try {
+      head = execFileSync(
+        'git',
+        ['rev-parse', '--verify', 'HEAD'],
+        { cwd: rootDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'], env: readOnlyGitEnv() }
+      ).trim();
+    } catch {
+      // An initialized repository without its first commit still has a useful
+      // dirty working tree. `git status` below is the authoritative repo check.
     }
 
-    return { modified, added, deleted };
+    const output = execFileSync(
+      'git',
+      ['status', '--porcelain=v1', '-z', '--no-renames', '--untracked-files=all', '--', '.'],
+      { cwd: rootDir, encoding: 'utf-8', timeout: 10000, stdio: ['pipe', 'pipe', 'pipe'], env: readOnlyGitEnv() }
+    );
+
+    const dirtyPaths = new Set<string>();
+    for (const record of output.split('\0')) {
+      if (record.length < 4) continue; // Minimum: "XY file"
+      const rootRelativePath = normalizePath(record.substring(3));
+      const filePath = repoPrefix && rootRelativePath.startsWith(repoPrefix)
+        ? rootRelativePath.slice(repoPrefix.length)
+        : rootRelativePath;
+      if (isSourceFile(filePath)) dirtyPaths.add(filePath);
+    }
+
+    return { head, dirtyPaths: Array.from(dirtyPaths).sort() };
+  } catch {
+    return null;
+  }
+}
+
+function parseStoredGitState(raw: string | null): GitStateV1 | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<GitStateV1>;
+    if (
+      typeof parsed.head !== 'string' ||
+      !Array.isArray(parsed.dirtyPaths) ||
+      parsed.dirtyPaths.some((item) => typeof item !== 'string')
+    ) {
+      return null;
+    }
+    return {
+      head: parsed.head,
+      dirtyPaths: Array.from(new Set(parsed.dirtyPaths.map(normalizePath))).sort(),
+    };
   } catch {
     return null;
   }
@@ -529,6 +565,128 @@ export class ExtractionOrchestrator {
     return Array.from(dependents);
   }
 
+  private getStoredGitState(): GitStateV1 | null {
+    return parseStoredGitState(this.queries.getMetadata(GIT_STATE_METADATA_KEY));
+  }
+
+  private updateGitStateMetadata(): void {
+    const state = getGitState(this.rootDir);
+    if (state) {
+      this.queries.setMetadata(GIT_STATE_METADATA_KEY, JSON.stringify(state));
+    }
+  }
+
+  /**
+   * Detect filesystem changes without mutating graph state or metadata.
+   *
+   * A missing metadata record or a changed HEAD invalidates the git-status
+   * shortcut, because a clean worktree says nothing about differences between
+   * the currently indexed commit and the checked-out commit. In that case every
+   * visible source file is hashed and the tracked-file set is reconciled.
+   */
+  private detectChanges(): DetectedChanges {
+    const gitState = getGitState(this.rootDir);
+    const storedGitState = this.getStoredGitState();
+
+    if (gitState && storedGitState && gitState.head === storedGitState.head) {
+      const candidatePaths = new Set<string>([
+        ...gitState.dirtyPaths,
+        ...storedGitState.dirtyPaths,
+      ]);
+      const added: string[] = [];
+      const modified: string[] = [];
+      const removed: string[] = [];
+      let complete = true;
+
+      for (const filePath of candidatePaths) {
+        if (!isSourceFile(filePath)) continue;
+        const fullPath = validatePathWithinRoot(this.rootDir, filePath);
+        if (!fullPath) continue;
+
+        const tracked = this.queries.getFileByPath(filePath);
+        try {
+          fs.statSync(fullPath);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (tracked) removed.push(filePath);
+          } else {
+            logDebug('Could not stat file while detecting changes', { filePath, error: String(error) });
+            complete = false;
+          }
+          continue;
+        }
+
+        let content: string;
+        try {
+          content = fs.readFileSync(fullPath, 'utf-8');
+        } catch (error) {
+          logDebug('Skipping unreadable file while detecting changes', { filePath, error: String(error) });
+          complete = false;
+          continue;
+        }
+
+        const contentHash = hashContent(content);
+        if (!tracked) {
+          added.push(filePath);
+        } else if (tracked.contentHash !== contentHash) {
+          modified.push(filePath);
+        }
+      }
+
+      return {
+        added,
+        modified,
+        removed,
+        filesChecked: candidatePaths.size,
+        complete,
+      };
+    }
+
+    const currentFiles = new Set(scanDirectory(this.rootDir));
+    const trackedFiles = this.queries.getAllFiles();
+    const trackedMap = new Map<string, FileRecord>();
+    for (const tracked of trackedFiles) trackedMap.set(tracked.path, tracked);
+
+    const added: string[] = [];
+    const modified: string[] = [];
+    const removed: string[] = [];
+    let complete = true;
+
+    for (const tracked of trackedFiles) {
+      if (!currentFiles.has(tracked.path)) removed.push(tracked.path);
+    }
+
+    for (const filePath of currentFiles) {
+      const fullPath = validatePathWithinRoot(this.rootDir, filePath);
+      if (!fullPath) continue;
+
+      let content: string;
+      try {
+        content = fs.readFileSync(fullPath, 'utf-8');
+      } catch (error) {
+        logDebug('Skipping unreadable file while detecting changes', { filePath, error: String(error) });
+        complete = false;
+        continue;
+      }
+
+      const tracked = trackedMap.get(filePath);
+      const contentHash = hashContent(content);
+      if (!tracked) {
+        added.push(filePath);
+      } else if (tracked.contentHash !== contentHash) {
+        modified.push(filePath);
+      }
+    }
+
+    return {
+      added,
+      modified,
+      removed,
+      filesChecked: currentFiles.size,
+      complete,
+    };
+  }
+
   /**
    * Index all files in the project
    */
@@ -565,6 +723,17 @@ export class ExtractionOrchestrator {
         currentFile: file,
       });
     });
+
+    // `indexAll` is authoritative for the current visible file set. Without
+    // this reconciliation, a clean branch switch followed by `index` leaves
+    // files deleted on the new branch in the graph; writing the new Git
+    // baseline then prevents a later incremental sync from ever seeing them.
+    const visibleFiles = new Set(files);
+    for (const tracked of this.queries.getAllFiles()) {
+      if (!visibleFiles.has(tracked.path)) {
+        this.queries.deleteFile(tracked.path);
+      }
+    }
 
     // Detect frameworks once per indexAll run using the scanned file list.
     // Names are passed to each parse call so framework-specific extractors
@@ -1010,7 +1179,7 @@ export class ExtractionOrchestrator {
       (parseWorker as import('worker_threads').Worker).terminate().catch(() => {});
     }
 
-    return {
+    const result: IndexResult = {
       success: filesIndexed > 0 || errors.filter((e) => e.severity === 'error').length === 0,
       filesIndexed,
       filesSkipped,
@@ -1020,6 +1189,12 @@ export class ExtractionOrchestrator {
       errors,
       durationMs: Date.now() - startTime,
     };
+
+    if (result.success && !result.errors.some((error) => error.severity === 'error')) {
+      this.updateGitStateMetadata();
+    }
+
+    return result;
   }
 
   /**
@@ -1033,6 +1208,12 @@ export class ExtractionOrchestrator {
     let filesErrored = 0;
     let totalNodes = 0;
     let totalEdges = 0;
+
+    const neededLanguages = [...new Set(filePaths.map((filePath) => detectLanguage(filePath)))];
+    if (neededLanguages.includes('c') && !neededLanguages.includes('cpp')) {
+      neededLanguages.push('cpp');
+    }
+    await loadGrammarsForLanguages(neededLanguages);
 
     for (const filePath of filePaths) {
       const result = await this.indexFile(filePath);
@@ -1052,7 +1233,7 @@ export class ExtractionOrchestrator {
       }
     }
 
-    return {
+    const result = {
       success: filesIndexed > 0 || errors.filter((e) => e.severity === 'error').length === 0,
       filesIndexed,
       filesSkipped,
@@ -1062,6 +1243,15 @@ export class ExtractionOrchestrator {
       errors,
       durationMs: Date.now() - startTime,
     };
+
+    // A targeted index is not an authoritative snapshot of every dirty path.
+    // Invalidate the baseline after any successful write so the next sync does
+    // a full hash reconciliation (including a later git restore/delete).
+    if (filesIndexed > 0) {
+      this.queries.deleteMetadata(GIT_STATE_METADATA_KEY);
+    }
+
+    return result;
   }
 
   /**
@@ -1259,6 +1449,7 @@ export class ExtractionOrchestrator {
     let filesModified = 0;
     let filesRemoved = 0;
     let nodesUpdated = 0;
+    let syncSucceeded = true;
     const changedFilePaths: string[] = [];
 
     onProgress?.({
@@ -1291,94 +1482,25 @@ export class ExtractionOrchestrator {
         }
       }
     };
-    const gitChanges = getGitChangedFiles(this.rootDir);
+    const detected = this.detectChanges();
+    syncSucceeded = detected.complete;
+    filesChecked = detected.filesChecked;
+    filesAdded = detected.added.length;
+    filesModified = detected.modified.length;
+    filesRemoved = detected.removed.length;
 
-    if (gitChanges) {
-      // === Git fast path ===
-      // Only inspect the files git reports as changed instead of scanning everything.
-      filesChecked = gitChanges.modified.length + gitChanges.added.length + gitChanges.deleted.length;
+    for (const filePath of detected.removed) {
+      rememberDependents(filePath);
+      this.queries.deleteFile(filePath);
+    }
 
-      // Handle deleted files
-      for (const filePath of gitChanges.deleted) {
-        const tracked = this.queries.getFileByPath(filePath);
-        if (tracked) {
-          rememberDependents(filePath);
-          this.queries.deleteFile(filePath);
-          filesRemoved++;
-        }
-      }
+    for (const filePath of detected.added) {
+      enqueueFileForIndex(filePath, 'added');
+    }
 
-      // Handle modified + added files — read + hash only these. Untracked
-      // (`??`) files stay untracked in git even after we index them, so they
-      // can't be trusted as "new": re-hash and compare against the DB exactly
-      // like modified files. Otherwise every sync re-indexes them and status
-      // reports them as pending forever. (See issue #206.)
-      for (const filePath of [...gitChanges.modified, ...gitChanges.added]) {
-        const fullPath = path.join(this.rootDir, filePath);
-        let content: string;
-        try {
-          content = fs.readFileSync(fullPath, 'utf-8');
-        } catch (error) {
-          logDebug('Skipping unreadable file during sync', { filePath, error: String(error) });
-          continue;
-        }
-
-        const contentHash = hashContent(content);
-        const tracked = this.queries.getFileByPath(filePath);
-
-        if (!tracked) {
-          enqueueFileForIndex(filePath, 'added');
-          filesAdded++;
-        } else if (tracked.contentHash !== contentHash) {
-          rememberDependents(filePath);
-          enqueueFileForIndex(filePath, 'modified');
-          filesModified++;
-        }
-      }
-    } else {
-      // === Fallback: full scan (non-git project or git failure) ===
-      const currentFiles = new Set(scanDirectory(this.rootDir));
-      filesChecked = currentFiles.size;
-
-      // Build Map for O(1) lookups instead of .find() per file
-      const trackedFiles = this.queries.getAllFiles();
-      const trackedMap = new Map<string, FileRecord>();
-      for (const f of trackedFiles) {
-        trackedMap.set(f.path, f);
-      }
-
-      // Find files to remove (in DB but not on disk)
-      for (const tracked of trackedFiles) {
-        if (!currentFiles.has(tracked.path)) {
-          rememberDependents(tracked.path);
-          this.queries.deleteFile(tracked.path);
-          filesRemoved++;
-        }
-      }
-
-      // Find files to add or update
-      for (const filePath of currentFiles) {
-        const fullPath = path.join(this.rootDir, filePath);
-        let content: string;
-        try {
-          content = fs.readFileSync(fullPath, 'utf-8');
-        } catch (error) {
-          logDebug('Skipping unreadable file during sync', { filePath, error: String(error) });
-          continue;
-        }
-
-        const contentHash = hashContent(content);
-        const tracked = trackedMap.get(filePath);
-
-        if (!tracked) {
-          enqueueFileForIndex(filePath, 'added');
-          filesAdded++;
-        } else if (tracked.contentHash !== contentHash) {
-          rememberDependents(filePath);
-          enqueueFileForIndex(filePath, 'modified');
-          filesModified++;
-        }
-      }
+    for (const filePath of detected.modified) {
+      rememberDependents(filePath);
+      enqueueFileForIndex(filePath, 'modified');
     }
 
     // A changed file can invalidate edges stored in files that import/reference it
@@ -1413,10 +1535,17 @@ export class ExtractionOrchestrator {
 
       const force = forceReindexFiles.has(filePath);
       const result = await this.indexFile(filePath, { force });
+      if (result.errors.some((error) => error.severity === 'error')) {
+        syncSucceeded = false;
+      }
       if (force && result.errors.length === 0 && result.nodes.length > 0) {
         filesModified++;
       }
       nodesUpdated += result.nodes.length;
+    }
+
+    if (syncSucceeded) {
+      this.updateGitStateMetadata();
     }
 
     return {
@@ -1435,92 +1564,12 @@ export class ExtractionOrchestrator {
    * Uses git status as a fast path when available, falling back to full scan.
    */
   getChangedFiles(): { added: string[]; modified: string[]; removed: string[] } {
-    const gitChanges = getGitChangedFiles(this.rootDir);
-
-    if (gitChanges) {
-      // === Git fast path ===
-      const added: string[] = [];
-      const modified: string[] = [];
-      const removed: string[] = [];
-
-      // Deleted files — only report if tracked in DB
-      for (const filePath of gitChanges.deleted) {
-        const tracked = this.queries.getFileByPath(filePath);
-        if (tracked) {
-          removed.push(filePath);
-        }
-      }
-
-      // Modified + added files — read + hash, compare with DB. Untracked (`??`)
-      // files stay untracked in git even after indexing, so they must be
-      // hash-compared like modified files instead of always counting as added —
-      // otherwise status reports them as pending forever. (See issue #206.)
-      for (const filePath of [...gitChanges.modified, ...gitChanges.added]) {
-        const fullPath = path.join(this.rootDir, filePath);
-        let content: string;
-        try {
-          content = fs.readFileSync(fullPath, 'utf-8');
-        } catch (error) {
-          logDebug('Skipping unreadable file while detecting changes', { filePath, error: String(error) });
-          continue;
-        }
-
-        const contentHash = hashContent(content);
-        const tracked = this.queries.getFileByPath(filePath);
-
-        if (!tracked) {
-          added.push(filePath);
-        } else if (tracked.contentHash !== contentHash) {
-          modified.push(filePath);
-        }
-      }
-
-      return { added, modified, removed };
-    }
-
-    // === Fallback: full scan (non-git project or git failure) ===
-    const currentFiles = new Set(scanDirectory(this.rootDir));
-    const trackedFiles = this.queries.getAllFiles();
-
-    // Build Map for O(1) lookups
-    const trackedMap = new Map<string, FileRecord>();
-    for (const f of trackedFiles) {
-      trackedMap.set(f.path, f);
-    }
-
-    const added: string[] = [];
-    const modified: string[] = [];
-    const removed: string[] = [];
-
-    // Find removed files
-    for (const tracked of trackedFiles) {
-      if (!currentFiles.has(tracked.path)) {
-        removed.push(tracked.path);
-      }
-    }
-
-    // Find added and modified files
-    for (const filePath of currentFiles) {
-      const fullPath = path.join(this.rootDir, filePath);
-      let content: string;
-      try {
-        content = fs.readFileSync(fullPath, 'utf-8');
-      } catch (error) {
-        logDebug('Skipping unreadable file while detecting changes', { filePath, error: String(error) });
-        continue;
-      }
-
-      const contentHash = hashContent(content);
-      const tracked = trackedMap.get(filePath);
-
-      if (!tracked) {
-        added.push(filePath);
-      } else if (tracked.contentHash !== contentHash) {
-        modified.push(filePath);
-      }
-    }
-
-    return { added, modified, removed };
+    const detected = this.detectChanges();
+    return {
+      added: detected.added,
+      modified: detected.modified,
+      removed: detected.removed,
+    };
   }
 }
 

@@ -1,89 +1,70 @@
 [CmdletBinding()]
 param(
     [switch]$Apply,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [string]$UserHome
 )
 
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $PSScriptRoot
-$SourceRoot = Join-Path $Root 'tools\context-thread-engine'
-$UserHome = [Environment]::GetFolderPath('UserProfile')
-$RuntimeRoot = Join-Path $UserHome '.ai-config-hub\mcp\context-thread'
-$RuntimeEntry = Join-Path $RuntimeRoot 'dist\bin\context-thread.js'
+$ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
+. (Join-Path $PSScriptRoot 'lib\deploy.ps1')
 
-function Get-FullPath($Path) {
-    return [System.IO.Path]::GetFullPath($Path)
+$Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
+$Runtime = $Manifest.Runtimes | Where-Object { $_.Name -eq 'context-thread' } | Select-Object -First 1
+if ($null -eq $Runtime) {
+    throw 'context-thread runtime is not registered in config/managed-assets.psd1.'
 }
 
-function Assert-PathInside($Path, $Parent, $Label) {
-    $fullPath = Get-FullPath $Path
-    $fullParent = (Get-FullPath $Parent).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
-    if (-not $fullPath.StartsWith($fullParent, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "$Label path is outside expected parent: $fullPath"
-    }
-}
+$ResolvedUserHome = Resolve-AiConfigHubUserHome $UserHome
+$SourceRoot = Join-Path $Root ([string]$Runtime.SourceRoot)
+$RuntimeRoot = Join-Path $ResolvedUserHome ([string]$Runtime.UserRelativeRoot)
+$RuntimeEntry = Join-Path $RuntimeRoot ([string]$Runtime.EntryRelativePath)
+Assert-AiConfigHubPathInside $RuntimeRoot $ResolvedUserHome 'context-thread runtime' | Out-Null
 
-function Require-Command($Name) {
-    $command = Get-Command $Name -ErrorAction SilentlyContinue
-    if (-not $command) {
-        throw "Required command '$Name' was not found on PATH."
-    }
-    return $command
-}
-
-if (-not (Test-Path -LiteralPath $SourceRoot)) {
-    throw "Missing context-thread engine source: $SourceRoot"
-}
-
-$packageJson = Join-Path $SourceRoot 'package.json'
-$packageLock = Join-Path $SourceRoot 'package-lock.json'
-foreach ($path in @($packageJson, $packageLock)) {
+foreach ($path in @(
+    $SourceRoot,
+    (Join-Path $SourceRoot 'package.json'),
+    (Join-Path $SourceRoot 'package-lock.json')
+)) {
     if (-not (Test-Path -LiteralPath $path)) {
-        throw "Missing runtime package file: $path"
+        throw "Missing context-thread runtime source: $path"
     }
 }
 
-Assert-PathInside $RuntimeRoot (Join-Path $UserHome '.ai-config-hub') 'Runtime root'
+$node = Assert-AiConfigHubNodeVersion
 
 if (-not $Apply) {
-    Write-Output 'Dry run only. Re-run with -Apply to sync the context-thread runtime.'
+    Write-Output 'Dry run only. Re-run with -Apply after reviewing the full preflight output.'
     Write-Output "source`t$SourceRoot"
     Write-Output "target`t$RuntimeRoot"
     Write-Output "entry`t$RuntimeEntry"
-    if (Test-Path -LiteralPath $RuntimeEntry) {
-        Write-Output "status`tinstalled runtime entry exists"
-    }
-    else {
-        Write-Output "status`truntime entry is missing"
-    }
-    if ($SkipBuild) {
-        Write-Output 'would copy existing dist without rebuilding because -SkipBuild was provided'
-    }
-    else {
-        Write-Output 'would build source with npm run build before copying'
-    }
-    Write-Output 'would install production dependencies in the runtime with npm ci --omit=dev'
-    exit 0
+    Write-Output $(if (Test-Path -LiteralPath $RuntimeEntry) { "status`tinstalled runtime entry exists" } else { "status`truntime entry is missing" })
+    Write-Output $(if ($SkipBuild) { 'would copy existing dist without rebuilding' } else { 'would build source with npm run build' })
+    Write-Output 'would stage production dependencies, validate, then atomically swap the runtime'
+    return
 }
 
-$npm = Require-Command 'npm'
-$node = Require-Command 'node'
+Invoke-AiConfigHubPreflight $Root $ResolvedUserHome
+$RuntimeExpectedFingerprint = Get-AiConfigHubPathFingerprint $RuntimeRoot
+if ((Test-Path -LiteralPath $RuntimeRoot) -and -not (Test-Path -LiteralPath $RuntimeRoot -PathType Container)) {
+    throw "context-thread runtime target exists but is not a directory: $RuntimeRoot"
+}
+$npm = Get-Command npm -ErrorAction SilentlyContinue
+if (-not $npm) {
+    throw "Required command 'npm' was not found on PATH."
+}
 
 if (-not $SkipBuild) {
     Push-Location -LiteralPath $SourceRoot
     try {
         if (-not (Test-Path -LiteralPath (Join-Path $SourceRoot 'node_modules'))) {
             & $npm.Source ci
-            if ($LASTEXITCODE -ne 0) {
-                exit $LASTEXITCODE
-            }
+            if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
         }
-
         & $npm.Source run build
-        if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-        }
+        if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE" }
     }
     finally {
         Pop-Location
@@ -93,65 +74,50 @@ if (-not $SkipBuild) {
 $sourceDist = Join-Path $SourceRoot 'dist'
 $sourceEntry = Join-Path $sourceDist 'bin\context-thread.js'
 if (-not (Test-Path -LiteralPath $sourceEntry)) {
-    throw "Missing built context-thread entry: $sourceEntry. Run without -SkipBuild or build the engine first."
+    throw "Missing built context-thread entry: $sourceEntry"
 }
 
-New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
-
-foreach ($fileName in @('package.json', 'package-lock.json', 'README.md', 'LICENSE')) {
-    $sourceFile = Join-Path $SourceRoot $fileName
-    if (Test-Path -LiteralPath $sourceFile) {
-        Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $RuntimeRoot $fileName) -Force
+$context = New-AiConfigHubOperationContext -UserHome $ResolvedUserHome -Pipeline 'runtime-context-thread' -StagingRelativeRoot $Manifest.UserPaths.StagingRoot -BackupRelativeRoot $Manifest.UserPaths.BackupRoot
+try {
+    $stagedRuntime = Join-Path $context.StagingRoot 'context-thread'
+    New-Item -ItemType Directory -Force -Path $stagedRuntime | Out-Null
+    foreach ($fileName in @('package.json', 'package-lock.json', 'README.md', 'LICENSE')) {
+        $sourceFile = Join-Path $SourceRoot $fileName
+        if (Test-Path -LiteralPath $sourceFile) {
+            Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $stagedRuntime $fileName) -Force
+        }
     }
-}
+    Copy-Item -LiteralPath $sourceDist -Destination $stagedRuntime -Recurse -Force
 
-$runtimeDist = Join-Path $RuntimeRoot 'dist'
-Assert-PathInside $runtimeDist $RuntimeRoot 'Runtime dist'
-if (Test-Path -LiteralPath $runtimeDist) {
-    Remove-Item -LiteralPath $runtimeDist -Recurse -Force
-}
-Copy-Item -LiteralPath $sourceDist -Destination $RuntimeRoot -Recurse -Force
-
-$runtimeWrapper = Join-Path $RuntimeRoot 'context-thread.ps1'
-$wrapperContent = @'
+    $wrapperContent = @'
 $ErrorActionPreference = 'Stop'
-
 $RuntimeRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Entry = Join-Path $RuntimeRoot 'dist\bin\context-thread.js'
-
-if (-not (Test-Path -LiteralPath $Entry)) {
-    throw "ContextThread runtime entry was not found: $Entry"
-}
-
+if (-not (Test-Path -LiteralPath $Entry)) { throw "ContextThread runtime entry was not found: $Entry" }
 $node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) {
-    throw "Required command 'node' was not found on PATH."
-}
-
+if (-not $node) { throw "Required command 'node' was not found on PATH." }
 & $node.Source $Entry @args
 exit $LASTEXITCODE
 '@
-Set-Content -Encoding UTF8 -LiteralPath $runtimeWrapper -Value $wrapperContent -NoNewline
+    Set-Content -Encoding UTF8 -LiteralPath (Join-Path $stagedRuntime 'context-thread.ps1') -Value $wrapperContent -NoNewline
 
-Push-Location -LiteralPath $RuntimeRoot
-try {
-    & $npm.Source ci --omit=dev
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
+    Push-Location -LiteralPath $stagedRuntime
+    try {
+        & $npm.Source ci --omit=dev
+        if ($LASTEXITCODE -ne 0) { throw "runtime npm ci failed with exit code $LASTEXITCODE" }
     }
-}
-finally {
-    Pop-Location
-}
+    finally {
+        Pop-Location
+    }
 
-if (-not (Test-Path -LiteralPath $RuntimeEntry)) {
-    throw "Runtime sync completed but entry is missing: $RuntimeEntry"
-}
+    $stagedEntry = Join-Path $stagedRuntime ([string]$Runtime.EntryRelativePath)
+    & $node.Source $stagedEntry --help | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "context-thread staged smoke check failed with exit code $LASTEXITCODE" }
 
-& $node.Source $RuntimeEntry --help | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+    Install-AiConfigHubStagedDirectory $context 'context-thread' $stagedRuntime $RuntimeRoot -ExpectedFingerprint $RuntimeExpectedFingerprint | Out-Null
+    Complete-AiConfigHubOperation $context
+    Write-Output "Synced context-thread runtime: $RuntimeRoot"
 }
-
-Write-Output "Synced context-thread runtime: $RuntimeRoot"
-Write-Output "Runtime entry: $RuntimeEntry"
+catch {
+    Throw-AiConfigHubOperationFailure $context $_
+}

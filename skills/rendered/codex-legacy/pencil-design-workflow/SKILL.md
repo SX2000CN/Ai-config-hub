@@ -1,6 +1,6 @@
 ---
 name: pencil-design-workflow
-description: 将明确的设计先行请求作为轻量闸门路由到当前可用的可见 Pencil MCP 宿主；仅在用户明确要求无头、批量、后台或不看过程时才进入 Pencil CLI/headless。
+description: 将明确要求先产出或迭代 .pen 设计稿的请求路由到当前可见的 IDE 插件 Pencil MCP，并在确认设计后 handoff 给 global-frontend-design；已有设计直接编码、局部 UI 修复和普通截图 review 不使用。
 ---
 
 # Pencil 设计先行工作流

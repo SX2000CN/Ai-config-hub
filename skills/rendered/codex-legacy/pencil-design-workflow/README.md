@@ -5,7 +5,7 @@
 ## 定位
 
 - 识别设计先行请求：设计图、设计稿、mockup、wireframe、视觉方案、确认后再写代码。
-- 默认选择当前会话已注入的可见 Pencil MCP 宿主；VS Code / Cursor 插件端和 Pencil Desktop 客户端都可以，只要能确认目标 `.pen`。
+- 默认选择当前会话已注入的 VS Code / Cursor 插件端 Pencil MCP，并确认目标 `.pen`；Pencil Desktop 只在用户明确要求重新诊断 Desktop transport 时使用。
 - 只有用户明确要求后台、无头、批量、自动化或不看过程时，才选择 Pencil CLI / headless。
 - 规范 `.pen` 文件和导出图的项目内保存位置。
 - 按需支持 Pencil 设计稿审查、设计到代码的对照审查和涉及 `.pen` / 导出图的 UI diff 审查。

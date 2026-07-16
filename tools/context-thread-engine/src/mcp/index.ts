@@ -22,6 +22,7 @@ import { StdioTransport, JsonRpcRequest, JsonRpcNotification, ErrorCodes } from 
 import { tools, ToolHandler } from './tools';
 import { SERVER_INSTRUCTIONS } from './server-instructions';
 import { HOST_PPID_ENV } from '../extraction/wasm-runtime-flags';
+import { PACKAGE_VERSION } from '../package-info';
 
 /**
  * Convert a file:// URI to a filesystem path.
@@ -45,9 +46,9 @@ function fileUriToPath(uri: string): string {
 /**
  * MCP Server Info
  */
-const SERVER_INFO = {
+export const SERVER_INFO = {
   name: 'context-thread',
-  version: '0.1.0',
+  version: PACKAGE_VERSION,
 };
 
 /**
