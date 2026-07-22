@@ -11,7 +11,7 @@
 - 最小可用层：`AGENTS.md` 或 `CLAUDE.md` 加一段项目规则，适合小脚本、demo、一次性工具。
 - 接手状态层：`.Ai-config/CURRENT.md`，适合长期项目或经常跨会话继续的项目。
 - 任务卡层：`.Ai-config/tasks/`，只在任务会跨天、中断、多 AI 接手、等待确认、阻塞或有残留风险时使用。
-- Skill 层：项目级 skill 的 canonical 事实源统一放在 `.Ai-config/skills/<skill-name>/`；`.claude/skills` / `.agents/skills` 只放工具发现薄入口，只在项目确实有可复用专门工作流时创建。
+- Skill 层：项目级 skill 的 canonical 事实源统一放在 `.Ai-config/skills/<skill-name>/`；`.claude/skills` / `.agents/skills` / `.grok/skills` 只放工具发现薄入口，只在项目确实有可复用专门工作流时创建。
 
 默认先建立足够轻的机制。只有用户要求、项目复杂度需要，或已有状态必须保留时，才升级到下一层。不要因为目标项目已经存在 `.Ai-config/`、任务卡或 skill 目录，就把普通业务任务升级成中枢审计；本 skill 也不自动拉起脉络、思维伙伴或同步流程，确需跨域时回到主任务路由判断主次。
 
@@ -32,7 +32,9 @@
 - `.github/instructions/`
 - `.claude/skills/`（工具入口或迁移来源，不作为长期事实源）
 - `.agents/skills/`（工具入口或迁移来源，不作为长期事实源）
+- `.grok/skills/`（Grok Build 工具入口或迁移来源，不作为长期事实源）
 - `.codex/skills/`（历史兼容入口或迁移来源，不作为长期事实源）
+- `.grok/config.toml`（仅当项目需要覆盖用户级 MCP/permission 时按需维护；勿提交密钥）
 - `.claude-plugin/`
 - `.codex-plugin/`
 
@@ -49,11 +51,22 @@
 - `update`：修改已有项目级 skill 或工作状态模板。
 - `migrate`：迁移已有 `.codex/skills`、`.agents/skills`、`.claude/skills`、旧版 `docs/ai/` 或 v1 单槽位 `.Ai-config/CURRENT.md` 到 `.Ai-config/` 接手入口和任务卡。
 - `audit`：审计事实源、入口、敏感信息、工作状态和文档一致性。
-- `repair`：修复入口指向、registry、工作状态、过期路径和轻量不一致。
+- `repair`：修复入口指向、registry、工作状态、过期路径、CURRENT hygiene 和已退役能力残留。
+
+**默认聚合意图**：用户说「更新项目 AI 配置」「修复项目 AI 配置」「让项目 AI 配置和全局匹配」「全局已同步，现在更新项目配置」等时，默认按 **`audit` + `repair`** 执行，不要先让用户在通用更新类型里选择题。只有存在多个会写入不同事实源、覆盖全局目录、迁移或删除的真实分叉时才询问。
 
 如果 `.Ai-config/` 还不存在但存在旧版 `docs/ai/`，把 `docs/ai/` 当作迁移来源读取，再迁移到 `.Ai-config/`。
 
 本 skill 是面向任意目标项目的通用流程，不识别"当前项目是不是 ai-config-hub 自己"这件事。如果目标项目自己的根目录 `CLAUDE.md` 或 `AGENTS.md` 里有更具体的项目专属指引（例如本仓库自己的 `CLAUDE.md` 定义了"更新项目 AI 配置"在这个仓库里的特殊含义），先读那份文件，它优先于本 skill 的通用判断。
+
+### audit + repair 必做清单（更新项目配置）
+
+1. 读 `.Ai-config/CURRENT.md` 与活动任务卡；按 `references/current-hygiene.md` 做 CURRENT 健康检查并修复膨胀/禁区/双写不一致。
+2. 检查项目级 skill 事实源是否收敛到 `.Ai-config/skills/`，薄入口是否仍指向 canonical。
+3. 检查并清理已退役全局能力残留：如项目内 `pencil-design-workflow` 入口、registry 中的 pencil 行、过时 Pencil 说明；不要删除用户业务设计稿文件，除非用户明确要求。
+4. 检查 registry、任务卡状态与 CURRENT 三区是否一致。
+5. 低风险修复直接做；覆盖、删除非空事实源、写全局目录前先确认。
+6. 汇报：修了什么、CURRENT 是否仍超限、残留风险、是否需要用户确认关闭的老任务。
 
 ## 3. 明确需求
 
@@ -103,7 +116,8 @@
 2. 查 `.Ai-config/skills/<skill-name>/`。
 3. 查 `.claude/skills/<skill-name>/SKILL.md`。
 4. 查 `.agents/skills/<skill-name>/SKILL.md`。
-5. 必要时查历史 `.codex/skills/<skill-name>/SKILL.md`。
+5. 查 `.grok/skills/<skill-name>/SKILL.md`。
+6. 必要时查历史 `.codex/skills/<skill-name>/SKILL.md`。
 
 确认事实源后，优先修改 canonical 事实源，再同步检查工具入口。若发现 durable 规则散落在项目 README、docs、脚本说明、旧版 `docs/ai/` 或工具入口中，先制定事实源收敛方案，把规则迁入 `.Ai-config/skills/<skill-name>/`，再继续实质修改。
 
@@ -159,6 +173,7 @@
 ```text
 .claude/skills/<skill-name>/SKILL.md
 .agents/skills/<skill-name>/SKILL.md
+.grok/skills/<skill-name>/SKILL.md
 ```
 
 可选兼容：

@@ -21,7 +21,7 @@ Assert-True (-not [string]::IsNullOrWhiteSpace([string]$sourceCore.Items[0].Sour
 
 $sourceFull = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile full -Mode Source -AllowDegraded -Json | Out-String) | ConvertFrom-Json
 $conflict = @($sourceFull.RoutingConflicts | Where-Object PreferredFor -eq 'browser-inspection')
-Assert-Equal 1 $conflict.Count 'Doctor did not report the full-profile browser routing conflict'
+Assert-Equal 0 $conflict.Count 'browser-inspection routing conflict should be retired after PreferredFor split'
 foreach ($expectation in @{'context-thread'=9; 'playwright'=24; 'chrome-devtools'=29}.GetEnumerator()) {
     $item = $sourceFull.Items | Where-Object Name -eq $expectation.Key | Select-Object -First 1
     Assert-Equal $expectation.Value $item.ActualToolCount "Doctor source smoke tool count changed for $($expectation.Key)"

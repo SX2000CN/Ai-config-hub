@@ -34,7 +34,7 @@
 | 非代码流程关系缺少轻量结构 | 任务卡中的 `关系索引` 记录对象、依赖、状态、证据和下一步 | `.Ai-config/tasks/`、`global-context-thread` |
 | 前端 UI 容易泛化、缺少设计判断 | 前端设计 skill 先建立产品化视觉方向，再实现和验证 | `global-frontend-design` |
 | 复杂方案容易过早收敛 | 思维伙伴以多轮协作探索、情景推演和延迟收敛补充用户思考 | `global-thinking-partner` |
-| 设计先行流程容易断在工具选择 | Pencil workflow skill 负责选择可见宿主、验证 `.pen` 和导出证据 | `pencil-design-workflow` |
+| 设计先行缺少轻量闸门 | frontend skill 用短 UI brief，确认后再实现 | `global-frontend-design` |
 | 敏感信息和全局配置容易误提交 | 敏感信息规则、私有目录边界和同步脚本 dry-run | `rules/shared/core.md`、`docs/secrets-policy.md`、`scripts/` |
 
 ## 配置分层
@@ -80,7 +80,6 @@ skills 是这套配置的能力模块，不只是可分发包。当前全局能�
 - `global-frontend-design`：处理前端创建、重设计和 review 的设计质量、状态覆盖、响应式和验证。
 - `global-thinking-partner`：可与领域 skill 组合的 reasoning mode，负责脑暴、假设挑战、情景和二阶影响推演，以及按需决策收敛。
 - `global-context-thread`：在复杂代码关系、配置关系和工作流关系中使用结构化事实源缩小上下文。
-- `pencil-design-workflow`：把设计先行请求路由到可见 Pencil 工作流，并保留 `.pen` 和导出图证据。
 
 skill 分为领域交付、reasoning mode 和工具路由三类。显式点名和平台强制触发优先；领域 skill 主导交付，思考伙伴可以组合，工具路由只在对应能力确实需要时启用。
 

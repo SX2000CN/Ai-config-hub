@@ -3,6 +3,7 @@ param(
     [switch]$Apply,
     [switch]$ClaudeCode,
     [switch]$Codex,
+    [switch]$Grok,
     [string]$Profile,
     [switch]$AllowDegraded,
     [string]$UserHome,
@@ -23,13 +24,16 @@ $ProfileDefinition = Get-AiConfigHubMcpProfile $Manifest $Profile
 $ProfileName = [string]$ProfileDefinition.Name
 $ClaudeDefinition = $Manifest.Mcp.Targets | Where-Object { $_.Name -eq 'ClaudeCode' } | Select-Object -First 1
 $CodexDefinition = $Manifest.Mcp.Targets | Where-Object { $_.Name -eq 'Codex' } | Select-Object -First 1
-if ($null -eq $ClaudeDefinition -or $null -eq $CodexDefinition) {
-    throw 'ClaudeCode and Codex MCP targets must be registered in config/managed-assets.psd1.'
+$GrokDefinition = $Manifest.Mcp.Targets | Where-Object { $_.Name -eq 'Grok' } | Select-Object -First 1
+if ($null -eq $ClaudeDefinition -or $null -eq $CodexDefinition -or $null -eq $GrokDefinition) {
+    throw 'ClaudeCode, Codex, and Grok MCP targets must be registered in config/managed-assets.psd1.'
 }
 $ClaudeSource = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'ClaudeCode' $ProfileName
 $CodexSource = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Codex' $ProfileName
+$GrokSource = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Grok' $ProfileName
 $ClaudeTarget = Join-Path $ResolvedUserHome ([string]$ClaudeDefinition.UserRelativePath)
 $CodexTarget = Join-Path $ResolvedUserHome ([string]$CodexDefinition.UserRelativePath)
+$GrokTarget = Join-Path $ResolvedUserHome ([string]$GrokDefinition.UserRelativePath)
 $McpGroups = foreach ($definition in $Manifest.Mcp.Servers) {
     $sourcePath = Join-Path $Root ([string]$definition.Source)
     $sourceObject = Get-Content -Raw -Encoding UTF8 -LiteralPath $sourcePath | ConvertFrom-Json
@@ -54,9 +58,10 @@ function Test-GroupTargetsTool($Group, $ToolName) {
     return @($Group.Targets) -contains $ToolName
 }
 
-if (-not $ClaudeCode -and -not $Codex) {
+if (-not $ClaudeCode -and -not $Codex -and -not $Grok) {
     $ClaudeCode = $true
     $Codex = $true
+    $Grok = $true
 }
 
 if ($ClaudeCode -and -not (Test-Path -LiteralPath $ClaudeSource)) {
@@ -65,6 +70,10 @@ if ($ClaudeCode -and -not (Test-Path -LiteralPath $ClaudeSource)) {
 
 if ($Codex -and -not (Test-Path -LiteralPath $CodexSource)) {
     throw "Missing rendered MCP source: $CodexSource. Run scripts\render-mcp.ps1 first."
+}
+
+if ($Grok -and -not (Test-Path -LiteralPath $GrokSource)) {
+    throw "Missing rendered MCP source: $GrokSource. Run scripts\render-mcp.ps1 first."
 }
 
 function Get-ManagedServers($ToolName) {
@@ -188,38 +197,34 @@ function Test-ClaudeManagedOwnership($ServerName, $ExistingServer, $CurrentServe
     return $false
 }
 
-function Resolve-CodexRenderedUserPaths($Content) {
+function Resolve-TomlRenderedUserPaths($Content) {
     $escapedHome = $ResolvedUserHome.Replace('\', '\\')
     return $Content.Replace('~\\', $escapedHome + '\\').Replace('~/', $escapedHome + '\\')
 }
 
-function Get-PencilMcpServerObject($AgentName) {
-    $server = Resolve-AiConfigHubPencilMcpServer $ResolvedUserHome
-    if ($null -eq $server) {
-        return $null
-    }
-
-    return [pscustomobject]@{
-        type = 'stdio'
-        command = $server.Command
-        args = @('--app', $server.App, '--agent', $AgentName)
-    }
+function Resolve-CodexRenderedUserPaths($Content) {
+    return Resolve-TomlRenderedUserPaths $Content
 }
 
-function Test-ClaudePencilServerUsesDesktop($Server) {
-    if ($null -eq $Server) {
-        return $false
-    }
-
-    $serverArgs = @($Server.args)
-    for ($i = 0; $i -lt $serverArgs.Count - 1; $i++) {
-        if ([string]$serverArgs[$i] -eq '--app' -and [string]$serverArgs[$i + 1] -eq 'desktop') {
-            return $true
-        }
-    }
-
+function Test-IsRetiredPencilClaudeServer($Server) {
+    if ($null -eq $Server) { return $false }
     $command = [string]$Server.command
-    return $command -match '\\Program Files\\Pencil\\resources\\app\.asar\.unpacked\\out\\mcp-server-windows-x64\.exe$'
+    $joinedArgs = (@($Server.args) | ForEach-Object { [string]$_ }) -join ' '
+    if ($command -match '(?i)pencil') { return $true }
+    if ($joinedArgs -match '(?i)pencil') { return $true }
+    if ($joinedArgs -match '(?i)--app') { return $true }
+    if ($joinedArgs -match '(?i)--agent\s+(claudeCode|codexCLI|grok)\b') { return $true }
+    return $false
+}
+
+function Test-IsRetiredPencilTomlBlock($Content) {
+    if (-not [regex]::IsMatch([string]$Content, (Get-SectionHeaderPattern 'mcp_servers.pencil'))) { return $false }
+    $pattern = Get-SectionPattern 'mcp_servers.pencil'
+    $sectionMatch = [regex]::Match([string]$Content, $pattern)
+    if (-not $sectionMatch.Success) { return $false }
+    return $sectionMatch.Value -match '(?i)pencil' -or
+        $sectionMatch.Value -match '(?i)--app' -or
+        $sectionMatch.Value -match '(?i)claudeCode|codexCLI'
 }
 
 function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
@@ -302,23 +307,14 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
     }
 
     $existingPencil = $target.mcpServers.pencil
-    if ($ProfileLocalMcpServers -notcontains 'pencil') {
-        if ($null -ne $existingPencil) { $actions.Add('preserve local mcpServers.pencil outside the selected profile') }
-    }
-    else {
-        $pencilServer = Get-PencilMcpServerObject 'claudeCode'
-        if ($null -eq $pencilServer) {
-            Write-Warning 'Pencil plugin MCP server was not found locally; sync-mcp will not register pencil with Claude Code.'
-        }
-        elseif ($null -eq $existingPencil) {
-            $actions.Add("register local pencil via Claude Code CLI ($($pencilServer.command))")
+    if ($null -ne $existingPencil) {
+        if (Test-IsRetiredPencilClaudeServer $existingPencil) {
+            $target.mcpServers.PSObject.Properties.Remove('pencil')
+            $actions.Add('remove retired mcpServers.pencil')
+            $managedChanged = $true
         }
         else {
-            $existingJson = $existingPencil | ConvertTo-Json -Depth 16 -Compress
-            $newJson = $pencilServer | ConvertTo-Json -Depth 16 -Compress
-            if ($existingJson -eq $newJson) { $actions.Add('pencil already registered by Claude Code CLI') }
-            elseif (Test-ClaudePencilServerUsesDesktop $existingPencil) { $actions.Add("replace desktop pencil via Claude Code CLI ($($pencilServer.command))") }
-            else { $actions.Add('preserve local mcpServers.pencil') }
+            $actions.Add('preserve custom mcpServers.pencil (not recognized as Pencil MCP)')
         }
     }
 
@@ -367,29 +363,22 @@ function Format-TomlStringArray($Values) {
     return '[' + ($quoted -join ', ') + ']'
 }
 
-function New-CodexPencilMcpBlock {
-    $server = Resolve-AiConfigHubPencilMcpServer $ResolvedUserHome
-    if ($null -eq $server) {
-        return $null
-    }
-
-    $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add('[mcp_servers.pencil]')
-    $lines.Add('command = ' + (Format-TomlString $server.Command))
-    $lines.Add('args = ' + (Format-TomlStringArray @('--app', $server.App, '--agent', 'codexCLI')))
-    $lines.Add("startup_timeout_ms = $($server.StartupTimeoutMs)")
+function Get-GrokManagedCompatBlock {
+    $lines = @(
+        '# >>> ai-config-hub managed compat'
+        '[compat.claude]'
+        'mcps = false'
+        'skills = false'
+        'agents = false'
+        'rules = false'
+        '# <<< ai-config-hub managed compat'
+    )
     return ($lines -join "`n")
 }
 
-function Test-CodexPencilBlockUsesDesktop($Content) {
-    $pattern = Get-SectionPattern 'mcp_servers.pencil'
-    $sectionMatch = [regex]::Match($Content, $pattern)
-    if (-not $sectionMatch.Success) {
-        return $false
-    }
-
-    return $sectionMatch.Value -match '"--app"\s*,\s*"desktop"' -or
-        $sectionMatch.Value -match '\\Program Files\\Pencil\\resources\\app\.asar\.unpacked\\out\\mcp-server-windows-x64\.exe'
+function Remove-GrokManagedCompatBlock($Content) {
+    $pattern = '(?ms)^# >>> ai-config-hub managed compat\r?\n.*?^# <<< ai-config-hub managed compat\r?\n?'
+    return [regex]::Replace([string]$Content, $pattern, '')
 }
 
 function Remove-CodexPencilBlock($Content) {
@@ -401,8 +390,14 @@ function Remove-CodexPencilBlock($Content) {
     return $working
 }
 
-function Get-CodexMergedContent($TargetPath, $SourcePath) {
-    $sourceContent = Resolve-CodexRenderedUserPaths (Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath)
+function Get-TomlToolMergedContent {
+    param(
+        [Parameter(Mandatory = $true)][string]$TargetPath,
+        [Parameter(Mandatory = $true)][string]$SourcePath,
+        [Parameter(Mandatory = $true)][string]$ToolName
+    )
+
+    $sourceContent = Resolve-TomlRenderedUserPaths (Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath)
     $targetContent = if (Test-Path -LiteralPath $TargetPath) {
         Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath
     }
@@ -411,21 +406,23 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
     }
 
     $actions = New-Object System.Collections.Generic.List[string]
-    if ([regex]::IsMatch($targetContent, (Get-SectionHeaderPattern 'mcp_servers.pencil'))) {
-        $actions.Add('preserve mcp_servers.pencil')
-    }
-
     $working = $targetContent
-    if ($ProfileLocalMcpServers -contains 'pencil' -and (Test-CodexPencilBlockUsesDesktop $working)) {
+    if ($ToolName -eq 'Grok') {
+        $working = Remove-GrokManagedCompatBlock $working
+    }
+    if (Test-IsRetiredPencilTomlBlock $working) {
         $working = Remove-CodexPencilBlock $working
-        $actions.Add('replace local mcp_servers.pencil desktop target')
+        $actions.Add('remove retired mcp_servers.pencil')
+    }
+    elseif ([regex]::IsMatch($working, (Get-SectionHeaderPattern 'mcp_servers.pencil'))) {
+        $actions.Add('preserve custom mcp_servers.pencil (not recognized as Pencil MCP)')
     }
 
     $newBlocks = New-Object System.Collections.Generic.List[string]
     $conflicts = New-Object System.Collections.Generic.List[string]
 
     foreach ($group in $McpGroups) {
-        if (-not (Test-GroupTargetsTool $group 'Codex')) { continue }
+        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
         $groupIsActive = $ActiveManagedDefinitionNames -contains $group.Name
         $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
         $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
@@ -444,7 +441,7 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
             if ($groupIsActive) { $newBlocks.Add((Get-CodexGroupBlock $sourceContent $group.Name)) }
         }
         else {
-            $ownership = Get-CodexUnmarkedOwnership $working $group
+            $ownership = Get-CodexUnmarkedOwnership $working $group $ToolName
             if ($ownership.HasSections -and $ownership.Owned) {
                 $working = Remove-CodexUnmarkedGroupSections $working $group
                 $actions.Add($(if ($groupIsActive) { "migrate owned unmarked $($group.Name) MCP sections" } else { "remove owned inactive $($group.Name) MCP sections" }))
@@ -464,27 +461,21 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
         }
     }
 
-    if ($ProfileLocalMcpServers -contains 'pencil' -and -not [regex]::IsMatch($working, (Get-SectionHeaderPattern 'mcp_servers.pencil'))) {
-        $pencilBlock = New-CodexPencilMcpBlock
-        if ($null -eq $pencilBlock) {
-            Write-Warning 'Pencil plugin MCP server was not found locally; sync-mcp will not add [mcp_servers.pencil]. Enable VS Code/Cursor Pencil MCP support before using pencil-design-workflow.'
-        }
-        else {
-            $actions.Add('add local mcp_servers.pencil')
-            if ([string]::IsNullOrWhiteSpace($working)) {
-                $working = $pencilBlock + "`n"
-            }
-            else {
-                $working = $working.TrimEnd() + "`n`n" + $pencilBlock + "`n"
-            }
-        }
-    }
-    elseif ($ProfileLocalMcpServers -notcontains 'pencil' -and [regex]::IsMatch($working, (Get-SectionHeaderPattern 'mcp_servers.pencil'))) {
-        $actions.Add('preserve local mcp_servers.pencil outside the selected profile')
+    foreach ($group in Get-ActiveMcpGroups $ToolName) {
+        $actions.Add("append managed $($group.Name) MCP block")
     }
 
-    foreach ($group in Get-ActiveMcpGroups 'Codex') {
-        $actions.Add("append managed $($group.Name) MCP block")
+    if ($ToolName -eq 'Grok') {
+        $newBlocks.Add((Get-GrokManagedCompatBlock))
+        $actions.Add('upsert managed compat.claude block (mcps/skills/agents/rules=false)')
+        $claudeJsonPath = Join-Path $ResolvedUserHome '.claude.json'
+        if (Test-Path -LiteralPath $claudeJsonPath -PathType Leaf) {
+            $actions.Add('compat risk: ~/.claude.json still present; managed compat.claude.mcps=false makes native config.toml the MCP source of truth')
+        }
+        $claudeHomeRules = Join-Path $ResolvedUserHome '.claude\CLAUDE.md'
+        if (Test-Path -LiteralPath $claudeHomeRules -PathType Leaf) {
+            $actions.Add('compat risk: ~/.claude/CLAUDE.md still present; managed compat disables Claude home agents/rules scan in favor of ~/.grok/AGENTS.md')
+        }
     }
 
     $managedBlock = ($newBlocks -join "`n`n").TrimEnd()
@@ -506,6 +497,14 @@ function Get-CodexMergedContent($TargetPath, $SourcePath) {
         Conflicts = @($conflicts | ForEach-Object { $_ })
         Changed = $content -ne $targetContent
     }
+}
+
+function Get-CodexMergedContent($TargetPath, $SourcePath) {
+    return Get-TomlToolMergedContent -TargetPath $TargetPath -SourcePath $SourcePath -ToolName 'Codex'
+}
+
+function Get-GrokMergedContent($TargetPath, $SourcePath) {
+    return Get-TomlToolMergedContent -TargetPath $TargetPath -SourcePath $SourcePath -ToolName 'Grok'
 }
 
 function Test-SameJsonObject($Left, $Right) {
@@ -566,7 +565,28 @@ function Get-CurrentCodexOwnershipBlock($Group, $ServerName) {
     return New-CodexServerOwnershipBlock $ServerName $current.command $current.args $sourceServer.startup_timeout_ms
 }
 
-function Get-CodexUnmarkedOwnership($Content, $Group) {
+function Get-CurrentGrokOwnershipBlock($Group, $ServerName) {
+    $sourceServer = $Group.Source.servers.$ServerName
+    if ($null -eq $sourceServer) { return $null }
+    $current = Get-CurrentClaudeManagedServer $ServerName
+    $arguments = @($current.args | ForEach-Object { [string]$_ })
+    if ($ServerName -eq 'playwright' -and ($arguments -notcontains '--headless')) {
+        $arguments += @('--headless')
+    }
+    $startupSec = 20
+    if ($null -ne $sourceServer.startup_timeout_ms) {
+        $startupSec = [Math]::Max(20, [int][Math]::Ceiling(([double]$sourceServer.startup_timeout_ms) / 1000.0))
+    }
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add("[mcp_servers.$ServerName]")
+    $lines.Add('command = ' + (Format-TomlString $current.command))
+    $lines.Add('args = ' + (Format-TomlStringArray $arguments))
+    $lines.Add('enabled = true')
+    $lines.Add("startup_timeout_sec = $startupSec")
+    return Normalize-CodexOwnershipBlock ($lines -join "`n")
+}
+
+function Get-CodexUnmarkedOwnership($Content, $Group, $ToolName = 'Codex') {
     $hasSections = $false
     $allOwned = $true
     foreach ($serverName in @($Group.Servers) + @($Group.LegacyServers)) {
@@ -580,9 +600,14 @@ function Get-CodexUnmarkedOwnership($Content, $Group) {
         $actual = Normalize-CodexOwnershipBlock (($serverMatches | ForEach-Object { $_.Value.Trim() }) -join "`n`n")
         if ($envMatches.Count -gt 0) { $actual = Normalize-CodexOwnershipBlock ($actual + "`n`n" + $envMatches[0].Value.Trim()) }
         $owned = $false
-        $currentBlock = Get-CurrentCodexOwnershipBlock $Group $serverName
+        $currentBlock = if ($ToolName -eq 'Grok') {
+            Get-CurrentGrokOwnershipBlock $Group $serverName
+        }
+        else {
+            Get-CurrentCodexOwnershipBlock $Group $serverName
+        }
         if ($null -ne $currentBlock -and $actual -eq $currentBlock) { $owned = $true }
-        if (-not $owned) {
+        if (-not $owned -and $ToolName -ne 'Grok') {
             foreach ($signature in @($Group.LegacySignatures)) {
                 $resolvedSignature = New-ClaudeServerFromLegacySignature $signature
                 $legacyBlock = New-CodexServerOwnershipBlock $serverName $resolvedSignature.command $resolvedSignature.args $signature.StartupTimeoutMs $signature.CodexStyle $resolvedSignature.type
@@ -604,46 +629,6 @@ function Remove-CodexUnmarkedGroupSections($Content, $Group) {
     return $working
 }
 
-function Get-ClaudePencilRegistrationPlan($TargetPath) {
-    if ($ProfileLocalMcpServers -notcontains 'pencil') {
-        return [pscustomobject]@{ Needed = $false; RemoveExisting = $false; Server = $null; Reason = 'not enabled by selected profile; preserve existing registration' }
-    }
-    $pencilServer = Get-PencilMcpServerObject 'claudeCode'
-    if ($null -eq $pencilServer) {
-        return [pscustomobject]@{ Needed = $false; RemoveExisting = $false; Server = $null; Reason = 'pencil MCP server not found' }
-    }
-
-    $target = if (Test-Path -LiteralPath $TargetPath) {
-        Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath | ConvertFrom-Json
-    }
-    else {
-        [pscustomobject]@{}
-    }
-    $existingPencil = if ($null -ne $target.mcpServers) { $target.mcpServers.pencil } else { $null }
-
-    if (Test-SameJsonObject $existingPencil $pencilServer) {
-        return [pscustomobject]@{ Needed = $false; RemoveExisting = $false; Server = $pencilServer; Reason = 'already registered' }
-    }
-
-    if ($null -ne $existingPencil -and -not (Test-ClaudePencilServerUsesDesktop $existingPencil)) {
-        return [pscustomobject]@{ Needed = $false; RemoveExisting = $false; Server = $pencilServer; Reason = 'preserve custom existing registration' }
-    }
-
-    return [pscustomobject]@{ Needed = $true; RemoveExisting = ($null -ne $existingPencil); Server = $pencilServer; Reason = 'register with Claude Code CLI' }
-}
-
-function Remove-ClaudePencilFromMergedContent($Merged) {
-    $target = $Merged.Content | ConvertFrom-Json
-    if ($null -ne $target.mcpServers -and $null -ne $target.mcpServers.pencil) {
-        $target.mcpServers.PSObject.Properties.Remove('pencil')
-    }
-    return [pscustomobject]@{
-        Content = ConvertTo-StableJson $target
-        Actions = @($Merged.Actions) + @('remove existing desktop pencil before Claude Code CLI registration')
-        Changed = $true
-    }
-}
-
 function Write-MergeStatus($Name, $TargetPath, $Merged) {
     $targetExists = Test-Path -LiteralPath $TargetPath
     $targetContent = if ($targetExists) { Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath } else { '' }
@@ -655,7 +640,7 @@ function Write-MergeStatus($Name, $TargetPath, $Merged) {
     }
 }
 
-function Assert-ClaudeFinalConfiguration($TargetPath, $PencilPlan) {
+function Assert-ClaudeFinalConfiguration($TargetPath) {
     $target = Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath | ConvertFrom-Json
     $names = Get-PropertyNames $target.mcpServers
     foreach ($serverName in Get-ActiveManagedServers 'ClaudeCode') {
@@ -663,42 +648,60 @@ function Assert-ClaudeFinalConfiguration($TargetPath, $PencilPlan) {
             throw "Final Claude MCP config is missing managed server: $serverName"
         }
     }
-    if ($PencilPlan.Needed -and -not (Test-SameJsonObject $target.mcpServers.pencil $PencilPlan.Server)) {
-        throw 'Claude Code CLI completed but the final pencil registration does not match the discovered server.'
+    if ($null -ne $target.mcpServers.pencil -and (Test-IsRetiredPencilClaudeServer $target.mcpServers.pencil)) {
+        throw 'Final Claude MCP config still contains retired pencil server.'
+    }
+}
+
+function Assert-TomlToolFinalConfiguration($TargetPath, $ToolName) {
+    $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath
+    foreach ($group in Get-ActiveMcpGroups $ToolName) {
+        if (-not $content.Contains("# >>> ai-config-hub managed mcp: $($group.Name)")) {
+            throw "Final $ToolName MCP config is missing managed group: $($group.Name)"
+        }
+    }
+    foreach ($serverName in Get-ActiveManagedServers $ToolName) {
+        $sectionName = "mcp_servers.$serverName"
+        $sectionCount = [regex]::Matches($content, (Get-SectionHeaderPattern $sectionName)).Count
+        if ($sectionCount -ne 1) {
+            throw "Final $ToolName MCP config must contain exactly one [$sectionName] section; found $sectionCount."
+        }
+        if ($ToolName -eq 'Codex') {
+            $envSectionName = "$sectionName.env"
+            $envSectionCount = [regex]::Matches($content, (Get-SectionHeaderPattern $envSectionName)).Count
+            if ($envSectionCount -gt 1) {
+                throw "Final $ToolName MCP config contains duplicate [$envSectionName] sections."
+            }
+        }
+    }
+    if (Test-IsRetiredPencilTomlBlock $content) {
+        throw "Final $ToolName MCP config still contains retired mcp_servers.pencil."
+    }
+    if ($ToolName -eq 'Grok') {
+        if (-not $content.Contains('# >>> ai-config-hub managed compat')) {
+            throw 'Final Grok config is missing managed compat block.'
+        }
+        if ($content -notmatch '(?m)^\s*mcps\s*=\s*false\s*$') {
+            throw 'Final Grok managed compat block must set mcps = false.'
+        }
     }
 }
 
 function Assert-CodexFinalConfiguration($TargetPath) {
-    $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $TargetPath
-    foreach ($group in Get-ActiveMcpGroups 'Codex') {
-        if (-not $content.Contains("# >>> ai-config-hub managed mcp: $($group.Name)")) {
-            throw "Final Codex MCP config is missing managed group: $($group.Name)"
-        }
-    }
-    foreach ($serverName in Get-ActiveManagedServers 'Codex') {
-        $sectionName = "mcp_servers.$serverName"
-        $sectionCount = [regex]::Matches($content, (Get-SectionHeaderPattern $sectionName)).Count
-        if ($sectionCount -ne 1) {
-            throw "Final Codex MCP config must contain exactly one [$sectionName] section; found $sectionCount."
-        }
-        $envSectionName = "$sectionName.env"
-        $envSectionCount = [regex]::Matches($content, (Get-SectionHeaderPattern $envSectionName)).Count
-        if ($envSectionCount -gt 1) {
-            throw "Final Codex MCP config contains duplicate [$envSectionName] sections."
-        }
-    }
-    $pencilSections = [regex]::Matches($content, (Get-SectionHeaderPattern 'mcp_servers.pencil')).Count
-    $pencilEnvSections = [regex]::Matches($content, (Get-SectionHeaderPattern 'mcp_servers.pencil.env')).Count
-    if ($pencilSections -gt 1 -or $pencilEnvSections -gt 1 -or ($pencilEnvSections -gt 0 -and $pencilSections -eq 0)) {
-        throw 'Final Codex MCP config has inconsistent pencil sections.'
-    }
+    Assert-TomlToolFinalConfiguration $TargetPath 'Codex'
+}
+
+function Assert-GrokFinalConfiguration($TargetPath) {
+    Assert-TomlToolFinalConfiguration $TargetPath 'Grok'
 }
 
 Assert-AiConfigHubPathInside $ClaudeTarget $ResolvedUserHome 'Claude MCP target' | Out-Null
 Assert-AiConfigHubPathInside $CodexTarget $ResolvedUserHome 'Codex MCP target' | Out-Null
+Assert-AiConfigHubPathInside $GrokTarget $ResolvedUserHome 'Grok MCP target' | Out-Null
 foreach ($target in @(
     [pscustomobject]@{ Enabled = $ClaudeCode; Name = 'Claude MCP'; Path = $ClaudeTarget },
-    [pscustomobject]@{ Enabled = $Codex; Name = 'Codex MCP'; Path = $CodexTarget }
+    [pscustomobject]@{ Enabled = $Codex; Name = 'Codex MCP'; Path = $CodexTarget },
+    [pscustomobject]@{ Enabled = $Grok; Name = 'Grok MCP'; Path = $GrokTarget }
 )) {
     if ($target.Enabled -and (Test-Path -LiteralPath $target.Path) -and -not (Test-Path -LiteralPath $target.Path -PathType Leaf)) {
         throw "$($target.Name) target exists but is not a file: $($target.Path)"
@@ -726,29 +729,20 @@ elseif ($AllowDegraded -and $Readiness.DegradedReady) {
 }
 
 $ClaudeMerged = $null
-$ClaudePencilPlan = $null
 $ClaudeChanged = $false
 $ClaudeExpectedFingerprint = $null
 $CodexMerged = $null
 $CodexChanged = $false
 $CodexExpectedFingerprint = $null
+$GrokMerged = $null
+$GrokChanged = $false
+$GrokExpectedFingerprint = $null
 
 if ($ClaudeCode) {
     $fingerprintBefore = Get-AiConfigHubPathFingerprint $ClaudeTarget
     $ClaudeMerged = Get-ClaudeMergedContent $ClaudeTarget $ClaudeSource
-    $ClaudePencilPlan = Get-ClaudePencilRegistrationPlan $ClaudeTarget
-    if ($ClaudePencilPlan.RemoveExisting) {
-        $ClaudeMerged = Remove-ClaudePencilFromMergedContent $ClaudeMerged
-    }
     $ClaudeChanged = [bool]$ClaudeMerged.Changed
     Write-MergeStatus 'claude-code' $ClaudeTarget $ClaudeMerged
-    if ($ClaudePencilPlan.Needed) {
-        Write-Output "would register`tclaude-code pencil`t$($ClaudePencilPlan.Server.command)"
-        Write-Output '  - via claude mcp add -s user pencil -- <command> <args>'
-    }
-    else {
-        Write-Output "pencil`t$($ClaudePencilPlan.Reason)"
-    }
     $ClaudeExpectedFingerprint = Get-AiConfigHubPathFingerprint $ClaudeTarget
     if ($fingerprintBefore -ne $ClaudeExpectedFingerprint) {
         throw "Claude MCP target changed while planning; retry the sync: $ClaudeTarget"
@@ -766,9 +760,21 @@ if ($Codex) {
     }
 }
 
+if ($Grok) {
+    $fingerprintBefore = Get-AiConfigHubPathFingerprint $GrokTarget
+    $GrokMerged = Get-GrokMergedContent $GrokTarget $GrokSource
+    $GrokChanged = [bool]$GrokMerged.Changed
+    Write-MergeStatus 'grok' $GrokTarget $GrokMerged
+    $GrokExpectedFingerprint = Get-AiConfigHubPathFingerprint $GrokTarget
+    if ($fingerprintBefore -ne $GrokExpectedFingerprint) {
+        throw "Grok MCP target changed while planning; retry the sync: $GrokTarget"
+    }
+}
+
 $ownershipConflicts = @()
 if ($null -ne $ClaudeMerged) { $ownershipConflicts += @($ClaudeMerged.Conflicts) }
 if ($null -ne $CodexMerged) { $ownershipConflicts += @($CodexMerged.Conflicts) }
+if ($null -ne $GrokMerged) { $ownershipConflicts += @($GrokMerged.Conflicts) }
 $ownershipConflicts = @($ownershipConflicts | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
 if ($Apply -and $ownershipConflicts.Count -gt 0) {
     throw "Managed MCP ownership conflicts must be resolved before Apply:`n$($ownershipConflicts -join "`n")"
@@ -779,9 +785,10 @@ if (-not $Apply) {
     return
 }
 
-$needsClaudeTransaction = $ClaudeCode -and ($ClaudeChanged -or $ClaudePencilPlan.Needed)
+$needsClaudeTransaction = $ClaudeCode -and $ClaudeChanged
 $needsCodexTransaction = $Codex -and $CodexChanged
-if (-not $needsClaudeTransaction -and -not $needsCodexTransaction) {
+$needsGrokTransaction = $Grok -and $GrokChanged
+if (-not $needsClaudeTransaction -and -not $needsCodexTransaction -and -not $needsGrokTransaction) {
     Write-Output 'Managed MCP targets are already up to date.'
     return
 }
@@ -796,47 +803,19 @@ try {
         $stagedCodex = New-AiConfigHubStagedFile $context 'codex.toml' $CodexMerged.Content
         Install-AiConfigHubStagedFile $context 'codex' $stagedCodex $CodexTarget -ExpectedFingerprint $CodexExpectedFingerprint | Out-Null
     }
-
-    if ($ClaudeCode -and $ClaudePencilPlan.Needed) {
-        $claude = if ([string]::IsNullOrWhiteSpace($ClaudeCommand)) {
-            Get-Command claude -ErrorAction SilentlyContinue
-        }
-        else {
-            Get-Command $ClaudeCommand -ErrorAction SilentlyContinue
-        }
-        if (-not $claude) {
-            throw "Required command 'claude' was not found on PATH for pencil registration."
-        }
-        $oldUserProfile = $env:USERPROFILE
-        $oldHome = $env:HOME
-        $oldClaudeConfigDir = $env:CLAUDE_CONFIG_DIR
-        try {
-            $env:USERPROFILE = $ResolvedUserHome
-            $env:HOME = $ResolvedUserHome
-            Remove-Item Env:CLAUDE_CONFIG_DIR -ErrorAction SilentlyContinue
-            & $claude.Source mcp add -s user pencil -- $ClaudePencilPlan.Server.command @($ClaudePencilPlan.Server.args)
-            if ($LASTEXITCODE -ne 0) {
-                throw "claude mcp add failed for pencil with exit code $LASTEXITCODE"
-            }
-        }
-        finally {
-            $env:USERPROFILE = $oldUserProfile
-            $env:HOME = $oldHome
-            if ($null -eq $oldClaudeConfigDir) {
-                Remove-Item Env:CLAUDE_CONFIG_DIR -ErrorAction SilentlyContinue
-            }
-            else {
-                $env:CLAUDE_CONFIG_DIR = $oldClaudeConfigDir
-            }
-        }
+    if ($needsGrokTransaction) {
+        $stagedGrok = New-AiConfigHubStagedFile $context 'grok.toml' $GrokMerged.Content
+        Install-AiConfigHubStagedFile $context 'grok' $stagedGrok $GrokTarget -ExpectedFingerprint $GrokExpectedFingerprint | Out-Null
     }
 
-    if ($ClaudeCode) { Assert-ClaudeFinalConfiguration $ClaudeTarget $ClaudePencilPlan }
+    if ($ClaudeCode) { Assert-ClaudeFinalConfiguration $ClaudeTarget }
     if ($Codex) { Assert-CodexFinalConfiguration $CodexTarget }
+    if ($Grok) { Assert-GrokFinalConfiguration $GrokTarget }
 
     Complete-AiConfigHubOperation $context
     if ($needsClaudeTransaction) { Write-Output "Synced: claude-code`t$ClaudeTarget" }
     if ($needsCodexTransaction) { Write-Output "Synced: codex`t$CodexTarget" }
+    if ($needsGrokTransaction) { Write-Output "Synced: grok`t$GrokTarget" }
 }
 catch {
     Throw-AiConfigHubOperationFailure $context $_

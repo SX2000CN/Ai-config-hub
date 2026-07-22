@@ -26,7 +26,8 @@ function Write-Text($Path, $Content) {
     if (-not (Test-Path -LiteralPath $directory)) {
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
     }
-    Set-Content -Encoding UTF8 -LiteralPath $Path -Value $Content -NoNewline
+    # UTF-8 without BOM: Grok and other TOML/JSON consumers reject or mishandle BOM.
+    [System.IO.File]::WriteAllText($Path, [string]$Content, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 $sharedCore = (Read-Text (Join-Path $Root ([string]$Manifest.Rules.SharedCore))).TrimEnd()

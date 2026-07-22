@@ -61,6 +61,7 @@ function New-TestRepository($Path) {
         'config\managed-assets.psd1',
         'rules\rendered\CLAUDE.md',
         'rules\rendered\AGENTS.md',
+        'rules\rendered\grok-AGENTS.md',
         'skills\rendered',
         'tool-configs\mcp\rendered',
         'tool-configs\mcp\shared',
@@ -133,6 +134,21 @@ LEGACY = "remove-me"
 '@
 }
 
+function Get-InitialGrokConfig {
+    return @'
+[models]
+default = "preserve-me"
+
+[mcp_servers.custom]
+command = "custom-command"
+args = []
+
+[mcp_servers.pencil]
+command = "C:\\Program Files\\Pencil\\resources\\app.asar.unpacked\\out\\mcp-server-windows-x64.exe"
+args = ["--app", "desktop", "--agent", "grok"]
+'@
+}
+
 function Assert-RulesApplied($TestRoot, $UserHome) {
     $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $TestRoot 'config\managed-assets.psd1')
     foreach ($definition in $manifest.Rules.Targets) {
@@ -159,9 +175,6 @@ New-Item -ItemType Directory -Force -Path $tempRoot | Out-Null
 $savedEnvironment = @{
     AllowedHomeRoot = $env:AI_CONFIG_HUB_TEST_ALLOWED_HOME_ROOT
     PreflightLog = $env:AI_CONFIG_HUB_TEST_PREFLIGHT_LOG
-    PencilCommand = $env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND
-    PencilApp = $env:AI_CONFIG_HUB_PENCIL_MCP_APP
-    ClaudeLog = $env:AI_CONFIG_HUB_TEST_CLAUDE_LOG
     ConcurrentTarget = $env:AI_CONFIG_HUB_TEST_CONCURRENT_TARGET
     PreflightMutationTarget = $env:AI_CONFIG_HUB_TEST_PREFLIGHT_MUTATION_TARGET
     PreflightMutationSource = $env:AI_CONFIG_HUB_TEST_PREFLIGHT_MUTATION_SOURCE
@@ -385,7 +398,7 @@ try {
     $applyHome = Join-Path $tempRoot 'apply-home'
     New-Item -ItemType Directory -Force -Path $applyHome | Out-Null
 
-    foreach ($relativePath in @('.claude\CLAUDE.md', '.codex\AGENTS.md')) {
+    foreach ($relativePath in @('.claude\CLAUDE.md', '.codex\AGENTS.md', '.grok\AGENTS.md')) {
         Write-Utf8NoBom (Join-Path $applyHome $relativePath) 'old rule content'
     }
     & (Join-Path $testRepository 'scripts\sync.ps1') -Apply -UserHome $applyHome | Out-Null
@@ -397,36 +410,42 @@ try {
     Initialize-TestRuntimeEntries $applyHome
     $claudeTarget = Join-Path $applyHome '.claude.json'
     $codexTarget = Join-Path $applyHome '.codex\config.toml'
+    $grokTarget = Join-Path $applyHome '.grok\config.toml'
     Write-Utf8NoBom $claudeTarget (Get-InitialClaudeConfig)
     Write-Utf8NoBom $codexTarget (Get-InitialCodexConfig)
+    Write-Utf8NoBom $grokTarget (Get-InitialGrokConfig)
 
-    $pencilCommand = Join-Path $tempRoot 'pencil\mcp-server-windows-x64.exe'
-    Write-Utf8NoBom $pencilCommand 'test executable placeholder'
-    $env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND = $pencilCommand
-    $env:AI_CONFIG_HUB_PENCIL_MCP_APP = 'visual_studio_code'
-    $env:AI_CONFIG_HUB_TEST_CLAUDE_LOG = Join-Path $tempRoot 'claude-success.log'
-    $fakeClaudeSuccess = Join-Path $FixtureRoot 'fake-claude-success.cmd'
-
-    & (Join-Path $testRepository 'scripts\sync-mcp.ps1') -Apply -Profile design -UserHome $applyHome -ClaudeCommand $fakeClaudeSuccess | Out-Null
+    & (Join-Path $testRepository 'scripts\sync-mcp.ps1') -Apply -Profile design -UserHome $applyHome | Out-Null
 
     $claudeConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $claudeTarget | ConvertFrom-Json
-    Assert-Equal 'preserve-me' $claudeConfig.theme 'Claude non-MCP configuration was not preserved'
-    Assert-Equal 'custom-command' $claudeConfig.mcpServers.custom.command 'Claude custom MCP server was not preserved'
-    Assert-Equal (Resolve-Path -LiteralPath $pencilCommand).Path $claudeConfig.mcpServers.pencil.command 'Claude Pencil command was not replaced'
-    Assert-Equal 'visual_studio_code' $claudeConfig.mcpServers.pencil.args[1] 'Claude Pencil app was not replaced'
+    Assert-equal 'preserve-me' $claudeConfig.theme 'Claude non-MCP configuration was not preserved'
+    Assert-equal 'custom-command' $claudeConfig.mcpServers.custom.command 'Claude custom MCP server was not preserved'
+    Assert-True ($null -eq $claudeConfig.mcpServers.pencil) 'Claude retired pencil MCP server was not removed'
     Assert-True ($null -ne $claudeConfig.mcpServers.'local-webfetch') 'Claude local-webfetch server is missing from design profile'
     foreach ($managedServer in @('chrome-devtools', 'playwright', 'context-thread')) {
         Assert-True ($null -eq $claudeConfig.mcpServers.$managedServer) "Claude design profile unexpectedly contains: $managedServer"
     }
-    Assert-Contains (Get-Content -Raw -LiteralPath $env:AI_CONFIG_HUB_TEST_CLAUDE_LOG) 'mcp' 'Claude CLI was not invoked for Pencil registration'
 
     $codexConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $codexTarget
     Assert-Contains $codexConfig 'model = "preserve-me"' 'Codex non-MCP configuration was not preserved'
     Assert-Contains $codexConfig '[mcp_servers.custom]' 'Codex custom MCP server was not preserved'
-    Assert-Contains $codexConfig '[mcp_servers.pencil]' 'Codex Pencil MCP section is missing'
-    Assert-Contains $codexConfig '"visual_studio_code"' 'Codex Pencil app was not replaced'
-    Assert-True ($codexConfig -notmatch '(?m)^\[mcp_servers\.pencil\.env\]$') 'Codex desktop Pencil env section was not removed'
-    Assert-True ($codexConfig -notmatch '"desktop"') 'Codex desktop Pencil registration was not replaced'
+    Assert-True ($codexConfig -notmatch '(?m)^\[mcp_servers\.pencil\]') 'Codex retired pencil MCP section was not removed'
+    Assert-True ($codexConfig -notmatch '(?m)^\[mcp_servers\.pencil\.env\]$') 'Codex pencil env section was not removed'
+
+    $grokConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $grokTarget
+    Assert-Contains $grokConfig 'default = "preserve-me"' 'Grok non-MCP configuration was not preserved'
+    Assert-Contains $grokConfig '[mcp_servers.custom]' 'Grok custom MCP server was not preserved'
+    Assert-True ($grokConfig -notmatch '(?m)^\[mcp_servers\.pencil\]') 'Grok retired pencil MCP section was not removed'
+    Assert-Contains $grokConfig '# >>> ai-config-hub managed compat' 'Grok managed compat block is missing'
+    Assert-Contains $grokConfig 'mcps = false' 'Grok managed compat must disable Claude MCP scan'
+    Assert-Contains $grokConfig '# >>> ai-config-hub managed mcp: local-webfetch' 'Grok design profile missing local-webfetch marker'
+    $grokBytes = [System.IO.File]::ReadAllBytes($grokTarget)
+    Assert-True (-not ($grokBytes.Length -ge 3 -and $grokBytes[0] -eq 0xEF -and $grokBytes[1] -eq 0xBB -and $grokBytes[2] -eq 0xBF)) 'Grok config.toml must be written without UTF-8 BOM'
+
+    $grokBrowserRendered = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $testRepository 'tool-configs\mcp\rendered\browser\grok.mcp.toml')
+    Assert-Contains $grokBrowserRendered '[mcp_servers.playwright]' 'Grok browser rendered fragment missing playwright'
+    Assert-Contains $grokBrowserRendered '--headless' 'Grok playwright rendered fragment must default to headless'
+    Assert-Contains $grokBrowserRendered 'startup_timeout_sec' 'Grok rendered fragment must use startup_timeout_sec'
 
     $legacyHeaderHome = Join-Path $tempRoot 'legacy-header-home'
     New-Item -ItemType Directory -Force -Path $legacyHeaderHome | Out-Null
@@ -599,19 +618,17 @@ args = []
     New-Item -ItemType Directory -Force -Path $preflightMergeHome | Out-Null
     Initialize-TestRuntimeEntries $preflightMergeHome
     $preflightMergeTarget = Join-Path $preflightMergeHome '.claude.json'
-    $resolvedPencilCommand = (Resolve-Path -LiteralPath $pencilCommand).Path.Replace('\', '\\')
-    $beforePreflightJson = @"
+    $beforePreflightJson = @'
 {
   "theme": "before-preflight",
   "mcpServers": {
-    "pencil": {
-      "type": "stdio",
-      "command": "$resolvedPencilCommand",
-      "args": ["--app", "visual_studio_code", "--agent", "claudeCode"]
+    "custom": {
+      "command": "custom-command",
+      "args": []
     }
   }
 }
-"@
+'@
     $duringPreflightJson = $beforePreflightJson.Replace('before-preflight', 'changed-during-preflight')
     $preflightMutationSource = Join-Path $tempRoot 'preflight-mutation.json'
     Write-Utf8NoBom $preflightMergeTarget $beforePreflightJson
@@ -621,29 +638,9 @@ args = []
 
     & (Join-Path $testRepository 'scripts\sync-mcp.ps1') -Apply -ClaudeCode -UserHome $preflightMergeHome | Out-Null
     $preflightMergedConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $preflightMergeTarget | ConvertFrom-Json
-    Assert-Equal 'changed-during-preflight' $preflightMergedConfig.theme 'MCP planning did not re-read a target changed during preflight'
-
-    $rollbackHome = Join-Path $tempRoot 'rollback-home'
-    New-Item -ItemType Directory -Force -Path $rollbackHome | Out-Null
-    Initialize-TestRuntimeEntries $rollbackHome
-    $rollbackClaudeTarget = Join-Path $rollbackHome '.claude.json'
-    $rollbackCodexTarget = Join-Path $rollbackHome '.codex\config.toml'
-    $initialClaude = Get-InitialClaudeConfig
-    $initialCodex = Get-InitialCodexConfig
-    Write-Utf8NoBom $rollbackClaudeTarget $initialClaude
-    Write-Utf8NoBom $rollbackCodexTarget $initialCodex
-
-    $mcpFailed = $false
-    try {
-        & (Join-Path $testRepository 'scripts\sync-mcp.ps1') -Apply -Profile design -UserHome $rollbackHome -ClaudeCommand (Join-Path $FixtureRoot 'fake-claude-fail.cmd') | Out-Null
-    }
-    catch {
-        $mcpFailed = $true
-        Assert-Contains $_.Exception.Message 'exit code 23' 'Claude CLI failure did not preserve the original error'
-    }
-    Assert-True $mcpFailed 'Claude CLI failure must fail the MCP transaction'
-    Assert-Equal $initialClaude (Get-Content -Raw -Encoding UTF8 -LiteralPath $rollbackClaudeTarget) 'Claude MCP config was not rolled back after Pencil registration failed'
-    Assert-Equal $initialCodex (Get-Content -Raw -Encoding UTF8 -LiteralPath $rollbackCodexTarget) 'Codex MCP config was not rolled back after Pencil registration failed'
+    Assert-equal 'changed-during-preflight' $preflightMergedConfig.theme 'MCP planning did not re-read a target changed during preflight'
+    Assert-True ($null -ne $preflightMergedConfig.mcpServers.'local-webfetch') 'Preflight merge missing local-webfetch'
+    Assert-True ($null -eq $preflightMergedConfig.mcpServers.pencil) 'Preflight merge should not introduce pencil'
 
     $raceRepository = New-TestRepository (Join-Path $tempRoot 'race-repository')
     $raceDeploy = Join-Path $raceRepository 'scripts\lib\deploy.ps1'
@@ -714,9 +711,6 @@ function Copy-AiConfigHubStagedFile {
 finally {
     $env:AI_CONFIG_HUB_TEST_ALLOWED_HOME_ROOT = $savedEnvironment.AllowedHomeRoot
     $env:AI_CONFIG_HUB_TEST_PREFLIGHT_LOG = $savedEnvironment.PreflightLog
-    $env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND = $savedEnvironment.PencilCommand
-    $env:AI_CONFIG_HUB_PENCIL_MCP_APP = $savedEnvironment.PencilApp
-    $env:AI_CONFIG_HUB_TEST_CLAUDE_LOG = $savedEnvironment.ClaudeLog
     $env:AI_CONFIG_HUB_TEST_CONCURRENT_TARGET = $savedEnvironment.ConcurrentTarget
     $env:AI_CONFIG_HUB_TEST_PREFLIGHT_MUTATION_TARGET = $savedEnvironment.PreflightMutationTarget
     $env:AI_CONFIG_HUB_TEST_PREFLIGHT_MUTATION_SOURCE = $savedEnvironment.PreflightMutationSource

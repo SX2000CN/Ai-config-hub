@@ -1,44 +1,5 @@
 $ErrorActionPreference = 'Stop'
 
-function Add-AiConfigHubPencilCandidate {
-    param([System.Collections.Generic.List[object]]$Candidates, [string]$Path, [string]$App, [string]$Source)
-    if ([string]::IsNullOrWhiteSpace($Path) -or [string]::IsNullOrWhiteSpace($App)) { return }
-    $Candidates.Add([pscustomobject]@{ Path = $Path; App = $App; Source = $Source }) | Out-Null
-}
-
-function Get-AiConfigHubPencilMcpCandidates {
-    param([string]$UserHome)
-    $candidates = New-Object System.Collections.Generic.List[object]
-    $resolvedUserHome = if ([string]::IsNullOrWhiteSpace($UserHome)) { [Environment]::GetFolderPath('UserProfile') } else { [System.IO.Path]::GetFullPath($UserHome) }
-    if (-not [string]::IsNullOrWhiteSpace($env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND)) {
-        $app = if ([string]::IsNullOrWhiteSpace($env:AI_CONFIG_HUB_PENCIL_MCP_APP)) { 'visual_studio_code' } else { $env:AI_CONFIG_HUB_PENCIL_MCP_APP }
-        Add-AiConfigHubPencilCandidate $candidates $env:AI_CONFIG_HUB_PENCIL_MCP_COMMAND $app 'AI_CONFIG_HUB_PENCIL_MCP_COMMAND'
-    }
-    $pencilMcpRoot = Join-Path $resolvedUserHome '.pencil\mcp'
-    foreach ($app in @('visual_studio_code', 'cursor', 'windsurf')) {
-        Add-AiConfigHubPencilCandidate $candidates (Join-Path $pencilMcpRoot "$app\out\mcp-server-windows-x64.exe") $app "Pencil $app MCP cache"
-    }
-    if (Test-Path -LiteralPath $pencilMcpRoot) {
-        Get-ChildItem -LiteralPath $pencilMcpRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            if ($_.Name -ne 'desktop') { Add-AiConfigHubPencilCandidate $candidates (Join-Path $_.FullName 'out\mcp-server-windows-x64.exe') $_.Name "Pencil $($_.Name) MCP cache" }
-        }
-    }
-    $seen = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($candidate in $candidates) {
-        if ($seen.Add("$($candidate.Path)|$($candidate.App)")) { $candidate }
-    }
-}
-
-function Resolve-AiConfigHubPencilMcpServer {
-    param([string]$UserHome)
-    foreach ($candidate in Get-AiConfigHubPencilMcpCandidates $UserHome) {
-        if (Test-Path -LiteralPath $candidate.Path -PathType Leaf) {
-            return [pscustomobject]@{ Command = (Resolve-Path -LiteralPath $candidate.Path).Path; App = $candidate.App; Source = $candidate.Source; StartupTimeoutMs = 20000 }
-        }
-    }
-    return $null
-}
-
 function Get-AiConfigHubMcpPropertyNames($Object) {
     if ($null -eq $Object) { return @() }
     return @($Object.PSObject.Properties | ForEach-Object { $_.Name })
@@ -390,14 +351,13 @@ function Get-AiConfigHubMcpReadiness {
     }
 
     foreach ($localServerName in @($Profile.LocalServers)) {
-        $pencil = if ([string]$localServerName -eq 'pencil') { Resolve-AiConfigHubPencilMcpServer $UserHome } else { $null }
         $items.Add([pscustomobject]@{
-            Kind = 'local'; Definition = [string]$localServerName; Name = [string]$localServerName; Ready = ($null -ne $pencil); Optional = $true
+            Kind = 'local'; Definition = [string]$localServerName; Name = [string]$localServerName; Ready = $false; Optional = $true
             Package = ''; ExpectedVersion = ''; SourceVersion = $null; InstalledVersion = $null; SourceHash = $null; InstalledHash = $null
-            Drift = $null; DriftReason = 'local plugin is outside managed runtime comparison'; Runtime = 'local-plugin'; SourcePath = ''
-            InstalledPath = $(if ($null -eq $pencil) { '' } else { [string]$pencil.Command }); ActivePath = $(if ($null -eq $pencil) { '' } else { [string]$pencil.Command })
-            PreferredFor = @('visual-design'); ExpectedToolCount = $null; ActualToolCount = $null; ToolCountReason = 'local plugin tool count is not probed'
-            Tools = @(); Reason = $(if ($null -eq $pencil) { 'Pencil MCP server was not found locally' } else { "discovered from $($pencil.Source)" })
+            Drift = $null; DriftReason = 'local plugin discovery is not configured'; Runtime = 'local-plugin'; SourcePath = ''
+            InstalledPath = ''; ActivePath = ''
+            PreferredFor = @(); ExpectedToolCount = $null; ActualToolCount = $null; ToolCountReason = 'local plugin tool count is not probed'
+            Tools = @(); Reason = "local server '$localServerName' has no discovery provider (retired or unsupported)"
         }) | Out-Null
     }
 

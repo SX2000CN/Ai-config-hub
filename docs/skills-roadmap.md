@@ -1,8 +1,8 @@
 # Skills 路线图
 
-`skills/` 目录是这套 AI 配置的可复用能力层，不只是可分发文件包。它把项目中枢、前端设计、思维扩展、脉络关系和 Pencil 设计先行等专门工作流沉淀为 AI 可按需触发的能力。
+`skills/` 目录是这套 AI 配置的可复用能力层，不只是可分发文件包。它把项目中枢、前端设计、思维扩展和脉络关系等专门工作流沉淀为 AI 可按需触发的能力。
 
-当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread` 和 `pencil-design-workflow` 的源码化、渲染、检查和 dry-run 同步流程。
+当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread` 的源码化、渲染、检查和 dry-run 同步流程。`pencil-design-workflow` 已退役：由 frontend 的 UI brief 路径承接设计先行，sync-skills 会删除托管副本。
 
 `project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
 
@@ -62,13 +62,10 @@
   - rendered 包：`skills/rendered/`
   - 约束：简单问答和普通局部任务不自动初始化索引、不创建任务卡；context-thread 只负责代码结构关系，非代码复杂工作流由任务卡关系索引承接。
 
-- `pencil-design-workflow`
-  - 定位：Pencil / `.pen` 设计先行工具路由 skill；默认使用当前会话可见的 VS Code / Cursor 插件 MCP，只有用户明确要求后台、无头、批量或不看过程时才读取 CLI/headless 细节。
-  - 共享源：`skills/shared/pencil-design-workflow/`
-  - Claude Code 入口源：`skills/claude-code/pencil-design-workflow/SKILL.md`
-  - Codex 入口源：`skills/codex/pencil-design-workflow/SKILL.md`
-  - rendered 包：`skills/rendered/`
-  - 约束：不抢已有设计直接实现或局部 UI bugfix；插件 MCP 不可用时必须停下说明，不得静默切换 Desktop/CLI；确认后携带 `.pen` 和可见证据 handoff 给前端实现。
+- ~~`pencil-design-workflow`~~（已退役）
+  - 原定位：Pencil 设计先行工具路由。
+  - 替代：`global-frontend-design` 的设计先行 / UI brief 路径。
+  - 清理：`Skills.Retired` + `sync-skills.ps1 -Apply` 删除用户级托管目录；项目内入口由 `project-ai-config-hub` audit+repair 清理。
 
 ## 路由契约
 

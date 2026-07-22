@@ -24,6 +24,9 @@ Assert-Equal 'local-webfetch' ((Get-AiConfigHubMcpProfile $manifest 'core').Serv
 Assert-Equal 'local-webfetch,chrome-devtools' ((Get-AiConfigHubMcpProfile $manifest 'browser-debug').Servers -join ',') 'browser-debug must remain minimal'
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\claude-code.mcp.json') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'ClaudeCode' 'core') 'core Claude rendered path changed'
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\codex.mcp.toml') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'Codex' 'core') 'core Codex rendered path changed'
+Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\grok.mcp.toml') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'Grok' 'core') 'core Grok rendered path changed'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -contains 'Grok') 'local-webfetch must target Grok'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'playwright').Targets -contains 'Grok') 'playwright must target Grok'
 
 & (Join-Path $Root 'scripts\render-mcp.ps1') -Check | Out-Null
 & (Join-Path $Root 'scripts\check-mcp.ps1') | Out-Null
@@ -47,10 +50,11 @@ try {
     SchemaVersion = 1
     Skills = @{ Names = @('demo'); Definitions = @(@{ Name = 'demo'; Role = 'domain' }); Targets = @() }
     Mcp = @{
-        Groups = @(@{ Name = 'legacy'; Source = 'tool-configs\mcp\shared\legacy.json'; Targets = @('ClaudeCode', 'Codex'); LegacyServers = @() })
+        Groups = @(@{ Name = 'legacy'; Source = 'tool-configs\mcp\shared\legacy.json'; Targets = @('ClaudeCode', 'Codex', 'Grok'); LegacyServers = @() })
         Targets = @(
             @{ Name = 'ClaudeCode'; Rendered = 'tool-configs\mcp\rendered\claude-code.mcp.json'; UserRelativePath = '.claude.json' }
             @{ Name = 'Codex'; Rendered = 'tool-configs\mcp\rendered\codex.mcp.toml'; UserRelativePath = '.codex\config.toml' }
+            @{ Name = 'Grok'; Rendered = 'tool-configs\mcp\rendered\grok.mcp.toml'; UserRelativePath = '.grok\config.toml' }
         )
         LocalServers = @()
     }

@@ -6,7 +6,15 @@
       "prompt": "修复并同步这个项目的 AI 配置中枢。",
       "primary": "project-ai-config-hub",
       "allowedSecondary": [],
-      "forbidden": ["global-frontend-design", "pencil-design-workflow"]
+      "forbidden": ["global-frontend-design"]
+    },
+    {
+      "id": "ai-config-update-project",
+      "prompt": "更新项目 AI 配置。",
+      "primary": "project-ai-config-hub",
+      "allowedSecondary": [],
+      "forbidden": ["global-frontend-design"],
+      "notes": "defaults to audit+repair including CURRENT hygiene"
     },
     {
       "id": "ai-config-brainstorm",
@@ -34,21 +42,22 @@
       "prompt": "实现一个新的运营仪表盘，包含完整状态和响应式布局。",
       "primary": "global-frontend-design",
       "allowedSecondary": [],
-      "forbidden": ["pencil-design-workflow"]
+      "forbidden": []
     },
     {
-      "id": "pencil-first",
-      "prompt": "先用 Pencil 做出可见设计稿，确认后再写前端。",
-      "primary": "pencil-design-workflow",
-      "allowedSecondary": ["global-frontend-design"],
-      "forbidden": []
+      "id": "frontend-design-brief-first",
+      "prompt": "先出设计方案确认后再写前端。",
+      "primary": "global-frontend-design",
+      "allowedSecondary": [],
+      "forbidden": [],
+      "notes": "use ui-brief lite path; no Pencil"
     },
     {
       "id": "local-ui-fix",
       "prompt": "修复按钮文字溢出并跑最小验证。",
       "primary": null,
       "allowedSecondary": [],
-      "forbidden": ["global-frontend-design", "pencil-design-workflow", "global-thinking-partner"]
+      "forbidden": ["global-frontend-design", "global-thinking-partner"]
     },
     {
       "id": "plain-status-read",

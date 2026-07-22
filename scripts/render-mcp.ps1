@@ -170,16 +170,49 @@ foreach ($profileName in $profileNames) {
     $codexToml = if ($codexLines.Count -eq 0) { "# ai-config-hub managed mcp profile: $profileName (no Codex servers)`n" } else { ($codexLines -join "`n") + "`n" }
     $codexOutput = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Codex' $profileName
 
+    $grokLines = New-Object System.Collections.Generic.List[string]
+    foreach ($definition in Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'Grok') {
+        $source = $sourceByDefinition[[string]$definition.Name]
+        if ($grokLines.Count -gt 0) { $grokLines.Add('') }
+        $grokLines.Add("# >>> ai-config-hub managed mcp: $($definition.Name)")
+        foreach ($serverName in Get-PropertyNames $source.servers) {
+            $server = $source.servers.$serverName
+            $args = @(Get-ServerArgs $server)
+            # Grok Playwright defaults to headless; Claude/Codex keep shared source behavior.
+            if ($serverName -eq 'playwright' -and ($args -notcontains '--headless')) {
+                $args = @($args) + @('--headless')
+            }
+            $startupSec = 20
+            if ($null -ne $server.startup_timeout_ms) {
+                $startupSec = [Math]::Max(20, [int][Math]::Ceiling(([double]$server.startup_timeout_ms) / 1000.0))
+            }
+            $grokLines.Add('')
+            $grokLines.Add("[mcp_servers.$serverName]")
+            $grokLines.Add('command = ' + (Format-TomlString ([string]$server.command)))
+            $quotedArgs = $args | ForEach-Object { Format-TomlString $_ }
+            $grokLines.Add('args = [' + ($quotedArgs -join ', ') + ']')
+            $grokLines.Add('enabled = true')
+            $grokLines.Add("startup_timeout_sec = $startupSec")
+        }
+        $grokLines.Add('')
+        $grokLines.Add("# <<< ai-config-hub managed mcp: $($definition.Name)")
+    }
+    $grokToml = if ($grokLines.Count -eq 0) { "# ai-config-hub managed mcp profile: $profileName (no Grok servers)`n" } else { ($grokLines -join "`n") + "`n" }
+    $grokOutput = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Grok' $profileName
+
     if ($Check) {
         $results.Add((Test-ExpectedOutput $claudeOutput $claudeJson)) | Out-Null
         $results.Add((Test-ExpectedOutput $codexOutput $codexToml)) | Out-Null
+        $results.Add((Test-ExpectedOutput $grokOutput $grokToml)) | Out-Null
     }
     else {
         Write-Text $claudeOutput $claudeJson
         Write-Text $codexOutput $codexToml
+        Write-Text $grokOutput $grokToml
         Write-Output "Rendered MCP profile $profileName`:"
         Write-Output "- $claudeOutput"
         Write-Output "- $codexOutput"
+        Write-Output "- $grokOutput"
     }
 }
 

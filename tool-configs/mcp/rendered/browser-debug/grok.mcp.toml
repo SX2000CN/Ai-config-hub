@@ -1,0 +1,19 @@
+# >>> ai-config-hub managed mcp: local-webfetch
+
+[mcp_servers.local-webfetch]
+command = "node"
+args = ["~\\.ai-config-hub\\mcp\\local-webfetch\\index.js"]
+enabled = true
+startup_timeout_sec = 20
+
+# <<< ai-config-hub managed mcp: local-webfetch
+
+# >>> ai-config-hub managed mcp: chrome-devtools
+
+[mcp_servers.chrome-devtools]
+command = "node"
+args = ["~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js", "chrome-devtools", "--no-performance-crux", "--no-usage-statistics"]
+enabled = true
+startup_timeout_sec = 20
+
+# <<< ai-config-hub managed mcp: chrome-devtools

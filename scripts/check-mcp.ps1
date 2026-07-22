@@ -129,11 +129,14 @@ foreach ($profileName in $profileNames) {
     $profileDefinition = Get-AiConfigHubMcpProfile $Manifest $profileName
     $claudeDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'ClaudeCode')
     $codexDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'Codex')
+    $grokDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'Grok')
     $expectedClaudeServers = @($claudeDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
     $expectedCodexServers = @($codexDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
+    $expectedGrokServers = @($grokDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
 
     $claudePath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'ClaudeCode' $profileName
     $codexPath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Codex' $profileName
+    $grokPath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Grok' $profileName
     try {
         $claude = Get-Content -Raw -Encoding UTF8 -LiteralPath $claudePath | ConvertFrom-Json
         $topLevelNames = @(Get-PropertyNames $claude)
@@ -159,6 +162,33 @@ foreach ($profileName in $profileNames) {
     }
     if ($codexContent -match '(?i)@latest') { Fail "Codex profile $profileName must not contain @latest" }
     if (-not $IsNormalizedV1 -and $codexContent -match '(?i)\bnpx(?:\.cmd)?\b') { Fail "Codex profile $profileName must not contain npx" }
+
+    $grokContent = [string](Get-Content -Raw -Encoding UTF8 -LiteralPath $grokPath)
+    foreach ($definition in $grokDefinitions) {
+        $definitionName = [string]$definition.Name
+        foreach ($marker in @("# >>> ai-config-hub managed mcp: $definitionName", "# <<< ai-config-hub managed mcp: $definitionName")) {
+            if (-not $grokContent.Contains($marker)) { Fail "Missing Grok profile $profileName marker: $marker" }
+        }
+        foreach ($serverName in @($sourceServerNamesByDefinition[$definitionName])) {
+            if ([regex]::Matches($grokContent, "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\]$").Count -ne 1) { Fail "Grok profile $profileName must contain one server section for $serverName" }
+            if (-not ($grokContent -match "(?ms)\[mcp_servers\.$([regex]::Escape($serverName))\].*?startup_timeout_sec\s*=")) {
+                Fail "Grok profile $profileName must set startup_timeout_sec for $serverName"
+            }
+            if ($serverName -eq 'playwright' -and $grokContent -notmatch '--headless') {
+                Fail "Grok profile $profileName playwright must default to --headless"
+            }
+        }
+    }
+    foreach ($name in @($sourceServerNamesByDefinition.Values | ForEach-Object { $_ })) {
+        if ($expectedGrokServers -notcontains $name -and $grokContent -match "(?m)^\[mcp_servers\.$([regex]::Escape($name))\]$") { Fail "Unexpected Grok profile $profileName server: $name" }
+    }
+    if ($grokContent -match '(?i)@latest') { Fail "Grok profile $profileName must not contain @latest" }
+    if (-not $IsNormalizedV1 -and $grokContent -match '(?i)\bnpx(?:\.cmd)?\b') { Fail "Grok profile $profileName must not contain npx" }
+    # Grok rendered fragments must be UTF-8 without BOM
+    $grokBytes = [System.IO.File]::ReadAllBytes($grokPath)
+    if ($grokBytes.Length -ge 3 -and $grokBytes[0] -eq 0xEF -and $grokBytes[1] -eq 0xBB -and $grokBytes[2] -eq 0xBF) {
+        Fail "Grok profile $profileName rendered TOML must not contain UTF-8 BOM"
+    }
 }
 
 $scanFiles = Get-AiConfigHubScanFiles -Paths @(
@@ -176,10 +206,6 @@ foreach ($file in $scanFiles) {
     if ($file.FullName.StartsWith((Join-Path $Root 'tool-configs'), [StringComparison]::OrdinalIgnoreCase) -and $content -match '\{\{[^}]+\}\}') { Fail "Unresolved template placeholder in $($file.FullName)" }
 }
 Test-AiConfigHubSensitiveContent -Files $scanFiles -Fail ${function:Fail}
-
-$pencilServer = Resolve-AiConfigHubPencilMcpServer
-if ($null -eq $pencilServer) { Write-Warning 'Pencil plugin MCP server was not found locally; design/full profiles will report it as degraded.' }
-else { Write-Output "Pencil MCP candidate: $($pencilServer.Command) --app $($pencilServer.App)" }
 
 if ($Failed) { exit 1 }
 Write-Output 'MCP check passed'

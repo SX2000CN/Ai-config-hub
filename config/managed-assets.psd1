@@ -20,6 +20,14 @@
                 Rendered = 'rules\rendered\AGENTS.md'
                 UserRelativePath = '.codex\AGENTS.md'
             }
+            @{
+                Name = 'Grok'
+                Template = 'templates\grok-AGENTS.md.tpl'
+                Supplement = 'rules\tools\grok.md'
+                Placeholder = '{{grok_supplement}}'
+                Rendered = 'rules\rendered\grok-AGENTS.md'
+                UserRelativePath = '.grok\AGENTS.md'
+            }
         )
     }
 
@@ -29,6 +37,9 @@
             'global-frontend-design'
             'global-thinking-partner'
             'global-context-thread'
+        )
+        # Managed skill directories that must be removed from user targets on sync-skills -Apply.
+        Retired = @(
             'pencil-design-workflow'
         )
         Definitions = @(
@@ -46,7 +57,7 @@
                 Activation = 'deliverable'
                 ExclusiveWith = @()
                 HandoffTo = @()
-                Exclusions = @('pencil-design-first', 'local-style-fix', 'backend-only')
+                Exclusions = @('local-style-fix', 'backend-only')
             }
             @{
                 Name = 'global-thinking-partner'
@@ -63,14 +74,6 @@
                 ExclusiveWith = @()
                 HandoffTo = @('project-ai-config-hub')
                 Exclusions = @('single-file-task', 'plain-status-analysis', 'stale-index')
-            }
-            @{
-                Name = 'pencil-design-workflow'
-                Role = 'tool-router'
-                Activation = 'explicit-design-first'
-                ExclusiveWith = @()
-                HandoffTo = @('global-frontend-design')
-                Exclusions = @('existing-design-implementation', 'local-ui-fix', 'screenshot-only-review')
             }
         )
         Targets = @(
@@ -95,6 +98,13 @@
                 UserRelativeRoot = '.codex\skills'
                 RequireWhenToUse = $false
             }
+            @{
+                Name = 'Grok'
+                SourceRoot = 'skills\grok'
+                RenderedRoot = 'skills\rendered\grok'
+                UserRelativeRoot = '.grok\skills'
+                RequireWhenToUse = $false
+            }
         )
     }
 
@@ -104,7 +114,7 @@
             @{
                 Name = 'local-webfetch'
                 Source = 'tool-configs\mcp\shared\local-webfetch.json'
-                Targets = @('ClaudeCode')
+                Targets = @('ClaudeCode', 'Grok')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Type = 'stdio'; Command = 'node'; Args = @('~\.ai-config-hub\mcp\local-webfetch\index.js'); CodexStyle = 'direct' }
@@ -118,7 +128,7 @@
             @{
                 Name = 'context-thread'
                 Source = 'tool-configs\mcp\shared\context-thread.json'
-                Targets = @('ClaudeCode', 'Codex')
+                Targets = @('ClaudeCode', 'Codex', 'Grok')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Type = 'stdio'; Command = 'node'; Args = @('~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js', 'serve', '--mcp'); CodexStyle = 'direct' }
@@ -133,7 +143,7 @@
             @{
                 Name = 'playwright'
                 Source = 'tool-configs\mcp\shared\playwright.json'
-                Targets = @('ClaudeCode', 'Codex')
+                Targets = @('ClaudeCode', 'Codex', 'Grok')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Command = 'npx'; Args = @('-y', '@playwright/mcp@0.0.78'); StartupTimeoutMs = 20000 }
@@ -143,13 +153,13 @@
                 )
                 RequiresRuntime = 'browser-mcp'
                 Optional = $true
-                PreferredFor = @('browser-automation', 'browser-testing', 'browser-inspection')
+                PreferredFor = @('browser-automation', 'browser-testing', 'ui-verification')
                 Doctor = @{ Mode = 'browser-runtime'; Args = @('--doctor', 'playwright'); ExpectedToolCount = 24 }
             }
             @{
                 Name = 'chrome-devtools'
                 Source = 'tool-configs\mcp\shared\chrome-devtools.json'
-                Targets = @('ClaudeCode', 'Codex')
+                Targets = @('ClaudeCode', 'Codex', 'Grok')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Command = 'npx'; Args = @('-y', 'chrome-devtools-mcp@1.6.0'); StartupTimeoutMs = 20000 }
@@ -159,7 +169,7 @@
                 )
                 RequiresRuntime = 'browser-mcp'
                 Optional = $true
-                PreferredFor = @('browser-debugging', 'performance-analysis', 'browser-inspection')
+                PreferredFor = @('browser-debugging', 'performance-analysis')
                 Doctor = @{ Mode = 'browser-runtime'; Args = @('--doctor', 'chrome-devtools'); ExpectedToolCount = 29 }
             }
         )
@@ -168,8 +178,9 @@
             @{ Name = 'code-intel'; Servers = @('local-webfetch', 'context-thread'); LocalServers = @() }
             @{ Name = 'browser'; Servers = @('local-webfetch', 'playwright'); LocalServers = @() }
             @{ Name = 'browser-debug'; Servers = @('local-webfetch', 'chrome-devtools'); LocalServers = @() }
-            @{ Name = 'design'; Servers = @('local-webfetch'); LocalServers = @('pencil') }
-            @{ Name = 'full'; Servers = @('local-webfetch', 'context-thread', 'playwright', 'chrome-devtools'); LocalServers = @('pencil') }
+            # design is a compatibility alias of core (Pencil design surface retired).
+            @{ Name = 'design'; Servers = @('local-webfetch'); LocalServers = @() }
+            @{ Name = 'full'; Servers = @('local-webfetch', 'context-thread', 'playwright', 'chrome-devtools'); LocalServers = @() }
         )
         Targets = @(
             @{
@@ -196,8 +207,22 @@
                 }
                 UserRelativePath = '.codex\config.toml'
             }
+            @{
+                Name = 'Grok'
+                RenderedByProfile = @{
+                    core = 'tool-configs\mcp\rendered\grok.mcp.toml'
+                    'code-intel' = 'tool-configs\mcp\rendered\code-intel\grok.mcp.toml'
+                    browser = 'tool-configs\mcp\rendered\browser\grok.mcp.toml'
+                    'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\grok.mcp.toml'
+                    design = 'tool-configs\mcp\rendered\design\grok.mcp.toml'
+                    full = 'tool-configs\mcp\rendered\full\grok.mcp.toml'
+                }
+                UserRelativePath = '.grok\config.toml'
+            }
         )
-        LocalServers = @('pencil')
+        LocalServers = @()
+        # Recognizable legacy local MCP names removed on sync-mcp -Apply when ownership matches.
+        RetiredLocalServers = @('pencil')
     }
 
     Runtimes = @(

@@ -130,7 +130,8 @@ function New-AiConfigHubStagedFile {
     if (-not (Test-Path -LiteralPath $parent)) {
         New-Item -ItemType Directory -Force -Path $parent | Out-Null
     }
-    Set-Content -Encoding UTF8 -LiteralPath $path -Value $Content -NoNewline
+    # PowerShell 5.1 Set-Content -Encoding UTF8 writes BOM; Grok/TOML/JSON consumers need no BOM.
+    [System.IO.File]::WriteAllText($path, [string]$Content, (New-Object System.Text.UTF8Encoding($false)))
     return $path
 }
 

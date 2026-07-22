@@ -44,6 +44,39 @@ if ($Apply) {
     Invoke-AiConfigHubPreflight $Root $ResolvedUserHome -IncludeCodexLegacy:$IncludeCodexLegacy
 }
 
+$RetiredSkillNames = @()
+if ($null -ne $Manifest.Skills.Retired) {
+    $RetiredSkillNames = @($Manifest.Skills.Retired | ForEach-Object { [string]$_ })
+}
+
+$Retirements = New-Object System.Collections.Generic.List[object]
+foreach ($definition in $TargetDefinitions) {
+    foreach ($retiredName in $RetiredSkillNames) {
+        $target = Join-Path (Join-Path $ResolvedUserHome ([string]$definition.UserRelativeRoot)) $retiredName
+        Assert-AiConfigHubPathInside $target $ResolvedUserHome "$($definition.Name)-retire-$retiredName" | Out-Null
+        $exists = Test-Path -LiteralPath $target -PathType Container
+        if (-not $exists) {
+            Write-Output "retired absent`t$target"
+            continue
+        }
+        $managed = Test-AiConfigHubManagedSkillTarget $target $retiredName
+        if (-not $managed) {
+            Write-Output "would stop: unmanaged retired target`t$target"
+            if ($Apply) {
+                throw "Refusing to delete unmanaged retired skill target: $target"
+            }
+            continue
+        }
+        Write-Output "would remove retired managed target`t$target"
+        $Retirements.Add([pscustomobject]@{
+            Name = "$($definition.Name)-retire-$retiredName"
+            SkillName = $retiredName
+            Target = $target
+            ExpectedFingerprint = (Get-AiConfigHubPathFingerprint $target)
+        }) | Out-Null
+    }
+}
+
 $Changes = New-Object System.Collections.Generic.List[object]
 foreach ($item in $Targets) {
     if (-not (Test-Path -LiteralPath $item.Source -PathType Container)) {
@@ -104,7 +137,7 @@ if (-not $Apply) {
     return
 }
 
-if ($Changes.Count -eq 0) {
+if ($Changes.Count -eq 0 -and $Retirements.Count -eq 0) {
     Write-Output 'Global skill targets are already up to date.'
     return
 }
@@ -115,6 +148,25 @@ try {
         $staged = Copy-AiConfigHubStagedDirectory $context $item.Name $item.Source
         Install-AiConfigHubStagedDirectory $context $item.Name $staged $item.Target -ExpectedFingerprint $item.ExpectedFingerprint | Out-Null
         Write-Output "Synced: $($item.Source) -> $($item.Target)"
+    }
+    foreach ($item in $Retirements) {
+        $fingerprint = Get-AiConfigHubPathFingerprint $item.Target
+        if ($fingerprint -ne $item.ExpectedFingerprint) {
+            throw "Retired skill target changed while applying; retry the sync: $($item.Target)"
+        }
+        $backup = Join-Path $context.BackupRoot ($item.Name + '.bak')
+        if (Test-Path -LiteralPath $backup) {
+            Remove-Item -LiteralPath $backup -Recurse -Force
+        }
+        [System.IO.Directory]::Move($item.Target, $backup)
+        $context.Changes.Add([pscustomobject]@{
+            Kind = 'Directory'
+            Name = $item.Name
+            Target = $item.Target
+            Backup = $backup
+            Existed = $true
+        }) | Out-Null
+        Write-Output "Removed retired managed skill: $($item.Target)"
     }
     Complete-AiConfigHubOperation $context
 }
