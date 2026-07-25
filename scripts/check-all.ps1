@@ -96,7 +96,23 @@ Test-AiConfigHubSensitiveContent -Files $repositoryScanFiles -Fail {
     throw $Message
 }
 
-& git -C $Root diff --check
-if ($LASTEXITCODE -ne 0) { throw "git diff --check failed with exit code $LASTEXITCODE" }
+# git may write autocrlf LF/CRLF notices to stderr; do not treat those as terminating errors under Stop.
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+try {
+    & git -C $Root diff --check 2>&1 | ForEach-Object {
+        $text = "$_"
+        if ($text -match '^\s*warning:') {
+            Write-Warning ($text -replace '^\s*warning:\s*', '')
+            return
+        }
+        Write-Output $text
+    }
+    $gitDiffCheckExit = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+}
+if ($gitDiffCheckExit -ne 0) { throw "git diff --check failed with exit code $gitDiffCheckExit" }
 
 Write-Output 'All non-mutating render checks, tests, validation, and dry-run steps passed'

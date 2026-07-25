@@ -6,8 +6,11 @@
 
 - 修改文件：
 - 用户可见结果：
+- Design Read：
+- 轨道：product / marketing / hybrid
+- 旋钮：VARIANCE= · MOTION= · DENSITY=
 - 应用的视觉方向：
-- 关键视觉动作：
+- Signature / 关键视觉动作：
 
 ## 文档
 
@@ -21,9 +24,10 @@
 | Typecheck / lint / test / build | 通过 / 失败 / 未运行 |  |
 | 桌面浏览器 | 通过 / 失败 / 未运行 |  |
 | 移动端浏览器 | 通过 / 失败 / 未运行 |  |
-| 视觉方向可见性 | 通过 / 失败 / 未运行 |  |
+| 视觉方向 / signature 可见性 | 通过 / 失败 / 未运行 |  |
 | 可访问性状态 | 通过 / 失败 / 未运行 |  |
 | Loading / empty / error 状态 | 通过 / 失败 / 未运行 |  |
+| 营销 preflight（若适用） | 通过 / 失败 / 未运行 |  |
 | 控制台错误 | 通过 / 失败 / 未运行 |  |
 
 ## 残留风险

@@ -36,12 +36,14 @@
   - 脚本：`scripts/render-skills.ps1`、`scripts/check-skills.ps1`、`scripts/sync-skills.ps1`
 
 - `global-frontend-design`
-  - 定位：全局前端设计 skill，用于创建、重设计或 review 前端界面，强调鲜明视觉方向、产品 UI 工程、可访问性、响应式、状态覆盖和验证。
+  - 定位：顶级全局前端领域 skill；Design Read、product/marketing 双轨、三旋钮（VARIANCE/MOTION/DENSITY）、一个 signature、anti-slop 与产品工程门禁；渐进加载，不依赖 Pencil。
   - 共享源：`skills/shared/global-frontend-design/`
   - Claude Code 入口源：`skills/claude-code/global-frontend-design/SKILL.md`
   - Codex 入口源：`skills/codex/global-frontend-design/SKILL.md`
+  - Grok 入口源：`skills/grok/global-frontend-design/SKILL.md`
   - rendered 包：`skills/rendered/`
-  - 来源归档：`.Ai-config/archive/global-frontend-design-sources/`
+  - 来源归档：`.Ai-config/archive/global-frontend-design-sources/`（方法融合 Anthropic frontend-design、产品 UI 工程源、taste-skill 方法；非上游全文再发布）
+  - 2026-07-24：路线 C 重做共享包（workflow / principles / dials / anti-slop / brief / preflight）
 
 - `global-thinking-partner`
   - 定位：可组合 reasoning mode；显式触发进入多轮协作探索、假设挑战、情景和二阶影响推演，隐式触发只做静默健全性检查。

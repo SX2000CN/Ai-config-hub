@@ -16,19 +16,25 @@
 
 ## 浏览器验证
 
-涉及 UI 修改时，能运行应用就打开浏览器检查目标界面。
+涉及 UI 修改时，能运行应用就打开浏览器检查目标界面。浏览器 MCP 仅在任务需要时启用。
 
 检查：
 
 - 目标路由能渲染。
 - 没有由本次改动导致的控制台错误。
-- 桌面布局。
-- 移动端布局。
-- 相关 hover、focus、disabled、loading、empty、error 状态。
+- 桌面布局与关键断点（至少一处窄屏心检）。
+- 相关 hover、focus、disabled、loading、empty、error 状态（product 侧重）。
 - 文本换行和长内容行为。
-- 主操作路径。
+- 主操作路径可完成。
+- **视觉方向与 signature 在屏幕上真实可见**（不是只写在 brief 里）。
+- 声明了较高 MOTION 时，动效实际存在，且 reduced motion 不致残。
 
 如果无法做浏览器验证，说明原因并列出替代检查。
+
+## 轨道附加
+
+- **product**：状态矩阵与表单/表关键路径；对照 `checklists/state-coverage.md` 按需。
+- **marketing**：对照 `checklists/preflight-marketing.md`；Hero 首屏 CTA、一致性锁、anti-slop 心检。
 
 ## 截图或视觉 review
 
@@ -38,7 +44,8 @@
 - 是否文字重叠。
 - 对比度和可读性。
 - 对齐和间距节奏。
-- 视觉主题是否可见。
+- 视觉主题与 signature 是否可见。
+- 是否像无题材的通用 AI 模板。
 
 ## 最终证据
 

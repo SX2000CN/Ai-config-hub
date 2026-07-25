@@ -77,7 +77,7 @@
 skills 是这套配置的能力模块，不只是可分发包。当前全局能力包括：
 
 - `project-ai-config-hub`：在目标项目中按需创建或升级 `.Ai-config/`、任务卡和项目级 skill 中枢。
-- `global-frontend-design`：处理前端创建、重设计和 review 的设计质量、状态覆盖、响应式和验证。
+- `global-frontend-design`：顶级前端领域 skill；Design Read、product/marketing 双轨、三旋钮、signature 与 anti-slop，并约束状态覆盖、响应式、复用和验证。
 - `global-thinking-partner`：可与领域 skill 组合的 reasoning mode，负责脑暴、假设挑战、情景和二阶影响推演，以及按需决策收敛。
 - `global-context-thread`：在复杂代码关系、配置关系和工作流关系中使用结构化事实源缩小上下文。
 

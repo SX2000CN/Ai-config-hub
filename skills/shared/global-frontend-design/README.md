@@ -1,31 +1,49 @@
 # 全局前端设计 Skill
 
-`global-frontend-design` 是本仓库维护的全局前端设计 skill。它把强视觉方向、产品级 UI 工程、可访问性、响应式、状态覆盖和验证结合起来，用于指导页面、组件、表单、仪表盘、落地页、布局打磨和 UI review。
+`global-frontend-design` 是本仓库维护的**顶级前端领域 skill**：把题材扎根的视觉判断、三旋钮、anti-slop、产品工程门禁、可访问性、响应式、状态覆盖与验证合成一套可渐进加载的工作流。
+
+它服务真实代码库中的页面、组件、表单、仪表盘、落地页、布局打磨与 UI review；**不是**某一家上游 skill 的安装副本。
+
+## 能力摘要
+
+| 能力 | 说明 |
+|---|---|
+| Design Read | 一行读懂类型、受众、语气、轨道 |
+| 双轨 | product（状态/密度/复用）与 marketing（辨识度/anti-slop） |
+| 三旋钮 | VARIANCE / MOTION / DENSITY |
+| 一个 signature | 只在一处承担可辩护美学风险 |
+| 工程门禁 | 复用、不乱加依赖、验证、反触发琐碎修复 |
+| 渐进加载 | 禁止通读全部 references |
 
 ## 包结构
 
-- `SKILL.md`：skill 入口、触发范围和按需读取路由。
-- `workflow.md`：视觉方向优先的端到端工作流。
-- `references/`：按任务加载的深入参考规则。
-- `templates/`：UI brief、实施计划、review 报告和最终汇报模板。
-- `checklists/`：修改前、设计质量、可访问性、状态覆盖、响应式和 review 检查清单。
-- `ATTRIBUTION.md`：来源、归属和许可证边界。
+- `workflow.md`：端到端主流程（必读）
+- `references/design-principles.md`：视觉判断主源
+- `references/design-dials.md`：三旋钮与预设
+- `references/anti-slop.md`：营销/高辨识度防模板
+- `references/product-ui-engineering.md`：产品落地
+- `references/accessibility.md` / `responsive-state-coverage.md` / `verification.md` / `frontend-stack-patterns.md`
+- `templates/ui-brief.md`：设计先行与 full brief
+- `checklists/`：设计质量、营销 preflight、a11y、状态、响应式、review
+- `ATTRIBUTION.md`：来源与许可证边界
+
+## 维护规则
+
+- 改执行顺序 → `workflow.md`
+- 改审美判断 / 题材扎根 / signature → `references/design-principles.md`
+- 改旋钮与预设 → `references/design-dials.md`
+- 改营销防模板 → `references/anti-slop.md`
+- 改产品层级/状态/文案工程 → `references/product-ui-engineering.md`
+- 改归属 → `ATTRIBUTION.md` 与归档目录
+- 工具入口只放在 `skills/{claude-code,codex,grok}/global-frontend-design/SKILL.md`；payload 以本目录为事实源
+- 同步用户级目录前：`render-skills.ps1` → `check-skills.ps1` → `sync-skills.ps1` dry-run；Apply 需用户授权
 
 ## 当前状态
 
-当前目录是这个 skill 的共享事实源和维护稿。原始来源快照、许可证和下载记录归档在：
+共享事实源与维护稿在本目录。历史来源快照说明见：
 
 ```text
 .Ai-config/archive/global-frontend-design-sources/
 ```
 
-这些归档文件用于审计来源，不参与日常 skill 运行。
-
-## 维护规则
-
-- 修改视觉方向、审美判断和“避免泛化 AI UI”时，优先改 `references/design-principles.md`。
-- 修改端到端执行顺序时，优先改 `workflow.md`。
-- 修改产品信息层级、状态、组件边界或文案规则时，优先改 `references/product-ui-engineering.md`。
-- 修改来源归属时，同步检查 `ATTRIBUTION.md` 和归档目录。
-- 如果未来要重新打包或同步到用户级目录，应从本目录复制运行包，不要把 archive 中的原始来源文件混入运行包。
-- 如需公开分发，必须先重新核对上游许可证和条款。
+归档不参与日常 skill 运行。

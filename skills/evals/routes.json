@@ -42,7 +42,16 @@
       "prompt": "实现一个新的运营仪表盘，包含完整状态和响应式布局。",
       "primary": "global-frontend-design",
       "allowedSecondary": [],
-      "forbidden": []
+      "forbidden": [],
+      "notes": "product rail; dials density-high"
+    },
+    {
+      "id": "frontend-marketing-landing",
+      "prompt": "做一页有辨识度的产品落地页，不要 AI 模板脸。",
+      "primary": "global-frontend-design",
+      "allowedSecondary": [],
+      "forbidden": [],
+      "notes": "marketing rail; anti-slop + preflight"
     },
     {
       "id": "frontend-design-brief-first",
@@ -50,7 +59,7 @@
       "primary": "global-frontend-design",
       "allowedSecondary": [],
       "forbidden": [],
-      "notes": "use ui-brief lite path; no Pencil"
+      "notes": "use ui-brief path; Design Read + dials; no Pencil"
     },
     {
       "id": "local-ui-fix",
