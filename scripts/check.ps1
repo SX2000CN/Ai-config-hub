@@ -38,6 +38,9 @@ foreach ($target in $Manifest.Rules.Targets) {
     if ([string]$target.Name -eq 'Codex' -and -not $content.Contains('Codex')) {
         Fail "Missing Codex marker in $file"
     }
+    if ([string]$target.Name -eq 'OpenCode' -and -not $content.Contains('OpenCode')) {
+        Fail "Missing OpenCode marker in $file"
+    }
 }
 
 $currentGuidanceFiles = @(
@@ -68,11 +71,15 @@ foreach ($file in $currentGuidanceFiles) {
 
 $claudeSupplement = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\tools\claude-code.md')
 $codexSupplement = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\tools\codex.md')
+$openCodeSupplement = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\tools\opencode.md')
 if (-not $claudeSupplement.Contains('~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js')) {
     Fail 'Claude context-thread CLI contract is missing its real runtime path'
 }
 if (-not $codexSupplement.Contains('~/.ai-config-hub/mcp/context-thread/dist/bin/context-thread.js')) {
     Fail 'Codex context-thread CLI contract is missing its real runtime path'
+}
+if (-not $openCodeSupplement.Contains('~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js')) {
+    Fail 'OpenCode context-thread CLI contract is missing its real runtime path'
 }
 
 $scanPaths = @(

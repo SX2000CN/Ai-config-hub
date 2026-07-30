@@ -25,7 +25,10 @@ Assert-Equal 'local-webfetch,chrome-devtools' ((Get-AiConfigHubMcpProfile $manif
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\claude-code.mcp.json') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'ClaudeCode' 'core') 'core Claude rendered path changed'
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\codex.mcp.toml') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'Codex' 'core') 'core Codex rendered path changed'
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\grok.mcp.toml') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'Grok' 'core') 'core Grok rendered path changed'
+Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\opencode.mcp.json') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'OpenCode' 'core') 'core OpenCode rendered path changed'
 Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -contains 'Grok') 'local-webfetch must target Grok'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -contains 'OpenCode') 'local-webfetch must target OpenCode'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'context-thread').Targets -contains 'OpenCode') 'context-thread must target OpenCode'
 Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'playwright').Targets -contains 'Grok') 'playwright must target Grok'
 
 & (Join-Path $Root 'scripts\render-mcp.ps1') -Check | Out-Null
@@ -36,6 +39,9 @@ foreach ($profileName in Get-AiConfigHubMcpProfileNames $manifest) {
     $output = & (Join-Path $Root 'scripts\sync-mcp.ps1') -Profile $profileName -UserHome $dryRunHome 2>&1 | Out-String
     Assert-True $output.Contains("profile`t$profileName") "sync-mcp dry-run did not select profile $profileName"
     Assert-True $output.Contains('Dry run only') "sync-mcp profile $profileName unexpectedly attempted Apply"
+    $openCodeOutput = & (Join-Path $Root 'scripts\sync-opencode-mcp.ps1') -Profile $profileName -UserHome $dryRunHome 2>&1 | Out-String
+    Assert-True $openCodeOutput.Contains("profile`t$profileName") "sync-opencode-mcp dry-run did not select profile $profileName"
+    Assert-True $openCodeOutput.Contains('Dry run only') "sync-opencode-mcp profile $profileName unexpectedly attempted Apply"
 }
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('ai-config-hub-mcp-v1-' + [Guid]::NewGuid().ToString('N'))

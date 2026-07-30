@@ -98,6 +98,20 @@ function Format-TomlString($Value) {
     return '"' + ([string]$Value).Replace('\', '\\').Replace('"', '\"') + '"'
 }
 
+function New-OpenCodeServerEntry($Server) {
+    $command = @([string]$Server.command) + @(Get-ServerArgs $Server)
+    $timeout = 30000
+    if ($null -ne $Server.startup_timeout_ms) {
+        $timeout = [Math]::Max(30000, [int]$Server.startup_timeout_ms)
+    }
+    return [ordered]@{
+        type = 'local'
+        command = @($command)
+        enabled = $true
+        timeout = $timeout
+    }
+}
+
 function Test-ExpectedOutput($Path, $Expected) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         return [pscustomobject]@{ Matches = $false; Message = "ERROR: Missing rendered MCP target: $Path" }
@@ -114,6 +128,7 @@ $sourceByDefinition = @{}
 foreach ($definition in @($Manifest.Mcp.Servers)) {
     $sourceByDefinition[[string]$definition.Name] = Read-McpSource $definition
 }
+$openCodeTarget = $Manifest.Mcp.Targets | Where-Object { [string]$_.Name -eq 'OpenCode' } | Select-Object -First 1
 
 $profileNames = if ($null -eq $Profile -or $Profile.Count -eq 0) {
     Get-AiConfigHubMcpProfileNames $Manifest
@@ -200,19 +215,45 @@ foreach ($profileName in $profileNames) {
     $grokToml = if ($grokLines.Count -eq 0) { "# ai-config-hub managed mcp profile: $profileName (no Grok servers)`n" } else { ($grokLines -join "`n") + "`n" }
     $grokOutput = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Grok' $profileName
 
+    $openCodeJson = $null
+    $openCodeOutput = $null
+    if ($null -ne $openCodeTarget) {
+        $openCodeServers = [ordered]@{}
+        foreach ($definition in Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'OpenCode') {
+            $source = $sourceByDefinition[[string]$definition.Name]
+            foreach ($serverName in Get-PropertyNames $source.servers) {
+                if ($openCodeServers.Contains($serverName)) {
+                    throw "Duplicate OpenCode MCP server in profile $profileName`: $serverName"
+                }
+                $openCodeServers[$serverName] = New-OpenCodeServerEntry $source.servers.$serverName
+            }
+        }
+        $openCodeJson = ([ordered]@{ mcp = $openCodeServers } | ConvertTo-Json -Depth 12) + "`n"
+        $openCodeOutput = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'OpenCode' $profileName
+    }
+
     if ($Check) {
         $results.Add((Test-ExpectedOutput $claudeOutput $claudeJson)) | Out-Null
         $results.Add((Test-ExpectedOutput $codexOutput $codexToml)) | Out-Null
         $results.Add((Test-ExpectedOutput $grokOutput $grokToml)) | Out-Null
+        if ($null -ne $openCodeTarget) {
+            $results.Add((Test-ExpectedOutput $openCodeOutput $openCodeJson)) | Out-Null
+        }
     }
     else {
         Write-Text $claudeOutput $claudeJson
         Write-Text $codexOutput $codexToml
         Write-Text $grokOutput $grokToml
+        if ($null -ne $openCodeTarget) {
+            Write-Text $openCodeOutput $openCodeJson
+        }
         Write-Output "Rendered MCP profile $profileName`:"
         Write-Output "- $claudeOutput"
         Write-Output "- $codexOutput"
         Write-Output "- $grokOutput"
+        if ($null -ne $openCodeTarget) {
+            Write-Output "- $openCodeOutput"
+        }
     }
 }
 

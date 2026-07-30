@@ -1,6 +1,6 @@
 # Anti-slop（营销与高辨识度界面）
 
-在 **marketing** 轨道、品牌页、落地页、作品集、或用户明确要求「不要 AI 味 / 要有设计感」时加载。  
+在 **marketing** 轨道、品牌页、落地页、作品集、或用户明确要求「不要 AI 味 / 要有设计感」时加载。
 **产品轨道不要整份照搬**：仪表盘与密集表单以 [product-ui-engineering.md](product-ui-engineering.md) 为准；此处仅在产品壳需要品牌感时点状借鉴。
 
 本文件吸收公开审美 skill 的方法（Design Read、防默认、一致性锁、出货闸门），用本仓库语言重写；**不是**任何上游全文再发布，也不强制其技术栈（React/Next/GSAP/特定图标库等）。
@@ -79,9 +79,9 @@
 
 完整勾选见 [../checklists/preflight-marketing.md](../checklists/preflight-marketing.md)。心检：
 
-1. Design Read + 旋钮 + signature 已声明且与页面一致  
-2. 三把一致性锁通过  
-3. Hero 纪律与 eyebrow 配额通过  
-4. 无默认脸黑名单项  
-5. 动效有动机且 reduced motion 有路径  
-6. 真内容、真对比度、可点击主路径  
+1. Design Read + 旋钮 + signature 已声明且与页面一致
+2. 三把一致性锁通过
+3. Hero 纪律与 eyebrow 配额通过
+4. 无默认脸黑名单项
+5. 动效有动机且 reduced motion 有路径
+6. 真内容、真对比度、可点击主路径

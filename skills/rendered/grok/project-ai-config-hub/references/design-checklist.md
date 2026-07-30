@@ -27,6 +27,7 @@
 - `.claude/skills/<skill-name>/SKILL.md` 只是 Claude Code 工具入口。
 - `.agents/skills/<skill-name>/SKILL.md` 只是 Codex 工具入口。
 - `.grok/skills/<skill-name>/SKILL.md` 只是 Grok Build 工具入口。
+- `.opencode/skills/<skill-name>/SKILL.md` 只是 OpenCode 工具入口。
 - `.codex/skills/<skill-name>/SKILL.md` 只在需要兼容时存在。
 - 工具入口明确列出 `.Ai-config/skills/<skill-name>/` canonical 事实源路径和必读文件。
 
@@ -64,7 +65,7 @@
 - frontmatter 有稳定 `name` 和清晰 `description`。
 - 工具入口指向的 `.Ai-config/skills/<skill-name>/` canonical 事实源真实存在。
 - 不存在多个互相冲突的事实源；非 canonical 完整规则已标记为迁移来源、支持性引用或兼容入口。
-- `.Ai-config/skills-registry.md` 的事实源列指向 `.Ai-config/skills/<skill-name>/`；普通目标项目不得把 README、docs、`.claude/skills`、`.agents/skills`、`.grok/skills` 或 `.codex/skills` 登记为长期事实源。
+- `.Ai-config/skills-registry.md` 的事实源列指向 `.Ai-config/skills/<skill-name>/`；普通目标项目不得把 README、docs、`.claude/skills`、`.agents/skills`、`.grok/skills`、`.opencode/skills` 或 `.codex/skills` 登记为长期事实源。
 - `.Ai-config/CURRENT.md` 已按需创建或刷新；若没有创建，原因是任务没有持续接手价值。
 - `.Ai-config/tasks/README.md` 已按需创建。
 - `.Ai-config/tasks/*.md` 已按需创建或迁移，且可让后续 AI 无损接手。

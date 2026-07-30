@@ -62,6 +62,7 @@ function New-TestRepository($Path) {
         'rules\rendered\CLAUDE.md',
         'rules\rendered\AGENTS.md',
         'rules\rendered\grok-AGENTS.md',
+        'rules\rendered\opencode-AGENTS.md',
         'skills\rendered',
         'tool-configs\mcp\rendered',
         'tool-configs\mcp\shared',
@@ -72,7 +73,8 @@ function New-TestRepository($Path) {
         'scripts\mcp-local.ps1',
         'scripts\sync.ps1',
         'scripts\sync-skills.ps1',
-        'scripts\sync-mcp.ps1'
+        'scripts\sync-mcp.ps1',
+        'scripts\sync-opencode-mcp.ps1'
     )) {
         Copy-TestItem $Path $relativePath
     }
@@ -146,6 +148,29 @@ args = []
 [mcp_servers.pencil]
 command = "C:\\Program Files\\Pencil\\resources\\app.asar.unpacked\\out\\mcp-server-windows-x64.exe"
 args = ["--app", "desktop", "--agent", "grok"]
+'@
+}
+
+function Get-InitialOpenCodeConfig {
+    return @'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "preserve-me",
+  "mcp": {
+    "custom": {
+      "type": "local",
+      "command": ["custom-command"],
+      "enabled": true,
+      "timeout": 30000
+    },
+    "pencil": {
+      "type": "local",
+      "command": ["C:\\Program Files\\Pencil\\resources\\app.asar.unpacked\\out\\mcp-server-windows-x64.exe", "--app", "desktop"],
+      "enabled": true,
+      "timeout": 30000
+    }
+  }
+}
 '@
 }
 
@@ -398,7 +423,7 @@ try {
     $applyHome = Join-Path $tempRoot 'apply-home'
     New-Item -ItemType Directory -Force -Path $applyHome | Out-Null
 
-    foreach ($relativePath in @('.claude\CLAUDE.md', '.codex\AGENTS.md', '.grok\AGENTS.md')) {
+    foreach ($relativePath in @('.claude\CLAUDE.md', '.codex\AGENTS.md', '.grok\AGENTS.md', '.config\opencode\AGENTS.md')) {
         Write-Utf8NoBom (Join-Path $applyHome $relativePath) 'old rule content'
     }
     & (Join-Path $testRepository 'scripts\sync.ps1') -Apply -UserHome $applyHome | Out-Null
@@ -411,19 +436,22 @@ try {
     $claudeTarget = Join-Path $applyHome '.claude.json'
     $codexTarget = Join-Path $applyHome '.codex\config.toml'
     $grokTarget = Join-Path $applyHome '.grok\config.toml'
+    $openCodeTarget = Join-Path $applyHome '.config\opencode\opencode.json'
     Write-Utf8NoBom $claudeTarget (Get-InitialClaudeConfig)
     Write-Utf8NoBom $codexTarget (Get-InitialCodexConfig)
     Write-Utf8NoBom $grokTarget (Get-InitialGrokConfig)
+    Write-Utf8NoBom $openCodeTarget (Get-InitialOpenCodeConfig)
 
-    & (Join-Path $testRepository 'scripts\sync-mcp.ps1') -Apply -Profile design -UserHome $applyHome | Out-Null
+    & (Join-Path $testRepository 'scripts\sync-mcp.ps1') -Apply -Profile core -UserHome $applyHome | Out-Null
+    & (Join-Path $testRepository 'scripts\sync-opencode-mcp.ps1') -Apply -Profile core -UserHome $applyHome | Out-Null
 
     $claudeConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $claudeTarget | ConvertFrom-Json
     Assert-equal 'preserve-me' $claudeConfig.theme 'Claude non-MCP configuration was not preserved'
     Assert-equal 'custom-command' $claudeConfig.mcpServers.custom.command 'Claude custom MCP server was not preserved'
     Assert-True ($null -eq $claudeConfig.mcpServers.pencil) 'Claude retired pencil MCP server was not removed'
-    Assert-True ($null -ne $claudeConfig.mcpServers.'local-webfetch') 'Claude local-webfetch server is missing from design profile'
+    Assert-True ($null -ne $claudeConfig.mcpServers.'local-webfetch') 'Claude local-webfetch server is missing from core profile'
     foreach ($managedServer in @('chrome-devtools', 'playwright', 'context-thread')) {
-        Assert-True ($null -eq $claudeConfig.mcpServers.$managedServer) "Claude design profile unexpectedly contains: $managedServer"
+        Assert-True ($null -eq $claudeConfig.mcpServers.$managedServer) "Claude core profile unexpectedly contains: $managedServer"
     }
 
     $codexConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $codexTarget
@@ -438,9 +466,35 @@ try {
     Assert-True ($grokConfig -notmatch '(?m)^\[mcp_servers\.pencil\]') 'Grok retired pencil MCP section was not removed'
     Assert-Contains $grokConfig '# >>> ai-config-hub managed compat' 'Grok managed compat block is missing'
     Assert-Contains $grokConfig 'mcps = false' 'Grok managed compat must disable Claude MCP scan'
-    Assert-Contains $grokConfig '# >>> ai-config-hub managed mcp: local-webfetch' 'Grok design profile missing local-webfetch marker'
+    Assert-Contains $grokConfig '# >>> ai-config-hub managed mcp: local-webfetch' 'Grok core profile missing local-webfetch marker'
     $grokBytes = [System.IO.File]::ReadAllBytes($grokTarget)
     Assert-True (-not ($grokBytes.Length -ge 3 -and $grokBytes[0] -eq 0xEF -and $grokBytes[1] -eq 0xBB -and $grokBytes[2] -eq 0xBF)) 'Grok config.toml must be written without UTF-8 BOM'
+
+    $openCodeConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $openCodeTarget | ConvertFrom-Json
+    Assert-equal 'preserve-me' $openCodeConfig.model 'OpenCode non-MCP configuration was not preserved'
+    Assert-True ($null -ne $openCodeConfig.mcp.custom) 'OpenCode custom MCP server was not preserved'
+    Assert-True ($null -eq $openCodeConfig.mcp.pencil) 'OpenCode retired pencil MCP server was not removed'
+    Assert-True ($null -ne $openCodeConfig.mcp.'local-webfetch') 'OpenCode local-webfetch server is missing from core profile'
+    Assert-True ($null -eq $openCodeConfig.mcp.'context-thread') 'OpenCode core profile unexpectedly contains context-thread'
+
+    & (Join-Path $testRepository 'scripts\sync-opencode-mcp.ps1') -Apply -Profile code-intel -UserHome $applyHome | Out-Null
+    $openCodeCodeIntel = Get-Content -Raw -Encoding UTF8 -LiteralPath $openCodeTarget | ConvertFrom-Json
+    Assert-True ($null -ne $openCodeCodeIntel.mcp.'local-webfetch') 'OpenCode code-intel profile removed local-webfetch'
+    Assert-True ($null -ne $openCodeCodeIntel.mcp.'context-thread') 'OpenCode code-intel profile missing context-thread'
+    Assert-equal 'preserve-me' $openCodeCodeIntel.model 'OpenCode profile switch changed non-MCP configuration'
+
+    $openCodeCodeIntel.mcp.'local-webfetch'.enabled = $false
+    Write-Utf8NoBom $openCodeTarget (($openCodeCodeIntel | ConvertTo-Json -Depth 32) + "`n")
+    $openCodeConflict = ''
+    try {
+        & (Join-Path $testRepository 'scripts\sync-opencode-mcp.ps1') -Apply -Profile code-intel -UserHome $applyHome | Out-Null
+    }
+    catch {
+        $openCodeConflict = $_.Exception.Message
+    }
+    Assert-Contains $openCodeConflict 'ownership conflicts' 'OpenCode Apply must reject a user-modified managed server'
+    $openCodeAfterConflict = Get-Content -Raw -Encoding UTF8 -LiteralPath $openCodeTarget | ConvertFrom-Json
+    Assert-True (-not $openCodeAfterConflict.mcp.'local-webfetch'.enabled) 'OpenCode ownership conflict changed the user configuration'
 
     $grokBrowserRendered = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $testRepository 'tool-configs\mcp\rendered\browser\grok.mcp.toml')
     Assert-Contains $grokBrowserRendered '[mcp_servers.playwright]' 'Grok browser rendered fragment missing playwright'

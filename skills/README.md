@@ -7,6 +7,8 @@
 - `shared/`：跨工具通用能力和事实源。
 - `claude-code/`：Claude Code 专属入口源。
 - `codex/`：Codex 专属入口源。
+- `grok/`：Grok 专属入口源。
+- `opencode/`：OpenCode 专属入口源。
 - `rendered/`：由 `scripts/render-skills.ps1` 生成的安装包。
 
 当前已实现：
@@ -36,4 +38,4 @@
 
 - 面向用户和维护者的正文默认使用中文。
 - `name`、路径、命令、工具名和必要英文关键词保留原文。
-- `description` 可以中文为主，但应保留 Claude Code、Codex、`.claude/skills`、`.agents/skills` 等关键触发词。
+- `description` 可以中文为主，但应保留 Claude Code、Codex、Grok、OpenCode、`.claude/skills`、`.agents/skills` 等关键触发词。

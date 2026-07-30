@@ -72,7 +72,6 @@ dry-run 若检测到仍存在 Claude JSON MCP 或 home Claude 全局规则/skill
 | `code-intel` | + `context-thread` | 共用 managed runtime |
 | `browser` | + `playwright`（**默认 `--headless`**） | headless 仅 Grok 渲染层追加；Claude/Codex 保持既有行为 |
 | `browser-debug` | + `chrome-devtools` | 锁版本 runtime |
-| `design` | = core（兼容别名） | Pencil 设计面已退役 |
 | `full` | 四 managed server | 临时全开，勿日常常驻 |
 
 约束：

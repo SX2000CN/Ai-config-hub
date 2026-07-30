@@ -13,12 +13,12 @@
 先做低风险只读判断：
 
 1. 优先读取 `.Ai-config/CURRENT.md`、`.Ai-config/skills-registry.md`、相关任务卡。
-2. 对比 `rules/rendered/*` 与用户级全局规则文件（`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`）。
-3. 对比 `skills/rendered/*` 与用户级全局 skill 目录（`~/.claude/skills/`、`~/.agents/skills/`）。
+2. 对比 `rules/rendered/*` 与用户级全局规则文件（`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、`~/.grok/AGENTS.md`、`~/.config/opencode/AGENTS.md`）。
+3. 对比 `skills/rendered/*` 与用户级全局 skill 目录（`~/.claude/skills/`、`~/.agents/skills/`、`~/.grok/skills/`、`~/.config/opencode/skills/`）。
 
 若 rendered/global 已一致，只刷新项目内 AI 状态文档；若不一致，先报告差异，再询问以项目源为准同步全局，还是以本机全局为准反向整理项目源。
 
-只读审计和低风险项目状态追平（包括对比 `rules/rendered/*`、`skills/rendered/*` 与本机全局目标的一致性）可以直接执行；把本机全局内容反向覆盖项目源文件，或执行 `sync.ps1 -Apply`、`sync-skills.ps1 -Apply`、`sync-mcp.ps1 -Apply` 写入用户级目录，必须先确认。
+只读审计和低风险项目状态追平（包括对比 `rules/rendered/*`、`skills/rendered/*` 与本机全局目标的一致性）可以直接执行；把本机全局内容反向覆盖项目源文件，或执行 `sync.ps1 -Apply`、`sync-skills.ps1 -Apply`、`sync-mcp.ps1 -Apply`、`sync-opencode-mcp.ps1 -Apply` 写入用户级目录，必须先确认。
 
 ## 本仓库验证边界
 

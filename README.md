@@ -2,7 +2,7 @@
 
 `ai-config-hub` 是一套个人 AI 编程协作配置系统。它的核心不是“把文件同步到哪里”，而是设计 AI 在真实项目中如何理解任务、按风险选择工作深度、使用结构化事实、验证结果、保护敏感信息并完成跨会话接手。
 
-分发系统只是为这套 AI 配置服务的基础设施：它负责把规则、skills、MCP 配置和本地工具运行时安全地渲染、检查并同步到 Claude Code、Codex、Grok Build 以及后续工具中。
+分发系统只是为这套 AI 配置服务的基础设施：它负责把规则、skills、MCP 配置和本地工具运行时安全地渲染、检查并同步到 Claude Code、Codex、OpenCode、Grok Build 以及后续工具中。
 
 完整设计见：[AI 配置设计与实现](docs/ai-config-design.md)。脉络的独立设计和技术实现见：[脉络文档索引](docs/context-thread/README.md)。
 
@@ -11,7 +11,7 @@
 - 默认轻量：简单任务不被任务卡、索引、长计划和同步流程拖重。
 - 按证据扩展：跨模块、跨会话、高风险或需要接手时才读取更多上下文并更新状态。
 - 减少幻觉：优先当前文件、当前文档、结构化事实源和验证结果，而不是靠长上下文硬猜。
-- 多工具一致：Claude Code、Codex、Grok Build 和后续工具共享核心规则，只把工具差异放到专属补充。
+- 多工具一致：Claude Code、Codex、OpenCode、Grok Build 和后续工具共享核心规则，只把工具差异放到专属补充。
 - 能力模块化：用 skills 沉淀前端设计、思维伙伴、脉络和项目 AI 配置中枢。
 - 可接手：用 `.Ai-config/CURRENT.md` 和任务卡保存有接手价值的工作现场。
 - 可落地：用 render/check/sync 脚本把配置安全同步到真实本机工具目录。
@@ -19,7 +19,7 @@
 ## 配置设计分层
 
 - 核心行为层：`rules/shared/core.md`，定义默认直接推进、证据读取、授权边界、比例验证、敏感信息和版本控制规则。
-- 工具适配层：`rules/tools/` 和 `templates/`，只处理 Claude Code / Codex / Grok Build 差异。
+- 工具适配层：`rules/tools/` 和 `templates/`，只处理 Claude Code / Codex / OpenCode / Grok Build 差异。
 - 可复用能力层：`skills/`，维护全局 skills 的共享事实源、工具入口和 rendered 包。
 - 项目状态层：`.Ai-config/`，维护当前仓库或目标项目的 AI 接手入口、任务卡和项目级 skill 清单。
 - 结构化事实层：脉络索引和任务卡关系索引，用来缩小复杂代码关系或复杂工作流关系的理解范围。
@@ -49,6 +49,7 @@ private/            本机私有草稿目录，除 README 外默认忽略
 - `docs/work-state-design.md`：`.Ai-config/CURRENT.md` 和任务卡机制。
 - `docs/skills-roadmap.md`：全局 skills 的能力边界和实现状态。
 - `docs/sync-workflow.md`：本机 render / check / sync 流程。
+- `docs/opencode-surface.md`：OpenCode 的配置路径、原生 skills 和 MCP 合并边界。
 - `docs/grok-build-surface.md`：Grok Build 路径、compat 与托管边界矩阵。
 - `docs/decisions/0001-grok-first-class-target.md`：Grok 一等公民 target 的架构决策。
 - `.Ai-config/`：当前项目的 AI 协作状态，不承载完整项目设计文档。
@@ -87,9 +88,10 @@ MCP 配置片段管理流程：
 .\scripts\check-mcp.ps1
 .\scripts\mcp-doctor.ps1 -Profile core -Mode Source
 .\scripts\sync-mcp.ps1 -Profile core
+.\scripts\sync-opencode-mcp.ps1 -Profile core
 ```
 
-MCP 按 profile 管理：`core` 默认给 Claude Code 与 Grok 提供 local-webfetch，Codex 的 core 不注册 managed MCP；`code-intel`、`browser`、`browser-debug` 分别启用脉络、Playwright、Chrome DevTools；`design` 为 core 兼容别名；`full` 聚合四 managed server。Grok Playwright 默认 headless；Grok Apply 会关闭 Claude MCP/skills/agents/rules compat 双源。已退役 Pencil skill/MCP：`sync-skills` 删除托管 skill 目录，`sync-mcp` 安全移除可识别的 pencil 配置。日常默认 `core`/`code-intel`，不要把 `full` 当常驻。Grok hooks/plugins 不由 Hub 托管。
+MCP 按 profile 管理：`core` 默认给 Claude Code、Grok 和 OpenCode 提供 local-webfetch，Codex 的 core 不注册 managed MCP；`code-intel` 为支持的目标增加 context-thread；`browser`、`browser-debug` 启用 Playwright、Chrome DevTools，但当前不注册到 OpenCode；`full` 聚合四 managed server（OpenCode 仍只接入 local-webfetch/context-thread）。Grok Playwright 默认 headless；Grok Apply 会关闭 Claude MCP/skills/agents/rules compat 双源。已退役 Pencil skill/MCP：各目标同步脚本只安全移除可识别的 Pencil 配置。日常默认 `core`/`code-intel`，不要把 `full` 当常驻。Grok hooks/plugins 不由 Hub 托管。
 
 脉络 MCP 使用本仓库源码构建，但运行时分发到用户级目录，不指向当前项目路径。首次使用或引擎源码变更后，先同步全局运行时：
 
@@ -107,6 +109,7 @@ MCP 按 profile 管理：`core` 默认给 Claude Code 与 Grok 提供 local-webf
 .\scripts\sync.ps1 -Apply
 .\scripts\sync-skills.ps1 -Apply
 .\scripts\sync-mcp.ps1 -Apply
+.\scripts\sync-opencode-mcp.ps1 -Profile core -Apply
 ```
 
 ## 安全原则
@@ -128,13 +131,13 @@ MCP 按 profile 管理：`core` 默认给 Claude Code 与 Grok 提供 local-webf
 
 分发和工具基础设施：
 
-- 已支持 Claude Code 和 Codex 全局规则的源码化管理。
+- 已支持 Claude Code、Codex、OpenCode 和 Grok 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
 - 已支持四个全局 skill 的源码化、渲染、检查和 dry-run 同步流程；新增或变更的用户级安装需执行 `sync-skills.ps1 -Apply`。
-- 已支持 `core`、`code-intel`、`browser`、`browser-debug`、`design`、`full` MCP profiles，并通过 doctor、runtime readiness、dry-run 和事务合并控制真实用户级配置。
-- 已用 `config/managed-assets.psd1` schema v2 统一登记托管规则目标、四个 skills、退役 skill 清理、四个 MCP server 定义、六个 profiles、三套 runtime 和用户目录相对路径，并保留 schema v1 规范化兼容；render 脚本支持非写入 `-Check`，`check-all.ps1` 会执行源码/rendered 一致性、三个 runtime 测试集、同步安全/profile/doctor 测试、runtime 和用户配置 dry-run、敏感信息检查及 `git diff --check`。
+- 已支持 `core`、`code-intel`、`browser`、`browser-debug`、`full` MCP profiles，并通过 doctor、runtime readiness、dry-run 和事务合并控制真实用户级配置；OpenCode MCP 以独立合并脚本保护 provider/model 配置。
+- 已用 `config/managed-assets.psd1` schema v2 统一登记托管规则目标、四个 skills、退役 skill 清理、四个 MCP server 定义、五个 profiles、三套 runtime 和用户目录相对路径，并保留 schema v1 规范化兼容；render 脚本支持非写入 `-Check`，`check-all.ps1` 会执行源码/rendered 一致性、三个 runtime 测试集、同步安全/profile/doctor 测试、runtime 和用户配置 dry-run、敏感信息检查及 `git diff --check`。
 - 用户级同步采用 staging 验证后再切换的事务式部署，备份统一保存在 `~/.ai-config-hub/backups/<pipeline>/<timestamp>-<guid>/`；中途失败会恢复本次管线已经更新的目标，不清理历史备份。
 - 脉络 MCP 的源码维护在 `tools/context-thread-engine/`，运行时由 `scripts/sync-context-thread-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`，MCP 配置通过 `node` 启动该用户级 runtime，不依赖当前仓库路径或全局 `context-thread` 命令。
-- `local-webfetch` MCP 只交付给 Claude Code：运行时对每次目标和重定向做公共网络校验，流式限制响应大小，并把抓取内容标记为不可信外部数据。显式代理被视为可信网络边界。
+- `local-webfetch` MCP 交付给 Claude Code、Grok 和 OpenCode：运行时对每次目标和重定向做公共网络校验，流式限制响应大小，并把抓取内容标记为不可信外部数据。显式代理被视为可信网络边界。
 - 浏览器 MCP 使用仓库锁定的 managed runtime，不在 server 启动时通过 `npx -y` 临时下载包。
-- Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。
+- Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；OpenCode 原生 skill 同步到 `C:\Users\sx200\.config\opencode\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。

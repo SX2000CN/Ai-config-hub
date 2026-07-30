@@ -28,6 +28,14 @@
                 Rendered = 'rules\rendered\grok-AGENTS.md'
                 UserRelativePath = '.grok\AGENTS.md'
             }
+            @{
+                Name = 'OpenCode'
+                Template = 'templates\opencode-AGENTS.md.tpl'
+                Supplement = 'rules\tools\opencode.md'
+                Placeholder = '{{opencode_supplement}}'
+                Rendered = 'rules\rendered\opencode-AGENTS.md'
+                UserRelativePath = '.config\opencode\AGENTS.md'
+            }
         )
     }
 
@@ -105,6 +113,13 @@
                 UserRelativeRoot = '.grok\skills'
                 RequireWhenToUse = $false
             }
+            @{
+                Name = 'OpenCode'
+                SourceRoot = 'skills\opencode'
+                RenderedRoot = 'skills\rendered\opencode'
+                UserRelativeRoot = '.config\opencode\skills'
+                RequireWhenToUse = $false
+            }
         )
     }
 
@@ -114,7 +129,7 @@
             @{
                 Name = 'local-webfetch'
                 Source = 'tool-configs\mcp\shared\local-webfetch.json'
-                Targets = @('ClaudeCode', 'Grok')
+                Targets = @('ClaudeCode', 'Grok', 'OpenCode')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Type = 'stdio'; Command = 'node'; Args = @('~\.ai-config-hub\mcp\local-webfetch\index.js'); CodexStyle = 'direct' }
@@ -128,7 +143,7 @@
             @{
                 Name = 'context-thread'
                 Source = 'tool-configs\mcp\shared\context-thread.json'
-                Targets = @('ClaudeCode', 'Codex', 'Grok')
+                Targets = @('ClaudeCode', 'Codex', 'Grok', 'OpenCode')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Type = 'stdio'; Command = 'node'; Args = @('~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js', 'serve', '--mcp'); CodexStyle = 'direct' }
@@ -178,8 +193,6 @@
             @{ Name = 'code-intel'; Servers = @('local-webfetch', 'context-thread'); LocalServers = @() }
             @{ Name = 'browser'; Servers = @('local-webfetch', 'playwright'); LocalServers = @() }
             @{ Name = 'browser-debug'; Servers = @('local-webfetch', 'chrome-devtools'); LocalServers = @() }
-            # design is a compatibility alias of core (Pencil design surface retired).
-            @{ Name = 'design'; Servers = @('local-webfetch'); LocalServers = @() }
             @{ Name = 'full'; Servers = @('local-webfetch', 'context-thread', 'playwright', 'chrome-devtools'); LocalServers = @() }
         )
         Targets = @(
@@ -190,7 +203,6 @@
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\claude-code.mcp.json'
                     browser = 'tool-configs\mcp\rendered\browser\claude-code.mcp.json'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\claude-code.mcp.json'
-                    design = 'tool-configs\mcp\rendered\design\claude-code.mcp.json'
                     full = 'tool-configs\mcp\rendered\full\claude-code.mcp.json'
                 }
                 UserRelativePath = '.claude.json'
@@ -202,7 +214,6 @@
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\codex.mcp.toml'
                     browser = 'tool-configs\mcp\rendered\browser\codex.mcp.toml'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\codex.mcp.toml'
-                    design = 'tool-configs\mcp\rendered\design\codex.mcp.toml'
                     full = 'tool-configs\mcp\rendered\full\codex.mcp.toml'
                 }
                 UserRelativePath = '.codex\config.toml'
@@ -214,10 +225,21 @@
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\grok.mcp.toml'
                     browser = 'tool-configs\mcp\rendered\browser\grok.mcp.toml'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\grok.mcp.toml'
-                    design = 'tool-configs\mcp\rendered\design\grok.mcp.toml'
                     full = 'tool-configs\mcp\rendered\full\grok.mcp.toml'
                 }
                 UserRelativePath = '.grok\config.toml'
+            }
+            @{
+                Name = 'OpenCode'
+                RenderedByProfile = @{
+                    core = 'tool-configs\mcp\rendered\opencode.mcp.json'
+                    'code-intel' = 'tool-configs\mcp\rendered\code-intel\opencode.mcp.json'
+                    browser = 'tool-configs\mcp\rendered\browser\opencode.mcp.json'
+                    'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\opencode.mcp.json'
+                    full = 'tool-configs\mcp\rendered\full\opencode.mcp.json'
+                }
+                # This is a managed fragment merged into opencode.json.mcp by sync-opencode-mcp.ps1.
+                UserRelativePath = '.config\opencode\opencode.json'
             }
         )
         LocalServers = @()

@@ -116,9 +116,9 @@ skill 分为领域交付、reasoning mode 和工具路由三类。显式点名�
 
 - `tool-configs/mcp/shared/`
 - `tools/context-thread-engine/`
-- 按需生成的临时浏览器验证页面、截图、Pencil `.pen` 和导出图
+- 按需生成的临时浏览器验证页面、截图、设计稿和导出图
 
-这一层让 AI 可以使用外部或本地工具能力。MCP 通过 `core`、`code-intel`、`browser`、`browser-debug`、`design` 和 `full` profiles 控制默认能力面，并由 doctor 检查 runtime、版本、安装漂移和工具握手。
+这一层让 AI 可以使用外部或本地工具能力。MCP 通过 `core`、`code-intel`、`browser`、`browser-debug` 和 `full` profiles 控制默认能力面，并由 doctor 检查 runtime、版本、安装漂移和工具握手；OpenCode 以原生 `opencode.json` 合并脚本接入其中的安全子集。
 
 ### 7. 分发与验证层
 
@@ -157,7 +157,7 @@ skill 分为领域交付、reasoning mode 和工具路由三类。显式点名�
 - 新增一种可复用工作流：改或新增 `skills/shared/<skill-name>/`，再维护工具入口。
 - 改项目接手和任务状态：改 `.Ai-config/` 或 `project-ai-config-hub` 模板。
 - 改复杂关系理解能力：改 `global-context-thread` 或 `tools/context-thread-engine/`。
-- 改 MCP、浏览器、Pencil 等工具接入：改 `tool-configs/` 或对应工具文档。
+- 改 MCP、浏览器等工具接入：改 `tool-configs/` 或对应工具文档。
 - 改同步方式：改 `scripts/` 和 `docs/sync-workflow.md`。
 
 ## 文档分工

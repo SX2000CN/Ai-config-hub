@@ -1,6 +1,6 @@
 # 官方路径和兼容边界
 
-最后核验时间：2026-07-23
+最后核验时间：2026-07-30
 
 ## Claude Code
 
@@ -62,6 +62,30 @@ AGENTS.md / Claude.md / CLAUDE.md   # 项目目录链指令文件
 
 全局 Grok surface 与 compat 策略见仓库 `docs/grok-build-surface.md` 与 `docs/decisions/0001-grok-first-class-target.md`。
 
+## OpenCode
+
+官方配置和 skill 发现路径：
+
+```text
+~/.config/opencode/opencode.json
+~/.config/opencode/AGENTS.md
+~/.config/opencode/skills/<skill-name>/SKILL.md
+.opencode/skills/<skill-name>/SKILL.md
+opencode.json
+```
+
+含义：
+
+- `~/.config/opencode/opencode.json`：用户级 provider、model、permission、tools、MCP 和其他运行配置。
+- `~/.config/opencode/AGENTS.md`：用户级 OpenCode 指令入口。
+- `~/.config/opencode/skills`：用户级原生 skill 发现目录。
+- `.opencode/skills`：项目级原生 skill 发现目录；项目配置也可通过根目录 `opencode.json` 覆盖全局设置。
+- OpenCode 还会发现 `~/.claude/skills`、`~/.agents/skills` 以及对应项目级兼容目录，但 Hub 以 `~/.config/opencode/skills` 和 `.opencode/skills` 作为 OpenCode 主路径。
+
+MCP 只写入 OpenCode `opencode.json` 的 `mcp` 节；不要把 Claude Code 的 `.claude.json` 或 Codex 的 `config.toml` 当作 OpenCode MCP 事实源。
+
+对 `project-ai-config-hub` 创建或修复的目标项目，`.opencode/skills/<skill-name>/SKILL.md` 只是工具入口；canonical 事实源仍在 `.Ai-config/skills/<skill-name>/`。
+
 ## 历史兼容路径
 
 部分既有项目或本机环境可能存在：
@@ -87,10 +111,10 @@ Codex 官方文档说明支持 symlinked skill folders。Claude Code / Grok 侧�
 
 ## 目标项目的 canonical 事实源
 
-上述 Claude Code / Codex / Grok 路径是工具发现路径，不等于项目级 skill 的事实源路径。由 `project-ai-config-hub` 创建或修复的普通目标项目中，项目级 skill 的 durable 规则、workflow、checklists、references 和 templates 应统一维护在：
+上述 Claude Code / Codex / Grok / OpenCode 路径是工具发现路径，不等于项目级 skill 的事实源路径。由 `project-ai-config-hub` 创建或修复的普通目标项目中，项目级 skill 的 durable 规则、workflow、checklists、references 和 templates 应统一维护在：
 
 ```text
 .Ai-config/skills/<skill-name>/
 ```
 
-工具入口可以引用这个目录，但不要把完整规则散落在 `.claude/skills`、`.agents/skills`、`.grok/skills`、`.codex/skills`、README、docs 或脚本说明里。本仓库自身的 `skills/shared/<skill-name>/` 是全局 managed skill 分发源，是和目标项目项目级 skill 不同的管线。
+工具入口可以引用这个目录，但不要把完整规则散落在 `.claude/skills`、`.agents/skills`、`.grok/skills`、`.opencode/skills`、`.codex/skills`、README、docs 或脚本说明里。本仓库自身的 `skills/shared/<skill-name>/` 是全局 managed skill 分发源，是和目标项目项目级 skill 不同的管线。

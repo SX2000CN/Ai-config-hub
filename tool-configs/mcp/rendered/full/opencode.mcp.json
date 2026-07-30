@@ -1,0 +1,24 @@
+{
+    "mcp":  {
+                "local-webfetch":  {
+                                       "type":  "local",
+                                       "command":  [
+                                                       "node",
+                                                       "~\\.ai-config-hub\\mcp\\local-webfetch\\index.js"
+                                                   ],
+                                       "enabled":  true,
+                                       "timeout":  30000
+                                   },
+                "context-thread":  {
+                                       "type":  "local",
+                                       "command":  [
+                                                       "node",
+                                                       "~\\.ai-config-hub\\mcp\\context-thread\\dist\\bin\\context-thread.js",
+                                                       "serve",
+                                                       "--mcp"
+                                                   ],
+                                       "enabled":  true,
+                                       "timeout":  30000
+                                   }
+            }
+}

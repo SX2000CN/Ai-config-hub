@@ -10,6 +10,7 @@ $ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
 . (Join-Path $PSScriptRoot 'lib\validation.ps1')
 $Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
 $IsNormalizedV1 = $null -ne $Manifest.SourceSchemaVersion
+$OpenCodeTarget = $Manifest.Mcp.Targets | Where-Object { [string]$_.Name -eq 'OpenCode' } | Select-Object -First 1
 $Failed = $false
 
 function Fail($Message) {
@@ -130,13 +131,16 @@ foreach ($profileName in $profileNames) {
     $claudeDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'ClaudeCode')
     $codexDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'Codex')
     $grokDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'Grok')
+    $openCodeDefinitions = if ($null -ne $OpenCodeTarget) { @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $profileDefinition 'OpenCode') } else { @() }
     $expectedClaudeServers = @($claudeDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
     $expectedCodexServers = @($codexDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
     $expectedGrokServers = @($grokDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
+    $expectedOpenCodeServers = @($openCodeDefinitions | ForEach-Object { $sourceServerNamesByDefinition[[string]$_.Name] } | ForEach-Object { $_ })
 
     $claudePath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'ClaudeCode' $profileName
     $codexPath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Codex' $profileName
     $grokPath = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Grok' $profileName
+    $openCodePath = if ($null -ne $OpenCodeTarget) { Get-AiConfigHubMcpRenderedPath $Root $Manifest 'OpenCode' $profileName } else { $null }
     try {
         $claude = Get-Content -Raw -Encoding UTF8 -LiteralPath $claudePath | ConvertFrom-Json
         $topLevelNames = @(Get-PropertyNames $claude)
@@ -145,6 +149,24 @@ foreach ($profileName in $profileNames) {
         if (($actualServers -join '|') -ne ($expectedClaudeServers -join '|')) { Fail "Claude profile $profileName server set mismatch: expected $($expectedClaudeServers -join ', '), found $($actualServers -join ', ')" }
     }
     catch { Fail "Invalid Claude rendered JSON for profile $profileName`: $($_.Exception.Message)" }
+
+    if ($null -ne $OpenCodeTarget) {
+        try {
+            $openCode = Get-Content -Raw -Encoding UTF8 -LiteralPath $openCodePath | ConvertFrom-Json
+            $topLevelNames = @(Get-PropertyNames $openCode)
+            if (($topLevelNames -join '|') -ne 'mcp') { Fail "OpenCode profile $profileName must contain only top-level mcp" }
+            $actualServers = @(Get-PropertyNames $openCode.mcp)
+            if (($actualServers -join '|') -ne ($expectedOpenCodeServers -join '|')) { Fail "OpenCode profile $profileName server set mismatch: expected $($expectedOpenCodeServers -join ', '), found $($actualServers -join ', ')" }
+            foreach ($serverName in $actualServers) {
+                $server = $openCode.mcp.$serverName
+                if ([string]$server.type -ne 'local') { Fail "OpenCode profile $profileName server $serverName must use type local" }
+                if (@($server.command).Count -lt 2) { Fail "OpenCode profile $profileName server $serverName must have a command array" }
+                if ($null -eq $server.enabled -or -not [bool]$server.enabled) { Fail "OpenCode profile $profileName server $serverName must be enabled" }
+                if ([int]$server.timeout -lt 30000) { Fail "OpenCode profile $profileName server $serverName must set timeout >= 30000" }
+            }
+        }
+        catch { Fail "Invalid OpenCode rendered JSON for profile $profileName`: $($_.Exception.Message)" }
+    }
 
     $codexContent = [string](Get-Content -Raw -Encoding UTF8 -LiteralPath $codexPath)
     foreach ($definition in $codexDefinitions) {
@@ -199,6 +221,7 @@ $scanFiles = Get-AiConfigHubScanFiles -Paths @(
     (Join-Path $Root 'scripts\mcp-local.ps1'),
     (Join-Path $Root 'scripts\mcp-doctor.ps1'),
     (Join-Path $Root 'scripts\sync-mcp.ps1'),
+    (Join-Path $Root 'scripts\sync-opencode-mcp.ps1'),
     (Join-Path $Root 'scripts\sync-browser-mcp-runtime.ps1')
 ) -Root $Root
 foreach ($file in $scanFiles) {

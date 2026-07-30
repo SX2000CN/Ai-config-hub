@@ -87,6 +87,7 @@ if ($IncludeCodexLegacy) { $skillParameters.IncludeCodexLegacy = $true }
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-skills.ps1') $skillParameters
 foreach ($profileName in Get-AiConfigHubMcpProfileNames (Import-AiConfigHubManagedAssetsManifest (Join-Path $Root 'config\managed-assets.psd1'))) {
     Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-mcp.ps1') @{ UserHome = $ResolvedUserHome; Profile = $profileName }
+    Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-opencode-mcp.ps1') @{ UserHome = $ResolvedUserHome; Profile = $profileName }
 }
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'mcp-doctor.ps1') @{ UserHome = $ResolvedUserHome; Profile = 'full'; Mode = 'Source'; AllowDegraded = $true }
 
