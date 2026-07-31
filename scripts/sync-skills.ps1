@@ -77,6 +77,28 @@ foreach ($definition in $TargetDefinitions) {
     }
 }
 
+foreach ($definition in @($Manifest.Skills.RetiredTargets)) {
+    foreach ($retiredName in @($definition.SkillNames | ForEach-Object { [string]$_ })) {
+        $target = Join-Path (Join-Path $ResolvedUserHome ([string]$definition.UserRelativeRoot)) $retiredName
+        Assert-AiConfigHubPathInside $target $ResolvedUserHome "$($definition.Name)-retire-target-$retiredName" | Out-Null
+        if (-not (Test-Path -LiteralPath $target -PathType Container)) {
+            Write-Output "retired target absent`t$target"
+            continue
+        }
+        if (-not (Test-AiConfigHubManagedSkillTarget $target $retiredName)) {
+            Write-Output "preserved unmanaged retired target`t$target"
+            continue
+        }
+        Write-Output "would remove retired managed target`t$target"
+        $Retirements.Add([pscustomobject]@{
+            Name = "$($definition.Name)-retire-target-$retiredName"
+            SkillName = $retiredName
+            Target = $target
+            ExpectedFingerprint = (Get-AiConfigHubPathFingerprint $target)
+        }) | Out-Null
+    }
+}
+
 $Changes = New-Object System.Collections.Generic.List[object]
 foreach ($item in $Targets) {
     if (-not (Test-Path -LiteralPath $item.Source -PathType Container)) {

@@ -80,11 +80,11 @@ opencode.json
 - `~/.config/opencode/AGENTS.md`：用户级 OpenCode 指令入口。
 - `~/.config/opencode/skills`：用户级原生 skill 发现目录。
 - `.opencode/skills`：项目级原生 skill 发现目录；项目配置也可通过根目录 `opencode.json` 覆盖全局设置。
-- OpenCode 还会发现 `~/.claude/skills`、`~/.agents/skills` 以及对应项目级兼容目录，但 Hub 以 `~/.config/opencode/skills` 和 `.opencode/skills` 作为 OpenCode 主路径。
+- OpenCode 还会发现 `~/.claude/skills`、`~/.agents/skills` 以及对应项目级兼容目录。Hub 以 `.agents/skills` 作为 Codex / OpenCode 共用入口，不再生成 `~/.config/opencode/skills` 或 `.opencode/skills` 副本，以避免同名 skill 多源。
 
 MCP 只写入 OpenCode `opencode.json` 的 `mcp` 节；不要把 Claude Code 的 `.claude.json` 或 Codex 的 `config.toml` 当作 OpenCode MCP 事实源。
 
-对 `project-ai-config-hub` 创建或修复的目标项目，`.opencode/skills/<skill-name>/SKILL.md` 只是工具入口；canonical 事实源仍在 `.Ai-config/skills/<skill-name>/`。
+对 `project-ai-config-hub` 创建或修复的目标项目，`.agents/skills/<skill-name>/SKILL.md` 同时作为 Codex 和 OpenCode 工具入口；既有 `.opencode/skills` 只作为迁移来源，canonical 事实源仍在 `.Ai-config/skills/<skill-name>/`。
 
 ## 历史兼容路径
 

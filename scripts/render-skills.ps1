@@ -115,6 +115,25 @@ function Test-RenderedDirectory($ToolSource, $SharedSource, $Destination) {
 }
 
 $failed = $false
+foreach ($relativeRoot in @($Manifest.Skills.RetiredRenderedRoots)) {
+    $retiredRoot = [System.IO.Path]::GetFullPath((Join-Path $Root ([string]$relativeRoot)))
+    $repositoryRoot = [System.IO.Path]::GetFullPath($Root).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $retiredRoot.StartsWith($repositoryRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Retired rendered root is outside the repository: $retiredRoot"
+    }
+    if (-not (Test-Path -LiteralPath $retiredRoot)) {
+        continue
+    }
+    if ($Check) {
+        Write-Output "ERROR: Retired rendered skill root still exists: $retiredRoot"
+        $failed = $true
+    }
+    else {
+        Remove-Item -LiteralPath $retiredRoot -Recurse -Force
+        Write-Output "Removed retired rendered skill root $retiredRoot"
+    }
+}
+
 foreach ($skillDefinition in $SkillDefinitions) {
     $skillName = [string]$skillDefinition.Name
     $sharedSource = Join-Path $Root "skills\shared\$skillName"

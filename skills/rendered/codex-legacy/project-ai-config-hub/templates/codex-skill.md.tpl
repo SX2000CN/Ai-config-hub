@@ -5,7 +5,7 @@ description: {{description}}
 
 # {{skill_name}}
 
-这是当前仓库的 Codex `.agents/skills` 项目级 skill 工具入口，只负责让工具发现并路由到项目 canonical 事实源。
+这是当前仓库的 Codex / OpenCode 共用 `.agents/skills` 项目级 skill 工具入口，只负责让工具发现并路由到项目 canonical 事实源。
 
 ## 事实源
 

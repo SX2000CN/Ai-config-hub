@@ -2,7 +2,7 @@
 
 最后更新时间：{{updated_at}}
 
-| Skill | 状态 | Canonical 事实源 | Claude Code 入口 | Codex 入口 | Grok 入口 | 备注 |
+| Skill | 状态 | Canonical 事实源 | Claude Code 入口 | Codex / OpenCode 共用入口 | Grok 入口 | 备注 |
 |---|---|---|---|---|---|---|
 | {{skill_name}} | {{status}} | `.Ai-config/skills/{{skill_name}}/` | `.claude/skills/{{skill_name}}/SKILL.md` | `.agents/skills/{{skill_name}}/SKILL.md` | `.grok/skills/{{skill_name}}/SKILL.md` | {{note}} |
 

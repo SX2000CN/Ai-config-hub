@@ -455,8 +455,15 @@ try {
     & (Join-Path $testRepository 'scripts\sync.ps1') -Apply -UserHome $applyHome | Out-Null
     Assert-RulesApplied $testRepository $applyHome
 
+    $retiredManagedOpenCodeSkill = Join-Path $applyHome '.config\opencode\skills\project-ai-config-hub\SKILL.md'
+    Write-Utf8NoBom $retiredManagedOpenCodeSkill "---`nname: project-ai-config-hub`n---`n`n<!-- ai-config-hub-managed: project-ai-config-hub -->`n"
+    $retiredUnmanagedOpenCodeSkill = Join-Path $applyHome '.config\opencode\skills\global-context-thread\SKILL.md'
+    $retiredUnmanagedContent = "---`nname: global-context-thread`n---`n`n# User-owned OpenCode skill`n"
+    Write-Utf8NoBom $retiredUnmanagedOpenCodeSkill $retiredUnmanagedContent
     & (Join-Path $testRepository 'scripts\sync-skills.ps1') -Apply -UserHome $applyHome | Out-Null
     Assert-SkillsApplied $testRepository $applyHome
+    Assert-True (-not (Test-Path -LiteralPath (Split-Path -Parent $retiredManagedOpenCodeSkill))) 'Managed retired OpenCode skill target was not removed'
+    Assert-Equal $retiredUnmanagedContent (Get-Content -Raw -Encoding UTF8 -LiteralPath $retiredUnmanagedOpenCodeSkill) 'Unmanaged retired OpenCode skill target was changed'
 
     Initialize-TestRuntimeEntries $applyHome
     $claudeTarget = Join-Path $applyHome '.claude.json'

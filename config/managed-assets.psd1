@@ -50,6 +50,22 @@
         Retired = @(
             'pencil-design-workflow'
         )
+        # OpenCode discovers ~/.agents/skills, so its former native copies are redundant.
+        RetiredTargets = @(
+            @{
+                Name = 'OpenCode'
+                UserRelativeRoot = '.config\opencode\skills'
+                SkillNames = @(
+                    'project-ai-config-hub'
+                    'global-frontend-design'
+                    'global-thinking-partner'
+                    'global-context-thread'
+                )
+            }
+        )
+        RetiredRenderedRoots = @(
+            'skills\rendered\opencode'
+        )
         Definitions = @(
             @{
                 Name = 'project-ai-config-hub'
@@ -111,13 +127,6 @@
                 SourceRoot = 'skills\grok'
                 RenderedRoot = 'skills\rendered\grok'
                 UserRelativeRoot = '.grok\skills'
-                RequireWhenToUse = $false
-            }
-            @{
-                Name = 'OpenCode'
-                SourceRoot = 'skills\opencode'
-                RenderedRoot = 'skills\rendered\opencode'
-                UserRelativeRoot = '.config\opencode\skills'
                 RequireWhenToUse = $false
             }
         )

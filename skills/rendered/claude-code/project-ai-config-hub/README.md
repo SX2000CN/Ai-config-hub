@@ -1,6 +1,6 @@
 # 项目级 AI 配置中枢
 
-`project-ai-config-hub` 是 `ai-config-hub` 的项目级分身。它作为全局 skill 安装到 Claude Code、Codex 和 OpenCode 后，在任意目标项目里按需创建、升级、审计和修复该项目自己的 AI 配置中枢。
+`project-ai-config-hub` 是 `ai-config-hub` 的项目级分身。它作为全局 skill 安装到 Claude Code、Codex / OpenCode 共用入口和 Grok 后，在任意目标项目里按需创建、升级、审计和修复该项目自己的 AI 配置中枢。
 
 主项目 `ai-config-hub` 管全局规则、全局 skills 和本机同步流程；本 skill 把同一套“事实源、入口、检查、同步”的管理思想带到项目级。
 
@@ -14,7 +14,7 @@
 - 修改当前项目已有的项目级 skill。
 - 把已有 `.codex/skills`、`.agents/skills`、`.claude/skills` 或 `.opencode/skills` 迁移为共享事实源加工具入口。
 - 审计项目内多个 AI 工具入口是否漂移。
-- 为同一个项目能力生成 Claude Code、Codex 和 OpenCode 入口。
+- 为同一个项目能力生成 Claude Code、Codex / OpenCode 共用入口和 Grok 入口。
 - 检查 skill 中是否包含敏感信息、过期路径或重复事实源。
 - 读取目标项目自己的根目录 `CLAUDE.md` / `AGENTS.md`，如果里面有比本 skill 更具体的项目专属指引，优先遵循那份文件。
 
@@ -46,7 +46,7 @@ AGENTS.md / CLAUDE.md
 ```text
 .claude/skills/<skill-name>/SKILL.md
 .agents/skills/<skill-name>/SKILL.md
-.opencode/skills/<skill-name>/SKILL.md
+.grok/skills/<skill-name>/SKILL.md
 ```
 
 只有在项目已有历史路径或用户明确要求兼容时，才生成：

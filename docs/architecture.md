@@ -84,7 +84,7 @@ C:\Users\sx200\.grok\AGENTS.md
 
 ### Skills
 
-每个全局 managed skill 使用同一条渲染和同步路径。注意：这是本仓库的全局 skill 分发管线；普通目标项目自己的项目级 skill，canonical 事实源应位于目标项目 `.Ai-config/skills/<skill-name>/`，`.claude/skills` 和 `.agents/skills` 只作为工具入口。
+每个全局 managed skill 使用同一条渲染和同步路径。注意：这是本仓库的全局 skill 分发管线；普通目标项目自己的项目级 skill，canonical 事实源应位于目标项目 `.Ai-config/skills/<skill-name>/`，`.claude/skills` 和 `.agents/skills` 只作为工具入口。OpenCode 官方发现 `.agents/skills`，因此与 Codex 共用该入口，不生成额外原生副本。
 
 ```text
 skills/shared/<skill-name>/
@@ -224,7 +224,7 @@ AI 接手入口和多任务状态总览
 - 同步真实全局 MCP 配置片段必须显式执行 `sync-mcp.ps1 -Apply`；OpenCode 使用 `sync-opencode-mcp.ps1 -Apply` 只合并 `opencode.json` 的 `mcp` 节。完整 Claude Code / Codex / Grok / OpenCode 用户配置仍不自动管理，只合并明确托管的 MCP server，并安全移除可识别的 retired pencil。Grok hooks/plugins、api_key、auth 与外观配置不托管。
 - MCP 通过 profile 控制能力面；默认 `core` 只给 Claude Code 启用 local-webfetch。代码脉络由 `code-intel` 启用，Chrome DevTools 专项调试由 `browser-debug` 启用，OpenCode 不注册浏览器 MCP，`full` 只用于明确需要全部 managed 能力的临时场景。普通浏览器自动化使用 Hub 外部的官方 Playwright CLI + skill。
 - Codex 完整 `config.toml` 不作为仓库事实源，只提供安全示例模板和托管 MCP 片段。
-- skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件；OpenCode 原生入口位于 `skills/opencode/` 和 `~/.config/opencode/skills/`。
+- skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件；Codex 与 OpenCode 共用 `skills/codex/` 渲染到 `~/.agents/skills/` 的通用入口，不维护 OpenCode 原生副本。
 - skill rendered 包通过 `render-skills.ps1` 为每个已登记全局 skill 生成，不应手工作为长期事实源编辑。
 - `global-context-thread` 是“脉络”轻量结构化事实层：context-thread 只负责代码结构关系，非代码复杂工作流仍由 `.Ai-config` 任务卡关系索引承接；没有可用索引或 MCP 工具时回退到普通文件读取。
 - `scripts/sync-context-thread-runtime.ps1` 负责把 `tools/context-thread-engine/` 的构建产物和生产依赖分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`；`scripts/context-thread.ps1` 是面向人类和脚本的轻量 wrapper，默认调用该用户级 runtime，不要求 npm 全局安装 `context-thread`。

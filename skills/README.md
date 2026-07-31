@@ -6,9 +6,8 @@
 
 - `shared/`：跨工具通用能力和事实源。
 - `claude-code/`：Claude Code 专属入口源。
-- `codex/`：Codex 专属入口源。
+- `codex/`：Codex / OpenCode 共用的 `.agents/skills` 入口源。
 - `grok/`：Grok 专属入口源。
-- `opencode/`：OpenCode 专属入口源。
 - `rendered/`：由 `scripts/render-skills.ps1` 生成的安装包。
 
 当前已实现：

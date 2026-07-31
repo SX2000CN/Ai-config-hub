@@ -25,9 +25,9 @@
 - 项目级 skill 的 canonical 事实源位于 `.Ai-config/skills/<skill-name>/`，只在确有可复用项目工作流时创建。
 - 项目已有目录、README、docs、脚本说明、旧版 `docs/ai/` 或工具入口只能作为迁移来源、支持性引用或兼容入口，不得作为长期 skill 事实源。
 - `.claude/skills/<skill-name>/SKILL.md` 只是 Claude Code 工具入口。
-- `.agents/skills/<skill-name>/SKILL.md` 只是 Codex 工具入口。
+- `.agents/skills/<skill-name>/SKILL.md` 是 Codex / OpenCode 共用工具入口。
 - `.grok/skills/<skill-name>/SKILL.md` 只是 Grok Build 工具入口。
-- `.opencode/skills/<skill-name>/SKILL.md` 只是 OpenCode 工具入口。
+- 既有 `.opencode/skills/<skill-name>/SKILL.md` 只作为迁移来源；Hub 不生成重复入口。
 - `.codex/skills/<skill-name>/SKILL.md` 只在需要兼容时存在。
 - 工具入口明确列出 `.Ai-config/skills/<skill-name>/` canonical 事实源路径和必读文件。
 

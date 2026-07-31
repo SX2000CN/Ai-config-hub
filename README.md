@@ -148,4 +148,4 @@ playwright-cli install --skills=agents
 - 脉络 MCP 的源码维护在 `tools/context-thread-engine/`，运行时由 `scripts/sync-context-thread-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`，MCP 配置通过 `node` 启动该用户级 runtime，不依赖当前仓库路径或全局 `context-thread` 命令。
 - `local-webfetch` MCP 只交付给 Claude Code：运行时对每次目标和重定向做公共网络校验，流式限制响应大小，并把抓取内容标记为不可信外部数据。显式代理被视为可信网络边界。
 - 浏览器日常自动化使用外部官方 Playwright CLI + skill；浏览器 MCP runtime 只锁定 Chrome DevTools，用于性能、Lighthouse、内存和深度调试，不在 server 启动时通过 `npx -y` 临时下载包。
-- Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`；OpenCode 原生 skill 同步到 `C:\Users\sx200\.config\opencode\skills\<skill-name>\`；`.codex\skills` 仅作为可选历史兼容目标。
+- Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`，OpenCode 直接发现并复用该通用目录；Hub 不再同步 `~/.config/opencode/skills` 原生副本，`.codex\skills` 仅作为可选历史兼容目标。

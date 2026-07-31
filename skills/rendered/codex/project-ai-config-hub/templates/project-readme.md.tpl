@@ -13,7 +13,10 @@
 ```text
 .claude/skills/{{skill_name}}/SKILL.md
 .agents/skills/{{skill_name}}/SKILL.md
+.grok/skills/{{skill_name}}/SKILL.md
 ```
+
+其中 `.agents/skills` 同时供 Codex 和 OpenCode 发现。
 
 如需历史 Codex 兼容，可额外维护：
 

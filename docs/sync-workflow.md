@@ -106,7 +106,6 @@ render 脚本也可以单独做非写入一致性检查：
     - `skills/claude-code/<skill-name>/SKILL.md`
     - `skills/codex/<skill-name>/SKILL.md`
     - `skills/grok/<skill-name>/SKILL.md`
-    - `skills/opencode/<skill-name>/SKILL.md`
 
    当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread`。退役：`pencil-design-workflow`（Apply 时删除托管副本）。
 
@@ -143,9 +142,8 @@ render 脚本也可以单独做非写入一致性检查：
 默认同步目标：
 
 - `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`
-- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`
+- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（Codex 与 OpenCode 共用）
 - `skills/rendered/grok/<skill-name>/` → `C:\Users\sx200\.grok\skills\<skill-name>\`
-- `skills/rendered/opencode/<skill-name>/` → `C:\Users\sx200\.config\opencode\skills\<skill-name>\`
 
 可选历史兼容目标：
 
@@ -155,6 +153,7 @@ render 脚本也可以单独做非写入一致性检查：
 
 - 不要直接编辑 `skills/rendered/` 作为长期源头；应修改 `skills/shared/` 或工具专属入口源。
 - `.codex\skills` 不是新 Codex skill 的默认目标，只在兼容已有环境时使用。
+- OpenCode 官方发现 `~/.agents/skills`；Hub 不再生成或同步 `~/.config/opencode/skills` 原生副本，旧托管副本只在 marker 匹配时退役。
 - Grok 原生目标是 `~/.grok/skills`，不要把 `~/.agents/skills` 或 Claude skills 当作 Grok 主路径。
 - 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
 - `sync-skills.ps1 -Apply` 只覆盖带对应 `ai-config-hub-managed` 标记的托管目录；同名但无标记的目录视为用户资产并拒绝覆盖，历史安装需先显式迁移（Grok 自带 bundled skills 无此 marker，不会被覆盖）。

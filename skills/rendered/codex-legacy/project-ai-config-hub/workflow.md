@@ -11,7 +11,7 @@
 - 最小可用层：`AGENTS.md` 或 `CLAUDE.md` 加一段项目规则，适合小脚本、demo、一次性工具。
 - 接手状态层：`.Ai-config/CURRENT.md`，适合长期项目或经常跨会话继续的项目。
 - 任务卡层：`.Ai-config/tasks/`，只在任务会跨天、中断、多 AI 接手、等待确认、阻塞或有残留风险时使用。
-- Skill 层：项目级 skill 的 canonical 事实源统一放在 `.Ai-config/skills/<skill-name>/`；`.claude/skills` / `.agents/skills` / `.grok/skills` / `.opencode/skills` 只放工具发现薄入口，只在项目确实有可复用专门工作流时创建。
+- Skill 层：项目级 skill 的 canonical 事实源统一放在 `.Ai-config/skills/<skill-name>/`；`.claude/skills` / `.agents/skills` / `.grok/skills` 只放工具发现薄入口，只在项目确实有可复用专门工作流时创建。OpenCode 与 Codex 共用 `.agents/skills`。
 
 默认先建立足够轻的机制。只有用户要求、项目复杂度需要，或已有状态必须保留时，才升级到下一层。不要因为目标项目已经存在 `.Ai-config/`、任务卡或 skill 目录，就把普通业务任务升级成中枢审计；本 skill 也不自动拉起脉络、思维伙伴或同步流程，确需跨域时回到主任务路由判断主次。
 
@@ -24,7 +24,7 @@
 - `AGENTS.md` / `AGENTS.override.md` / `CLAUDE.md` / `opencode.json`
 - `README.md`、`docs/`、`CHANGELOG.md`
 - `.Ai-config/`
-- 工具 skill 目录（`.claude/skills/`、`.agents/skills/`、`.grok/skills/`、`.opencode/skills/`）：工具入口或迁移来源，不作为长期事实源
+- 工具 skill 目录（`.claude/skills/`、`.agents/skills/`、`.grok/skills/`）：工具入口或迁移来源，不作为长期事实源；既有 `.opencode/skills/` 只作为迁移来源
 
 再按项目类型补充查看工程入口，例如 `package.json`、`pyproject.toml`、`Cargo.toml`、`go.mod`、`Makefile`。
 
@@ -128,12 +128,11 @@
 .claude/skills/<skill-name>/SKILL.md
 .agents/skills/<skill-name>/SKILL.md
 .grok/skills/<skill-name>/SKILL.md
-.opencode/skills/<skill-name>/SKILL.md
 ```
 
-工具入口应包含 frontmatter、简短触发说明、canonical 事实源路径（`.Ai-config/skills/<skill-name>/`）、必读文件顺序、安全边界和确认条件。
+工具入口应包含 frontmatter、简短触发说明、canonical 事实源路径（`.Ai-config/skills/<skill-name>/`）、必读文件顺序、安全边界和确认条件。`.agents/skills` 同时服务 Codex 和 OpenCode。
 
-工具入口不承载 durable 规则、workflow、checklist、references 或 templates。OpenCode 原生入口 `.opencode/skills/` 和历史兼容目录 `.codex/skills/` 都按需生成，见 `references/migration.md`。
+工具入口不承载 durable 规则、workflow、checklist、references 或 templates。Hub 不生成额外 `.opencode/skills/` 副本；历史兼容目录 `.codex/skills/` 只按需生成，见 `references/migration.md`。
 
 ## 6. 计划和确认
 

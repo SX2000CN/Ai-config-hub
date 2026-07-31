@@ -2,7 +2,7 @@
 
 更新时间：2026-07-31
 当前活动任务：无
-整体状态：空闲；浏览器自动化能力收敛已完成并同步到用户级目录。
+整体状态：空闲；OpenCode skill 已收敛到 Codex 共用的 `.agents/skills` 并完成用户级 Apply 与独立 discovery 验证。
 
 ## 一眼看结论
 
@@ -10,6 +10,7 @@
 - local-webfetch 只交付 Claude Code；OpenCode managed MCP 只保留 context-thread，provider 等非 MCP 配置保持不变。
 - Chrome-only browser runtime、Grok `core` 与 OpenCode `code-intel` 已 Apply；active profiles 为 `core`、`code-intel`、`browser-debug`、`full`。
 - `scripts/check-all.ps1`、post-Apply dry-run 和 Chrome DevTools 29/29 Smoke 通过；详情见任务卡。
+- OpenCode 官方发现 `.agents/skills`；Hub 已移除独立 OpenCode skill 源和 rendered target，待 Apply 后由 Codex/OpenCode 共用该通用目录。
 
 ## 当前待确认
 
@@ -27,6 +28,7 @@
 
 | 事项 | 结果 | 证据 |
 |---|---|---|
+| OpenCode skill 通用路径收敛 | 删除 OpenCode 原生 skill 源、rendered 和用户级托管副本；Codex/OpenCode 共用 `.agents/skills` | `.Ai-config/tasks/2026-07-31-opencode-skill-path-convergence.md`；完整预检、Apply、post-Apply dry-run 与 OpenCode `debug skill` 通过 |
 | 浏览器自动化能力收敛 | 退役 Playwright MCP，安装官方 Playwright CLI skills，保留 Chrome DevTools 专项 MCP，并收窄 local-webfetch/OpenCode surface | `.Ai-config/tasks/2026-07-31-browser-automation-convergence.md`；完整预检、runtime/MCP Apply 与 post-Apply Smoke 通过 |
 | OpenCode 一等 target 与同步管线 | 完成规则、skills、MCP fragment/merge、Pencil 退役和 ownership 冲突保护，并已 Apply 到本机 | `scripts/check-all.ps1`、同步安全/profile/doctor 测试通过；OpenCode `core` MCP 已同步 |
 | AI 配置内容全面修复与思考伙伴 V2 | 仓库实现、用户级全局 Apply 和 Codex 重启验收全部完成 | `scripts/check-all.ps1` 最终通过；37/37、20/20、3/3 测试通过；post-Apply dry-run unchanged；core Smoke 1/1；重启后 context-thread 进程持续为 0；索引 pending 0 |
@@ -37,6 +39,7 @@
 
 | 任务卡 | 关闭原因 |
 |---|---|
+| `.Ai-config/tasks/2026-07-31-opencode-skill-path-convergence.md` | 仓库管线、用户级规则/skills Apply、旧原生副本退役和 OpenCode 独立 discovery 验证全部完成 |
 | `.Ai-config/tasks/2026-07-31-browser-automation-convergence.md` | 仓库实现、用户级 CLI/skills、runtime/MCP Apply 和 post-Apply 验证全部完成 |
 | `.Ai-config/tasks/2026-07-16-ai-config-content-repair.md` | 规则、skills、MCP/runtime、安全与隐私修复、全局 Apply、重启验收和完整预检均已完成 |
 | `.Ai-config/tasks/2026-07-15-ai-config-hub-hardening.md` | 计划内实现与验证全部完成；未执行用户级 Apply、提交或推送 |

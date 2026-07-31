@@ -9,7 +9,7 @@
 ## 可能方向
 
 - `skills/shared/`
-- 跨 Claude Code / Codex / OpenCode 通用的工作流说明。
+- 跨 Claude Code / Codex / OpenCode 通用的工作流说明；OpenCode 与 Codex 共用 `.agents/skills` 入口。
   - 例如发版检查、文档同步检查、安全审查清单。
 
 - `skills/claude-code/`
@@ -32,7 +32,7 @@
   - 共享源：`skills/shared/project-ai-config-hub/`
    - Claude Code 入口源：`skills/claude-code/project-ai-config-hub/SKILL.md`
    - Codex 入口源：`skills/codex/project-ai-config-hub/SKILL.md`
-   - OpenCode 入口源：`skills/opencode/project-ai-config-hub/SKILL.md`
+    - OpenCode 入口：复用 Codex 的 `skills/codex/project-ai-config-hub/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 脚本：`scripts/render-skills.ps1`、`scripts/check-skills.ps1`、`scripts/sync-skills.ps1`
 
@@ -42,7 +42,7 @@
    - Claude Code 入口源：`skills/claude-code/global-frontend-design/SKILL.md`
    - Codex 入口源：`skills/codex/global-frontend-design/SKILL.md`
    - Grok 入口源：`skills/grok/global-frontend-design/SKILL.md`
-   - OpenCode 入口源：`skills/opencode/global-frontend-design/SKILL.md`
+    - OpenCode 入口：复用 Codex 的 `skills/codex/global-frontend-design/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 来源归档：`.Ai-config/archive/global-frontend-design-sources/`（方法融合 Anthropic frontend-design、产品 UI 工程源、taste-skill 方法；非上游全文再发布）
   - 2026-07-24：路线 C 重做共享包（workflow / principles / dials / anti-slop / brief / preflight）
@@ -52,7 +52,7 @@
   - 共享源：`skills/shared/global-thinking-partner/`
    - Claude Code 入口源：`skills/claude-code/global-thinking-partner/SKILL.md`
    - Codex 入口源：`skills/codex/global-thinking-partner/SKILL.md`
-   - OpenCode 入口源：`skills/opencode/global-thinking-partner/SKILL.md`
+    - OpenCode 入口：复用 Codex 的 `skills/codex/global-thinking-partner/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 约束：低副作用表示不擅自扩大授权或写入状态，不限制推理深度；用户转入实现后不阻断领域 workflow。
   - 评测：`skills/evals/global-thinking-partner/` 保存真实 prompt 夹具和定性 rubric，CI 不调用付费模型。
@@ -64,7 +64,7 @@
   - 共享源：`skills/shared/global-context-thread/`
    - Claude Code 入口源：`skills/claude-code/global-context-thread/SKILL.md`
    - Codex 入口源：`skills/codex/global-context-thread/SKILL.md`
-   - OpenCode 入口源：`skills/opencode/global-context-thread/SKILL.md`
+    - OpenCode 入口：复用 Codex 的 `skills/codex/global-context-thread/SKILL.md`
   - rendered 包：`skills/rendered/`
   - 约束：简单问答和普通局部任务不自动初始化索引、不创建任务卡；context-thread 只负责代码结构关系，非代码复杂工作流由任务卡关系索引承接。
 

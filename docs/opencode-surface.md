@@ -7,10 +7,10 @@
 ```text
 ~/.config/opencode/AGENTS.md
 ~/.config/opencode/opencode.json
-~/.config/opencode/skills/<skill-name>/SKILL.md
+~/.agents/skills/<skill-name>/SKILL.md
 ```
 
-规则由 `scripts/sync.ps1` 同步，skill 由 `scripts/sync-skills.ps1` 同步，MCP 由 `scripts/sync-opencode-mcp.ps1` 合并。OpenCode 的 `opencode.json` 同时包含 provider、model、权限和 MCP，因此 MCP 脚本只拥有 `mcp` 节，不覆盖其他配置。
+规则由 `scripts/sync.ps1` 同步，skill 由 `scripts/sync-skills.ps1` 同步到 Codex/OpenCode 共用的官方兼容目录 `~/.agents/skills`，MCP 由 `scripts/sync-opencode-mcp.ps1` 合并。Hub 不再同步 `~/.config/opencode/skills` 原生副本；已存在的 Hub 托管副本会按 marker 安全退役。OpenCode 的 `opencode.json` 同时包含 provider、model、权限和 MCP，因此 MCP 脚本只拥有 `mcp` 节，不覆盖其他配置。
 
 ## MCP 能力
 
