@@ -62,17 +62,18 @@ dry-run 若检测到仍存在 Claude JSON MCP 或 home Claude 全局规则/skill
 | `rules/shared/core.md` + `rules/tools/grok.md` + `templates/grok-AGENTS.md.tpl` | `rules/rendered/grok-AGENTS.md` | `~/.grok/AGENTS.md` | `render.ps1` / `check.ps1` / `sync.ps1` |
 | `skills/shared/*` + `skills/grok/*/SKILL.md` | `skills/rendered/grok/*` | `~/.grok/skills/*` | `render-skills.ps1` / `check-skills.ps1` / `sync-skills.ps1` |
 | `tool-configs/mcp/shared/*.json` | `tool-configs/mcp/rendered/**/grok.mcp.toml` | `~/.grok/config.toml`（marker 合并） | `render-mcp.ps1` / `check-mcp.ps1` / `sync-mcp.ps1` |
-| managed runtimes | — | `~/.ai-config-hub/mcp/{local-webfetch,context-thread,browser}` | 既有 runtime sync；三端共用 |
+| managed runtimes | — | `~/.ai-config-hub/mcp/{context-thread,browser}` | context-thread 共用；browser runtime 只包含 Chrome DevTools MCP |
 
 ## 4. MCP profile 语义（Grok）
 
 | Profile | Grok managed servers | 说明 |
 |---|---|---|
-| `core` | `local-webfetch` | 与 Claude core 对齐；**不同于** Codex core（Codex core 仍无 managed MCP） |
-| `code-intel` | + `context-thread` | 共用 managed runtime |
-| `browser` | + `playwright`（**默认 `--headless`**） | headless 仅 Grok 渲染层追加；Claude/Codex 保持既有行为 |
-| `browser-debug` | + `chrome-devtools` | 锁版本 runtime |
-| `full` | 四 managed server | 临时全开，勿日常常驻 |
+| `core` | 无 | 默认不注册 managed MCP |
+| `code-intel` | `context-thread` | 共用 managed runtime |
+| `browser-debug` | `chrome-devtools` | 锁版本专项调试 runtime |
+| `full` | `context-thread`、`chrome-devtools` | 临时全开，勿日常常驻 |
+
+普通浏览器自动化使用用户级官方 Playwright CLI `agents` skill；Playwright MCP 不再进入 Grok profile。Grok 会扫描 `~/.agents/skills`，但该官方 skill 不由 Hub 渲染或同步。
 
 约束：
 

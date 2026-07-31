@@ -113,6 +113,11 @@ function Get-InitialClaudeConfig {
       "type": "stdio",
       "command": "C:\\Program Files\\Pencil\\resources\\app.asar.unpacked\\out\\mcp-server-windows-x64.exe",
       "args": ["--app", "desktop", "--agent", "claudeCode"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.78"]
     }
   }
 }
@@ -133,6 +138,15 @@ args = ["--app", "desktop", "--agent", "codexCLI"]
 
 [mcp_servers.pencil.env]
 LEGACY = "remove-me"
+
+[mcp_servers.playwright]
+command = "cmd"
+args = ["/c", "npx", "-y", "@playwright/mcp@0.0.78"]
+startup_timeout_ms = 20000
+
+[mcp_servers.playwright.env]
+SystemRoot = "C:\\Windows"
+PROGRAMFILES = "C:\\Program Files"
 '@
 }
 
@@ -148,6 +162,12 @@ args = []
 [mcp_servers.pencil]
 command = "C:\\Program Files\\Pencil\\resources\\app.asar.unpacked\\out\\mcp-server-windows-x64.exe"
 args = ["--app", "desktop", "--agent", "grok"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@0.0.78", "--headless"]
+enabled = true
+startup_timeout_sec = 20
 '@
 }
 
@@ -166,6 +186,12 @@ function Get-InitialOpenCodeConfig {
     "pencil": {
       "type": "local",
       "command": ["C:\\Program Files\\Pencil\\resources\\app.asar.unpacked\\out\\mcp-server-windows-x64.exe", "--app", "desktop"],
+      "enabled": true,
+      "timeout": 30000
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@0.0.78"],
       "enabled": true,
       "timeout": 30000
     }
@@ -459,14 +485,16 @@ try {
     Assert-Contains $codexConfig '[mcp_servers.custom]' 'Codex custom MCP server was not preserved'
     Assert-True ($codexConfig -notmatch '(?m)^\[mcp_servers\.pencil\]') 'Codex retired pencil MCP section was not removed'
     Assert-True ($codexConfig -notmatch '(?m)^\[mcp_servers\.pencil\.env\]$') 'Codex pencil env section was not removed'
+    Assert-True ($codexConfig -notmatch '(?m)^\[mcp_servers\.playwright\]$') 'Codex retired Playwright MCP section was not removed'
 
     $grokConfig = Get-Content -Raw -Encoding UTF8 -LiteralPath $grokTarget
     Assert-Contains $grokConfig 'default = "preserve-me"' 'Grok non-MCP configuration was not preserved'
     Assert-Contains $grokConfig '[mcp_servers.custom]' 'Grok custom MCP server was not preserved'
     Assert-True ($grokConfig -notmatch '(?m)^\[mcp_servers\.pencil\]') 'Grok retired pencil MCP section was not removed'
+    Assert-True ($grokConfig -notmatch '(?m)^\[mcp_servers\.playwright\]') 'Grok retired Playwright MCP section was not removed'
     Assert-Contains $grokConfig '# >>> ai-config-hub managed compat' 'Grok managed compat block is missing'
     Assert-Contains $grokConfig 'mcps = false' 'Grok managed compat must disable Claude MCP scan'
-    Assert-Contains $grokConfig '# >>> ai-config-hub managed mcp: local-webfetch' 'Grok core profile missing local-webfetch marker'
+    Assert-True ($grokConfig -notmatch '(?m)^# >>> ai-config-hub managed mcp: local-webfetch$') 'Grok core profile retained local-webfetch'
     $grokBytes = [System.IO.File]::ReadAllBytes($grokTarget)
     Assert-True (-not ($grokBytes.Length -ge 3 -and $grokBytes[0] -eq 0xEF -and $grokBytes[1] -eq 0xBB -and $grokBytes[2] -eq 0xBF)) 'Grok config.toml must be written without UTF-8 BOM'
 
@@ -474,16 +502,17 @@ try {
     Assert-equal 'preserve-me' $openCodeConfig.model 'OpenCode non-MCP configuration was not preserved'
     Assert-True ($null -ne $openCodeConfig.mcp.custom) 'OpenCode custom MCP server was not preserved'
     Assert-True ($null -eq $openCodeConfig.mcp.pencil) 'OpenCode retired pencil MCP server was not removed'
-    Assert-True ($null -ne $openCodeConfig.mcp.'local-webfetch') 'OpenCode local-webfetch server is missing from core profile'
+    Assert-True ($null -eq $openCodeConfig.mcp.'local-webfetch') 'OpenCode retired local-webfetch server was not removed'
+    Assert-True ($null -eq $openCodeConfig.mcp.'playwright') 'OpenCode retired Playwright MCP server was not removed'
     Assert-True ($null -eq $openCodeConfig.mcp.'context-thread') 'OpenCode core profile unexpectedly contains context-thread'
 
     & (Join-Path $testRepository 'scripts\sync-opencode-mcp.ps1') -Apply -Profile code-intel -UserHome $applyHome | Out-Null
     $openCodeCodeIntel = Get-Content -Raw -Encoding UTF8 -LiteralPath $openCodeTarget | ConvertFrom-Json
-    Assert-True ($null -ne $openCodeCodeIntel.mcp.'local-webfetch') 'OpenCode code-intel profile removed local-webfetch'
+    Assert-True ($null -eq $openCodeCodeIntel.mcp.'local-webfetch') 'OpenCode code-intel profile retained retired local-webfetch'
     Assert-True ($null -ne $openCodeCodeIntel.mcp.'context-thread') 'OpenCode code-intel profile missing context-thread'
     Assert-equal 'preserve-me' $openCodeCodeIntel.model 'OpenCode profile switch changed non-MCP configuration'
 
-    $openCodeCodeIntel.mcp.'local-webfetch'.enabled = $false
+    $openCodeCodeIntel.mcp.'context-thread'.enabled = $false
     Write-Utf8NoBom $openCodeTarget (($openCodeCodeIntel | ConvertTo-Json -Depth 32) + "`n")
     $openCodeConflict = ''
     try {
@@ -494,12 +523,7 @@ try {
     }
     Assert-Contains $openCodeConflict 'ownership conflicts' 'OpenCode Apply must reject a user-modified managed server'
     $openCodeAfterConflict = Get-Content -Raw -Encoding UTF8 -LiteralPath $openCodeTarget | ConvertFrom-Json
-    Assert-True (-not $openCodeAfterConflict.mcp.'local-webfetch'.enabled) 'OpenCode ownership conflict changed the user configuration'
-
-    $grokBrowserRendered = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $testRepository 'tool-configs\mcp\rendered\browser\grok.mcp.toml')
-    Assert-Contains $grokBrowserRendered '[mcp_servers.playwright]' 'Grok browser rendered fragment missing playwright'
-    Assert-Contains $grokBrowserRendered '--headless' 'Grok playwright rendered fragment must default to headless'
-    Assert-Contains $grokBrowserRendered 'startup_timeout_sec' 'Grok rendered fragment must use startup_timeout_sec'
+    Assert-True (-not $openCodeAfterConflict.mcp.'context-thread'.enabled) 'OpenCode ownership conflict changed the user configuration'
 
     $legacyHeaderHome = Join-Path $tempRoot 'legacy-header-home'
     New-Item -ItemType Directory -Force -Path $legacyHeaderHome | Out-Null

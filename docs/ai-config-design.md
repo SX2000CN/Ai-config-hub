@@ -118,7 +118,7 @@ skill 分为领域交付、reasoning mode 和工具路由三类。显式点名�
 - `tools/context-thread-engine/`
 - 按需生成的临时浏览器验证页面、截图、设计稿和导出图
 
-这一层让 AI 可以使用外部或本地工具能力。MCP 通过 `core`、`code-intel`、`browser`、`browser-debug` 和 `full` profiles 控制默认能力面，并由 doctor 检查 runtime、版本、安装漂移和工具握手；OpenCode 以原生 `opencode.json` 合并脚本接入其中的安全子集。
+这一层让 AI 可以使用外部或本地工具能力。MCP 通过 `core`、`code-intel`、`browser-debug` 和 `full` profiles 控制默认能力面，并由 doctor 检查 runtime、版本、安装漂移和工具握手；普通浏览器自动化使用官方 Playwright CLI + skill，Chrome DevTools MCP 只承担专项调试；OpenCode 以原生 `opencode.json` 合并脚本接入其中的安全子集。
 
 ### 7. 分发与验证层
 

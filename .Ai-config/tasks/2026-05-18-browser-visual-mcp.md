@@ -6,6 +6,8 @@
 状态：已完成
 当前活动：否
 
+后续状态：本任务的 Playwright MCP 推荐已于 2026-07-31 被 `2026-07-31-browser-automation-convergence` 和 ADR 0002 取代；历史研究与当时实施记录保留。
+
 ## 目标
 
 研究 Claude Code 是否应全局配置 Playwright / 浏览器 MCP，用于真实网页截图、反复视觉审查和修复；同时确认 Codex 是否也需要类似配置、能否复用同一方案，以及当前最优配置路线。

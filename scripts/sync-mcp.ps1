@@ -34,19 +34,37 @@ $GrokSource = Get-AiConfigHubMcpRenderedPath $Root $Manifest 'Grok' $ProfileName
 $ClaudeTarget = Join-Path $ResolvedUserHome ([string]$ClaudeDefinition.UserRelativePath)
 $CodexTarget = Join-Path $ResolvedUserHome ([string]$CodexDefinition.UserRelativePath)
 $GrokTarget = Join-Path $ResolvedUserHome ([string]$GrokDefinition.UserRelativePath)
-$McpGroups = foreach ($definition in $Manifest.Mcp.Servers) {
-    $sourcePath = Join-Path $Root ([string]$definition.Source)
-    $sourceObject = Get-Content -Raw -Encoding UTF8 -LiteralPath $sourcePath | ConvertFrom-Json
-    [pscustomobject]@{
-        Name = [string]$definition.Name
-        Source = $sourceObject
-        Servers = @($sourceObject.servers.PSObject.Properties | ForEach-Object { $_.Name })
-        LegacyServers = @($definition.LegacyServers)
-        LegacySignatures = @($definition.LegacySignatures)
-        Targets = @($definition.Targets)
-        Optional = [bool]$definition.Optional
+$McpGroups = @(
+    foreach ($definition in $Manifest.Mcp.Servers) {
+        $sourcePath = Join-Path $Root ([string]$definition.Source)
+        $sourceObject = Get-Content -Raw -Encoding UTF8 -LiteralPath $sourcePath | ConvertFrom-Json
+        [pscustomobject]@{
+            Name = [string]$definition.Name
+            Source = $sourceObject
+            Servers = @($sourceObject.servers.PSObject.Properties | ForEach-Object { $_.Name })
+            LegacyServers = @($definition.LegacyServers)
+            LegacySignatures = @($definition.LegacySignatures)
+            Targets = @($definition.Targets)
+            LegacyTargets = @($definition.LegacyTargets)
+            Optional = [bool]$definition.Optional
+        }
     }
-}
+)
+$McpGroups = @($McpGroups) + @(
+    foreach ($definition in @($Manifest.Mcp.RetiredServers)) {
+        [pscustomobject]@{
+            Name = [string]$definition.Name
+            Source = $null
+            Servers = @([string]$definition.Name)
+            LegacyServers = @($definition.LegacyServers)
+            LegacySignatures = @($definition.LegacySignatures)
+            Targets = @($definition.Targets)
+            LegacyTargets = @($definition.Targets)
+            Optional = $true
+            Retired = $true
+        }
+    }
+)
 $LocalMcpServers = @($Manifest.Mcp.LocalServers)
 $ProfileLocalMcpServers = @($ProfileDefinition.LocalServers)
 $ProfileManagedDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $ProfileDefinition)
@@ -56,6 +74,10 @@ $ActiveManagedDefinitionNames = @($ProfileManagedDefinitionNames)
 function Test-GroupTargetsTool($Group, $ToolName) {
     if ($null -eq $Group.Targets -or @($Group.Targets).Count -eq 0) { return $true }
     return @($Group.Targets) -contains $ToolName
+}
+
+function Test-GroupLegacyTargetsTool($Group, $ToolName) {
+    return $null -ne $Group.LegacyTargets -and @($Group.LegacyTargets) -contains $ToolName
 }
 
 if (-not $ClaudeCode -and -not $Codex -and -not $Grok) {
@@ -79,7 +101,7 @@ if ($Grok -and -not (Test-Path -LiteralPath $GrokSource)) {
 function Get-ManagedServers($ToolName) {
     $servers = New-Object System.Collections.Generic.List[string]
     foreach ($group in $McpGroups) {
-        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
+        if (-not (Test-GroupTargetsTool $group $ToolName) -and -not (Test-GroupLegacyTargetsTool $group $ToolName)) { continue }
         foreach ($serverName in $group.Servers) {
             $servers.Add($serverName)
         }
@@ -173,7 +195,7 @@ function New-ClaudeServerFromLegacySignature($Signature) {
 
 function Get-CurrentClaudeManagedServer($ServerName) {
     $group = Get-McpGroupForServer $ServerName
-    if ($null -eq $group -or $null -eq $group.Source.servers.$ServerName) { return $null }
+    if ($null -eq $group -or $null -eq $group.Source -or $null -eq $group.Source.servers.$ServerName) { return $null }
     $server = $group.Source.servers.$ServerName
     $arguments = @($server.args | ForEach-Object { [string]$_ })
     if (-not [string]::IsNullOrWhiteSpace([string]$server.runtime_entry)) { $arguments += @([string]$server.runtime_entry) }
@@ -422,8 +444,8 @@ function Get-TomlToolMergedContent {
     $conflicts = New-Object System.Collections.Generic.List[string]
 
     foreach ($group in $McpGroups) {
-        if (-not (Test-GroupTargetsTool $group $ToolName)) { continue }
-        $groupIsActive = $ActiveManagedDefinitionNames -contains $group.Name
+        if (-not (Test-GroupTargetsTool $group $ToolName) -and -not (Test-GroupLegacyTargetsTool $group $ToolName)) { continue }
+        $groupIsActive = $ActiveManagedDefinitionNames -contains $group.Name -and (Test-GroupTargetsTool $group $ToolName)
         $startMarker = "# >>> ai-config-hub managed mcp: $($group.Name)"
         $endMarker = "# <<< ai-config-hub managed mcp: $($group.Name)"
         $start = [regex]::Escape($startMarker)
@@ -559,6 +581,7 @@ function New-CodexServerOwnershipBlock($ServerName, $Command, $Arguments, $Start
 }
 
 function Get-CurrentCodexOwnershipBlock($Group, $ServerName) {
+    if ($null -eq $Group.Source) { return $null }
     $sourceServer = $Group.Source.servers.$ServerName
     if ($null -eq $sourceServer) { return $null }
     $current = Get-CurrentClaudeManagedServer $ServerName
@@ -566,6 +589,7 @@ function Get-CurrentCodexOwnershipBlock($Group, $ServerName) {
 }
 
 function Get-CurrentGrokOwnershipBlock($Group, $ServerName) {
+    if ($null -eq $Group.Source) { return $null }
     $sourceServer = $Group.Source.servers.$ServerName
     if ($null -eq $sourceServer) { return $null }
     $current = Get-CurrentClaudeManagedServer $ServerName
@@ -580,6 +604,25 @@ function Get-CurrentGrokOwnershipBlock($Group, $ServerName) {
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add("[mcp_servers.$ServerName]")
     $lines.Add('command = ' + (Format-TomlString $current.command))
+    $lines.Add('args = ' + (Format-TomlStringArray $arguments))
+    $lines.Add('enabled = true')
+    $lines.Add("startup_timeout_sec = $startupSec")
+    return Normalize-CodexOwnershipBlock ($lines -join "`n")
+}
+
+function New-GrokServerOwnershipBlock($ServerName, $Signature) {
+    $resolved = New-ClaudeServerFromLegacySignature $Signature
+    $arguments = @($resolved.args | ForEach-Object { [string]$_ })
+    if ($ServerName -eq 'playwright' -and ($arguments -notcontains '--headless')) {
+        $arguments += @('--headless')
+    }
+    $startupSec = 20
+    if ($null -ne $Signature.StartupTimeoutMs) {
+        $startupSec = [Math]::Max(20, [int][Math]::Ceiling(([double]$Signature.StartupTimeoutMs) / 1000.0))
+    }
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add("[mcp_servers.$ServerName]")
+    $lines.Add('command = ' + (Format-TomlString $resolved.command))
     $lines.Add('args = ' + (Format-TomlStringArray $arguments))
     $lines.Add('enabled = true')
     $lines.Add("startup_timeout_sec = $startupSec")
@@ -607,6 +650,12 @@ function Get-CodexUnmarkedOwnership($Content, $Group, $ToolName = 'Codex') {
             Get-CurrentCodexOwnershipBlock $Group $serverName
         }
         if ($null -ne $currentBlock -and $actual -eq $currentBlock) { $owned = $true }
+        if (-not $owned -and $ToolName -eq 'Grok') {
+            foreach ($signature in @($Group.LegacySignatures)) {
+                $legacyBlock = New-GrokServerOwnershipBlock $serverName $signature
+                if ($actual -eq $legacyBlock) { $owned = $true; break }
+            }
+        }
         if (-not $owned -and $ToolName -ne 'Grok') {
             foreach ($signature in @($Group.LegacySignatures)) {
                 $resolvedSignature = New-ClaudeServerFromLegacySignature $signature

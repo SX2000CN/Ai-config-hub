@@ -13,11 +13,6 @@ const serverPackages = Object.freeze({
     expectedVersion: '1.6.0',
     entry: 'build/src/bin/chrome-devtools-mcp.js',
   },
-  playwright: {
-    packageName: '@playwright/mcp',
-    expectedVersion: '0.0.78',
-    entry: 'cli.js',
-  },
 });
 
 export function resolveServer(serverName) {
@@ -79,7 +74,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (command === '--doctor') {
       printDoctor(args[0]);
     } else if (!command || command === '--help' || command === '-h') {
-      process.stdout.write('Usage: browser-mcp-runtime <playwright|chrome-devtools> [args...]\n');
+      process.stdout.write('Usage: browser-mcp-runtime <chrome-devtools> [args...]\n');
     } else {
       runServer(command, args);
     }

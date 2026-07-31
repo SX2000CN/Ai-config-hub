@@ -129,7 +129,8 @@
             @{
                 Name = 'local-webfetch'
                 Source = 'tool-configs\mcp\shared\local-webfetch.json'
-                Targets = @('ClaudeCode', 'Grok', 'OpenCode')
+                Targets = @('ClaudeCode')
+                LegacyTargets = @('Grok', 'OpenCode')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Type = 'stdio'; Command = 'node'; Args = @('~\.ai-config-hub\mcp\local-webfetch\index.js'); CodexStyle = 'direct' }
@@ -156,22 +157,6 @@
                 Doctor = @{ Mode = 'node-command'; Args = @('--help'); ExpectedToolCount = 9 }
             }
             @{
-                Name = 'playwright'
-                Source = 'tool-configs\mcp\shared\playwright.json'
-                Targets = @('ClaudeCode', 'Codex', 'Grok')
-                LegacyServers = @()
-                LegacySignatures = @(
-                    @{ Command = 'npx'; Args = @('-y', '@playwright/mcp@0.0.78'); StartupTimeoutMs = 20000 }
-                    @{ Command = 'npx'; Args = @('-y', '@playwright/mcp@latest'); StartupTimeoutMs = 20000 }
-                    @{ Type = 'stdio'; Command = 'npx'; Args = @('-y', '@playwright/mcp@latest'); CodexStyle = 'direct' }
-                    @{ Command = 'cmd'; Args = @('/c', 'npx', '-y', '@playwright/mcp@latest') }
-                )
-                RequiresRuntime = 'browser-mcp'
-                Optional = $true
-                PreferredFor = @('browser-automation', 'browser-testing', 'ui-verification')
-                Doctor = @{ Mode = 'browser-runtime'; Args = @('--doctor', 'playwright'); ExpectedToolCount = 24 }
-            }
-            @{
                 Name = 'chrome-devtools'
                 Source = 'tool-configs\mcp\shared\chrome-devtools.json'
                 Targets = @('ClaudeCode', 'Codex', 'Grok')
@@ -188,12 +173,33 @@
                 Doctor = @{ Mode = 'browser-runtime'; Args = @('--doctor', 'chrome-devtools'); ExpectedToolCount = 29 }
             }
         )
+        RetiredServers = @(
+            @{
+                Name = 'playwright'
+                Targets = @('ClaudeCode', 'Codex', 'Grok', 'OpenCode')
+                LegacyServers = @()
+                LegacySignatures = @(
+                    @{ Type = 'stdio'; Command = 'node'; Args = @('~\.ai-config-hub\mcp\browser\bin\browser-mcp-runtime.js', 'playwright'); StartupTimeoutMs = 20000; CodexStyle = 'direct' }
+                    @{ Command = 'node'; Args = @('~\.ai-config-hub\mcp\browser\bin\browser-mcp-runtime.js', 'playwright'); StartupTimeoutMs = 20000; CodexStyle = 'wrapped' }
+                    @{ Command = 'npx'; Args = @('-y', '@playwright/mcp@0.0.78'); StartupTimeoutMs = 20000 }
+                    @{ Type = 'stdio'; Command = 'npx'; Args = @('-y', '@playwright/mcp@0.0.78'); StartupTimeoutMs = 20000; CodexStyle = 'direct' }
+                    @{ Type = 'stdio'; Command = 'npx'; Args = @('-y', '@playwright/mcp@0.0.78'); CodexStyle = 'direct' }
+                    @{ Type = 'stdio'; Command = 'npx'; Args = @('-y', '@playwright/mcp@latest'); StartupTimeoutMs = 20000; CodexStyle = 'direct' }
+                    @{ Type = 'stdio'; Command = 'npx'; Args = @('-y', '@playwright/mcp@latest'); CodexStyle = 'direct' }
+                    @{ Command = 'cmd'; Args = @('/c', 'npx', '-y', '@playwright/mcp@latest'); StartupTimeoutMs = 20000 }
+                )
+                OpenCodeSignatures = @(
+                    @{ Type = 'local'; Command = @('node', '~\.ai-config-hub\mcp\browser\bin\browser-mcp-runtime.js', 'playwright'); Enabled = $true; Timeout = 30000 }
+                    @{ Type = 'local'; Command = @('npx', '-y', '@playwright/mcp@0.0.78'); Enabled = $true; Timeout = 30000 }
+                    @{ Type = 'local'; Command = @('npx', '-y', '@playwright/mcp@latest'); Enabled = $true; Timeout = 30000 }
+                )
+            }
+        )
         Profiles = @(
             @{ Name = 'core'; Servers = @('local-webfetch'); LocalServers = @() }
             @{ Name = 'code-intel'; Servers = @('local-webfetch', 'context-thread'); LocalServers = @() }
-            @{ Name = 'browser'; Servers = @('local-webfetch', 'playwright'); LocalServers = @() }
             @{ Name = 'browser-debug'; Servers = @('local-webfetch', 'chrome-devtools'); LocalServers = @() }
-            @{ Name = 'full'; Servers = @('local-webfetch', 'context-thread', 'playwright', 'chrome-devtools'); LocalServers = @() }
+            @{ Name = 'full'; Servers = @('local-webfetch', 'context-thread', 'chrome-devtools'); LocalServers = @() }
         )
         Targets = @(
             @{
@@ -201,7 +207,6 @@
                 RenderedByProfile = @{
                     core = 'tool-configs\mcp\rendered\claude-code.mcp.json'
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\claude-code.mcp.json'
-                    browser = 'tool-configs\mcp\rendered\browser\claude-code.mcp.json'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\claude-code.mcp.json'
                     full = 'tool-configs\mcp\rendered\full\claude-code.mcp.json'
                 }
@@ -212,7 +217,6 @@
                 RenderedByProfile = @{
                     core = 'tool-configs\mcp\rendered\codex.mcp.toml'
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\codex.mcp.toml'
-                    browser = 'tool-configs\mcp\rendered\browser\codex.mcp.toml'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\codex.mcp.toml'
                     full = 'tool-configs\mcp\rendered\full\codex.mcp.toml'
                 }
@@ -223,7 +227,6 @@
                 RenderedByProfile = @{
                     core = 'tool-configs\mcp\rendered\grok.mcp.toml'
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\grok.mcp.toml'
-                    browser = 'tool-configs\mcp\rendered\browser\grok.mcp.toml'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\grok.mcp.toml'
                     full = 'tool-configs\mcp\rendered\full\grok.mcp.toml'
                 }
@@ -234,7 +237,6 @@
                 RenderedByProfile = @{
                     core = 'tool-configs\mcp\rendered\opencode.mcp.json'
                     'code-intel' = 'tool-configs\mcp\rendered\code-intel\opencode.mcp.json'
-                    browser = 'tool-configs\mcp\rendered\browser\opencode.mcp.json'
                     'browser-debug' = 'tool-configs\mcp\rendered\browser-debug\opencode.mcp.json'
                     full = 'tool-configs\mcp\rendered\full\opencode.mcp.json'
                 }

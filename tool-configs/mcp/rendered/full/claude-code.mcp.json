@@ -16,14 +16,6 @@
                                                            "--mcp"
                                                        ]
                                           },
-                       "playwright":  {
-                                          "type":  "stdio",
-                                          "command":  "node",
-                                          "args":  [
-                                                       "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
-                                                       "playwright"
-                                                   ]
-                                      },
                        "chrome-devtools":  {
                                                "type":  "stdio",
                                                "command":  "node",

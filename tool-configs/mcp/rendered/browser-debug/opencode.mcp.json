@@ -1,13 +1,5 @@
 {
     "mcp":  {
-                "local-webfetch":  {
-                                       "type":  "local",
-                                       "command":  [
-                                                       "node",
-                                                       "~\\.ai-config-hub\\mcp\\local-webfetch\\index.js"
-                                                   ],
-                                       "enabled":  true,
-                                       "timeout":  30000
-                                   }
+
             }
 }

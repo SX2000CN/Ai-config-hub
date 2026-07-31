@@ -22,7 +22,7 @@ Assert-True (-not [string]::IsNullOrWhiteSpace([string]$sourceCore.Items[0].Sour
 $sourceFull = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile full -Mode Source -AllowDegraded -Json | Out-String) | ConvertFrom-Json
 $conflict = @($sourceFull.RoutingConflicts | Where-Object PreferredFor -eq 'browser-inspection')
 Assert-Equal 0 $conflict.Count 'browser-inspection routing conflict should be retired after PreferredFor split'
-foreach ($expectation in @{'context-thread'=9; 'playwright'=24; 'chrome-devtools'=29}.GetEnumerator()) {
+foreach ($expectation in @{'context-thread'=9; 'chrome-devtools'=29}.GetEnumerator()) {
     $item = $sourceFull.Items | Where-Object Name -eq $expectation.Key | Select-Object -First 1
     Assert-Equal $expectation.Value $item.ActualToolCount "Doctor source smoke tool count changed for $($expectation.Key)"
 }
@@ -64,7 +64,7 @@ try {
     Assert-Equal $false $installedCore.Items[0].Drift 'Matching local-webfetch runtime reported drift'
     Assert-Equal 1 $installedCore.Items[0].ActualToolCount 'Installed local-webfetch smoke tool count changed'
 
-    $degradedBrowser = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser -Mode Readiness -UserHome $userHome -AllowDegraded -Json | Out-String) | ConvertFrom-Json
+    $degradedBrowser = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser-debug -Mode Readiness -UserHome $userHome -AllowDegraded -Json | Out-String) | ConvertFrom-Json
     Assert-True $degradedBrowser.DegradedReady 'Optional browser runtime should be degradable when core is ready'
     Assert-Equal 1 @($degradedBrowser.OptionalFailures).Count 'Missing browser runtime was not reported as one optional failure'
 
@@ -80,35 +80,34 @@ try {
     $env:AI_CONFIG_HUB_TEST_PREFLIGHT_LOG = Join-Path $tempRoot 'preflight.log'
     & (Join-Path $testRepo 'scripts\sync-browser-mcp-runtime.ps1') -Apply -UserHome $userHome | Out-Null
 
-    $browserSmoke = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser -Mode Smoke -UserHome $userHome -Json | Out-String) | ConvertFrom-Json
+    $browserSmoke = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser-debug -Mode Smoke -UserHome $userHome -Json | Out-String) | ConvertFrom-Json
     Assert-True $browserSmoke.Ready 'Doctor Smoke did not accept the installed browser profile'
-    $playwright = $browserSmoke.Items | Where-Object Name -eq 'playwright' | Select-Object -First 1
-    Assert-Equal '0.0.78' $playwright.InstalledVersion 'Installed Playwright MCP version changed'
-    Assert-Equal 24 $playwright.ActualToolCount 'Installed Playwright MCP tool count changed'
-    Assert-Equal $false $playwright.Drift 'Matching browser runtime reported drift'
+    $chrome = $browserSmoke.Items | Where-Object Name -eq 'chrome-devtools' | Select-Object -First 1
+    Assert-Equal '1.6.0' $chrome.InstalledVersion 'Installed Chrome DevTools MCP version changed'
+    Assert-Equal 29 $chrome.ActualToolCount 'Installed Chrome DevTools MCP tool count changed'
+    Assert-Equal $false $chrome.Drift 'Matching browser runtime reported drift'
 
     $installedBrowserRoot = Join-Path $userHome '.ai-config-hub\mcp\browser'
-    $cachePath = Join-Path $installedBrowserRoot 'node_modules\@playwright\mcp\.cache\doctor.log'
+    $cachePath = Join-Path $installedBrowserRoot 'node_modules\chrome-devtools-mcp\.cache\doctor.log'
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cachePath) | Out-Null
     Set-Content -Encoding UTF8 -LiteralPath $cachePath -Value 'ignored diagnostic output'
-    $browserWithCache = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser -Mode Readiness -UserHome $userHome -Json | Out-String) | ConvertFrom-Json
-    $cachedPlaywright = $browserWithCache.Items | Where-Object Name -eq 'playwright' | Select-Object -First 1
+    $browserWithCache = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser-debug -Mode Readiness -UserHome $userHome -Json | Out-String) | ConvertFrom-Json
+    $cachedChrome = $browserWithCache.Items | Where-Object Name -eq 'chrome-devtools' | Select-Object -First 1
     Assert-True $browserWithCache.Ready 'Ignored package cache/log output made the browser profile unready'
-    Assert-Equal $false $cachedPlaywright.Drift 'Ignored package cache/log output reported runtime drift'
-
-    $playwrightPayload = Join-Path $installedBrowserRoot 'node_modules\@playwright\mcp\cli.js'
-    $playwrightPayloadBytes = [IO.File]::ReadAllBytes($playwrightPayload)
-    try {
-        Add-Content -Encoding UTF8 -LiteralPath $playwrightPayload -Value "`n// test-only managed package drift"
-        $modifiedBrowser = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser -Mode Readiness -UserHome $userHome -AllowDegraded -Json | Out-String) | ConvertFrom-Json
-        $modifiedPlaywright = $modifiedBrowser.Items | Where-Object Name -eq 'playwright' | Select-Object -First 1
-        Assert-True $modifiedBrowser.DegradedReady 'Optional browser package drift incorrectly blocked degraded readiness'
-        Assert-Equal $true $modifiedPlaywright.Drift 'Modified locked Playwright package content did not report drift'
-        Assert-Equal $false $modifiedPlaywright.Ready 'Modified locked Playwright package content remained ready'
-    }
-    finally { [IO.File]::WriteAllBytes($playwrightPayload, $playwrightPayloadBytes) }
+    Assert-Equal $false $cachedChrome.Drift 'Ignored package cache/log output reported runtime drift'
 
     $chromePayload = Join-Path $installedBrowserRoot 'node_modules\chrome-devtools-mcp\build\src\bin\chrome-devtools-mcp.js'
+    $chromePayloadBytes = [IO.File]::ReadAllBytes($chromePayload)
+    try {
+        Add-Content -Encoding UTF8 -LiteralPath $chromePayload -Value "`n// test-only managed package drift"
+        $modifiedBrowser = (& (Join-Path $Root 'scripts\mcp-doctor.ps1') -Profile browser-debug -Mode Readiness -UserHome $userHome -AllowDegraded -Json | Out-String) | ConvertFrom-Json
+        $modifiedChrome = $modifiedBrowser.Items | Where-Object Name -eq 'chrome-devtools' | Select-Object -First 1
+        Assert-True $modifiedBrowser.DegradedReady 'Optional browser package drift incorrectly blocked degraded readiness'
+        Assert-Equal $true $modifiedChrome.Drift 'Modified locked Chrome DevTools package content did not report drift'
+        Assert-Equal $false $modifiedChrome.Ready 'Modified locked Chrome DevTools package content remained ready'
+    }
+    finally { [IO.File]::WriteAllBytes($chromePayload, $chromePayloadBytes) }
+
     $chromePayloadBytes = [IO.File]::ReadAllBytes($chromePayload)
     try {
         Remove-Item -LiteralPath $chromePayload -Force

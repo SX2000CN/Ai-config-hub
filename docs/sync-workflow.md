@@ -166,19 +166,27 @@ MCP 只管理明确登记的非敏感 server，不保存完整用户配置。`co
 
 单 server 事实源：
 
-- `tool-configs/mcp/shared/local-webfetch.json`：交付 Claude Code、Grok 和 OpenCode。
+- `tool-configs/mcp/shared/local-webfetch.json`：只交付 Claude Code。
 - `tool-configs/mcp/shared/context-thread.json`：Claude Code / Codex / Grok / OpenCode 共用。
-- `tool-configs/mcp/shared/playwright.json`：固定使用 browser runtime 中的 `@playwright/mcp@0.0.78`；Grok 渲染层默认追加 `--headless`。
 - `tool-configs/mcp/shared/chrome-devtools.json`：固定使用 browser runtime 中的 `chrome-devtools-mcp@1.6.0`。
 Profile 固定为：
 
 | Profile | 能力 |
 |---|---|
-| `core` | Claude Code、Grok 和 OpenCode 的 local-webfetch；Codex 不注册 managed MCP |
+| `core` | 只给 Claude Code 注册 local-webfetch；其他目标不注册 managed MCP |
 | `code-intel` | 支持的目标增加 context-thread |
-| `browser` | 支持的目标增加 Playwright（Grok 默认 headless）；OpenCode 暂不接入 |
 | `browser-debug` | 支持的目标增加 Chrome DevTools；OpenCode 暂不接入 |
-| `full` | Claude Code / Codex / Grok 聚合四个 server；OpenCode 保守聚合 local-webfetch/context-thread |
+| `full` | 聚合各目标允许的 local-webfetch、context-thread、Chrome DevTools；OpenCode 只接入 context-thread |
+
+Playwright MCP 已退役。普通浏览器自动化使用官方 Playwright CLI + skill，CLI 不进入 managed manifest 或 browser MCP runtime。在用户主目录安装两个官方 skill target：
+
+```powershell
+npm install -g @playwright/cli@0.1.17
+playwright-cli install --skills=claude
+playwright-cli install --skills=agents
+```
+
+Hub 不复制这些 skill；Claude Code 使用 `claude` target，Codex/OpenCode/Grok 可使用其发现范围内的 `agents` target。
 
 三个 runtime 的 dry-run 与真实同步入口：
 
@@ -193,7 +201,7 @@ Profile 固定为：
 .\scripts\sync-browser-mcp-runtime.ps1 -Apply
 ```
 
-默认安装位置分别是 `~\.ai-config-hub\mcp\local-webfetch\`、`~\.ai-config-hub\mcp\context-thread\` 和 `~\.ai-config-hub\mcp\browser\`。全部要求 Node.js `>=22.19.0 <25.0.0`，采用 staging、生产依赖安装、smoke、唯一备份和失败回滚。
+默认安装位置分别是 `~\.ai-config-hub\mcp\local-webfetch\`、`~\.ai-config-hub\mcp\context-thread\` 和 `~\.ai-config-hub\mcp\browser\`。最后一项只包含 Chrome DevTools MCP。全部要求 Node.js `>=22.19.0 <25.0.0`，采用 staging、生产依赖安装、smoke、唯一备份和失败回滚。
 
 渲染、检查和 doctor：
 
@@ -223,7 +231,7 @@ Profile 固定为：
 
 ```powershell
 .\scripts\sync-mcp.ps1 -Profile core
-.\scripts\sync-mcp.ps1 -Profile browser -ClaudeCode
+.\scripts\sync-mcp.ps1 -Profile browser-debug -ClaudeCode
 .\scripts\sync-mcp.ps1 -Profile code-intel -Codex
 .\scripts\sync-mcp.ps1 -Profile full -Grok
 .\scripts\sync-opencode-mcp.ps1 -Profile core
@@ -242,9 +250,9 @@ Profile 固定为：
 - 历史迁移只接管 manifest 中登记的精确 legacy signature，包括旧 `cmd /c` 和无 marker 直连格式；这些签名仅用于识别并移除旧配置，当前 rendered/source 仍禁止 `@latest`。
 - Codex / Grok 通过 `# >>> ai-config-hub managed mcp: <server>` marker 识别托管 block；Claude JSON 通过与已登记 current/legacy 精确配置比较确认归属。
 - Grok 额外维护 `# >>> ai-config-hub managed compat` 块，将 `compat.claude.mcps/skills/agents/rules` 设为 false，避免 Claude JSON / home Claude 规则成为双源。
-- 可识别的 retired `pencil` MCP（路径/参数含 Pencil 特征）在 Apply 时从 Claude/Codex/Grok/OpenCode 配置安全移除；无法识别的同名自定义 server 保留并提示。
-- OpenCode 由 `sync-opencode-mcp.ps1` 独立合并 `opencode.json` 的 `mcp` 节，保留 provider、model、permission 和其他用户配置；OpenCode 当前只接入 local-webfetch/context-thread，浏览器 server 待单独验证。
-- 浏览器 server 不在启动时运行 `npx -y`，只通过已安装且 lockfile 精确固定的 browser runtime 启动；检查脚本拒绝 `@latest` 和 managed `npx` 回流。Grok Playwright 默认 headless。
+- 可识别的 retired `pencil` 和 Playwright MCP 在 Apply 时从 Claude/Codex/Grok/OpenCode 配置安全移除；无法识别的同名自定义 server 保留并提示。
+- OpenCode 由 `sync-opencode-mcp.ps1` 独立合并 `opencode.json` 的 `mcp` 节，保留 provider、model、permission 和其他用户配置；OpenCode 当前只接入 context-thread，并会按 ownership 移除旧 local-webfetch。
+- Chrome DevTools MCP 不在启动时运行 `npx -y`，只通过已安装且 lockfile 精确固定的 browser runtime 启动；检查脚本拒绝 `@latest` 和 managed `npx` 回流。Playwright CLI 是独立外部工具，不由这条 MCP 检查管线托管。
 - Grok hooks / plugins 不由本管线托管；用户自管 `~/.grok/hooks` 与 plugins。
 - 每个目标项目的 context-thread 索引仍是项目本地事实源。runtime 存在不等于项目已初始化；使用目标项目 wrapper，或用 `node` 加 `~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js` 完整路径执行，不假设存在裸 `context-thread` 命令。
 - `sync-mcp.ps1 -Apply` 的备份位于 `~\.ai-config-hub\backups\mcp\<timestamp>-<guid>\`，中途失败时恢复本次已更新的全部目标，不删除历史备份。

@@ -51,6 +51,29 @@ function ConvertTo-ResolvedOpenCodeEntry($Entry) {
     return [pscustomobject]$result
 }
 
+function New-OpenCodeServerEntry($Server) {
+    $command = @([string]$Server.command) + @($Server.args)
+    if (-not [string]::IsNullOrWhiteSpace([string]$Server.runtime_entry)) {
+        $command += @([string]$Server.runtime_entry)
+    }
+    if (-not [string]::IsNullOrWhiteSpace([string]$Server.repo_script)) {
+        $command += @((Join-Path $Root ([string]$Server.repo_script)))
+    }
+    if ($null -ne $Server.script_args) {
+        $command += @($Server.script_args)
+    }
+    $timeout = 30000
+    if ($null -ne $Server.startup_timeout_ms) {
+        $timeout = [Math]::Max(30000, [int]$Server.startup_timeout_ms)
+    }
+    return [ordered]@{
+        type = 'local'
+        command = @($command)
+        enabled = $true
+        timeout = $timeout
+    }
+}
+
 function ConvertTo-CanonicalObject($Value) {
     if ($null -eq $Value) { return $null }
     if ($Value -is [string] -or $Value -is [ValueType]) { return $Value }
@@ -80,12 +103,33 @@ function Test-ManagedEntryOwnership($Existing, $Desired) {
     return (Get-StableJson $Existing) -eq (Get-StableJson $Desired)
 }
 
-function Test-RetiredOpenCodeEntry($Name, $Entry) {
-    if (@($Manifest.Mcp.RetiredLocalServers | ForEach-Object { [string]$_ }) -notcontains $Name) {
-        return $false
+function ConvertTo-OpenCodeSignature($Signature) {
+    $command = if ($Signature.Command -is [System.Array]) {
+        @($Signature.Command | ForEach-Object { Resolve-UserPath $_ })
     }
-    $commandText = (@($Entry.command) | ForEach-Object { [string]$_ }) -join ' '
-    return $commandText -match '(?i)pencil|--app'
+    else {
+        @([string]$Signature.Command) + @($Signature.Args | ForEach-Object { Resolve-UserPath $_ })
+    }
+    return [pscustomobject]@{
+        type = [string]$Signature.Type
+        command = @($command)
+        enabled = [bool]$Signature.Enabled
+        timeout = [int]$Signature.Timeout
+    }
+}
+
+function Test-RetiredOpenCodeEntry($Name, $Entry) {
+    if (@($Manifest.Mcp.RetiredLocalServers | ForEach-Object { [string]$_ }) -contains $Name) {
+        $commandText = (@($Entry.command) | ForEach-Object { [string]$_ }) -join ' '
+        return $commandText -match '(?i)pencil|--app'
+    }
+    foreach ($definition in @($Manifest.Mcp.RetiredServers)) {
+        if ([string]$definition.Name -ne $Name) { continue }
+        foreach ($signature in @($definition.OpenCodeSignatures)) {
+            if (Test-ManagedEntryOwnership $Entry (ConvertTo-OpenCodeSignature $signature)) { return $true }
+        }
+    }
+    return $false
 }
 
 $fragment = Get-Content -Raw -Encoding UTF8 -LiteralPath $SourcePath | ConvertFrom-Json
@@ -98,11 +142,14 @@ foreach ($property in @($fragment.mcp.PSObject.Properties)) {
     $desiredMcp[[string]$property.Name] = ConvertTo-ResolvedOpenCodeEntry $property.Value
 }
 
+$managedEntries = @{}
 $managedNames = @(
     foreach ($definition in @($Manifest.Mcp.Servers)) {
-        if (-not (Test-AiConfigHubMcpServerTargetsTool $definition 'OpenCode')) { continue }
         $source = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root ([string]$definition.Source)) | ConvertFrom-Json
-        Get-PropertyNames $source.servers
+        foreach ($serverName in Get-PropertyNames $source.servers) {
+            $managedEntries[$serverName] = ConvertTo-ResolvedOpenCodeEntry (New-OpenCodeServerEntry $source.servers.$serverName)
+            $serverName
+        }
     }
 )
 $activeNames = @($desiredMcp.Keys | ForEach-Object { [string]$_ })
@@ -158,8 +205,14 @@ foreach ($property in @($existingMcp.PSObject.Properties)) {
         continue
     }
     if ($managedNames -contains $name -and $activeNames -notcontains $name) {
-        $actions.Add("preserve inactive custom mcp.$name") | Out-Null
-        $mergedMcp[$name] = $existing
+        $owned = Test-ManagedEntryOwnership $existing $managedEntries[$name]
+        if ($owned) {
+            $actions.Add("remove owned inactive mcp.$name") | Out-Null
+        }
+        else {
+            $actions.Add("preserve custom inactive mcp.$name") | Out-Null
+            $mergedMcp[$name] = $existing
+        }
         continue
     }
     $mergedMcp[$name] = $existing

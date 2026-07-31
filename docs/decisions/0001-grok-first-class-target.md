@@ -4,6 +4,8 @@
 - 日期：2026-07-23
 - 范围：ai-config-hub 全局规则 / skills / MCP 分发与项目级中枢对齐
 
+> 2026-07-31：本 ADR 的 Grok 一等 target、原生规则/skills/MCP 与 compat 决策继续有效；其中 local-webfetch 和 Playwright MCP profile 细节已由 [ADR 0002](0002-browser-automation-convergence.md) 取代。
+
 ## 背景
 
 Grok Build 此前主要依赖 harness compat 读取 Claude 全局规则、`~/.claude.json` MCP 与旁路发现的 `~/.agents/skills`。已出现的问题包括：

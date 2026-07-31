@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-31
+
+- 退役 Playwright MCP，删除 active source、`browser` profile 和 `@playwright/mcp` runtime 依赖；browser runtime 只保留 `chrome-devtools-mcp@1.6.0`，普通浏览器自动化改用外部官方 `@playwright/cli@0.1.17` + skill。
+- 将 local-webfetch target 收窄为 Claude Code，OpenCode managed MCP 收敛为 context-thread；新增历史 target、inactive ownership 和 Playwright 精确退役签名，安全清理旧配置并保留同名自定义 server。
+- MCP profiles 收敛为 `core`、`code-intel`、`browser-debug`、`full`，同步更新 rendered 片段、doctor/profile/sync-safety 测试、架构与各 target surface 文档。
+
 ## 2026-07-16
 
 - 重构共享全局规则，移除 F0-F4 / V0-V4 双矩阵流程税，明确平台约束不可被用户授权覆盖、当前范围内可逆操作默认推进、tracked 文件禁止真实凭证，以及未纳入请求的资产只列清理候选。

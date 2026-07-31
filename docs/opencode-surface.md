@@ -16,13 +16,12 @@
 
 | Profile | OpenCode 托管 server | 说明 |
 |---|---|---|
-| `core` | `local-webfetch` | 默认最小能力面 |
-| `code-intel` | `local-webfetch`、`context-thread` | 需要代码关系或影响面分析时使用 |
-| `browser` | `local-webfetch` | Playwright 暂不注册到 OpenCode |
-| `browser-debug` | `local-webfetch` | Chrome DevTools 暂不注册到 OpenCode |
-| `full` | `local-webfetch`、`context-thread` | 保守聚合，不包含浏览器 server |
+| `core` | 无 | 默认不注册 managed MCP |
+| `code-intel` | `context-thread` | 需要代码关系或影响面分析时使用 |
+| `browser-debug` | 无 | Chrome DevTools 不注册到 OpenCode |
+| `full` | `context-thread` | 保守聚合，不包含浏览器 server |
 
-浏览器 MCP 先保持在 Claude Code、Codex 和 Grok 的原有 surface 内。OpenCode 曾经出现过配置 MCP 后宿主崩溃的历史问题，当前适配先使用已验证的 Node runtime 和较小的 server 集合，待单独验证后再扩大范围。
+OpenCode 的日常浏览器自动化使用用户级官方 Playwright CLI `agents` skill，不注册 Playwright MCP。Chrome DevTools MCP 保持在 Claude Code、Codex 和 Grok 的专项调试 surface 内。OpenCode 曾经出现过配置 MCP 后宿主崩溃的历史问题，因此托管面保持为 context-thread。
 
 ## 合并与安全
 
@@ -30,7 +29,7 @@
 - OpenCode local MCP 使用 `type: "local"`、合并后的 `command` 数组、`enabled` 和显式 `timeout`。
 - Apply 前运行完整预检；执行时使用 staging、备份和目标指纹检查。
 - 自定义 MCP server 保留；同名自定义配置与 active managed server 冲突时，Apply 阻断而不是静默覆盖。
-- 可识别的 retired `pencil` 配置只在其命令或参数包含 Pencil 特征时移除。
+- 可识别的 retired `pencil`、Playwright MCP 和 owned inactive local-webfetch 会安全移除；同名自定义配置保留。
 - 真实用户级写入前先运行对应 profile 的 dry-run，并确认 OpenCode 当前版本可正常启动。
 
 ## 维护命令
@@ -38,8 +37,8 @@
 ```powershell
 .\scripts\render-mcp.ps1 -Profile core
 .\scripts\check-mcp.ps1 -Profile core
-.\scripts\sync-opencode-mcp.ps1 -Profile core
-.\scripts\sync-opencode-mcp.ps1 -Profile core -Apply
+.\scripts\sync-opencode-mcp.ps1 -Profile code-intel
+.\scripts\sync-opencode-mcp.ps1 -Profile code-intel -Apply
 ```
 
 规则和 skills 的同步仍使用通用入口：

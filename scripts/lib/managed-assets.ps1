@@ -54,6 +54,10 @@ function ConvertTo-AiConfigHubManagedAssetsV2 {
 
     $Manifest.Mcp['DefaultProfile'] = 'full'
     $Manifest.Mcp['Servers'] = $servers
+    $Manifest.Mcp['RetiredServers'] = @()
+    if (-not $Manifest.Mcp.ContainsKey('RetiredLocalServers')) {
+        $Manifest.Mcp['RetiredLocalServers'] = @()
+    }
     $Manifest.Mcp['Profiles'] = @(
         @{
             Name = 'full'
@@ -124,6 +128,24 @@ function Import-AiConfigHubManagedAssetsManifest {
             $runtimeNames -notcontains [string]$server.RequiresRuntime) {
             throw "Managed MCP server $name requires unknown runtime: $($server.RequiresRuntime)"
         }
+    }
+
+    $retiredServerNames = New-Object System.Collections.Generic.List[string]
+    foreach ($server in @($manifest.Mcp.RetiredServers)) {
+        $name = [string]$server.Name
+        if ([string]::IsNullOrWhiteSpace($name)) {
+            throw 'Retired MCP server name must not be empty.'
+        }
+        if ($serverNames.Contains($name) -or $retiredServerNames.Contains($name)) {
+            throw "Duplicate active or retired MCP server: $name"
+        }
+        if (@($server.Targets).Count -eq 0) {
+            throw "Retired MCP server $name must declare its historical targets."
+        }
+        if (@($server.LegacySignatures).Count -eq 0 -and @($server.OpenCodeSignatures).Count -eq 0) {
+            throw "Retired MCP server $name must declare at least one ownership signature."
+        }
+        $retiredServerNames.Add($name) | Out-Null
     }
 
     $localServerNames = @($manifest.Mcp.LocalServers | ForEach-Object { [string]$_ })

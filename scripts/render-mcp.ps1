@@ -193,10 +193,6 @@ foreach ($profileName in $profileNames) {
         foreach ($serverName in Get-PropertyNames $source.servers) {
             $server = $source.servers.$serverName
             $args = @(Get-ServerArgs $server)
-            # Grok Playwright defaults to headless; Claude/Codex keep shared source behavior.
-            if ($serverName -eq 'playwright' -and ($args -notcontains '--headless')) {
-                $args = @($args) + @('--headless')
-            }
             $startupSec = 20
             if ($null -ne $server.startup_timeout_ms) {
                 $startupSec = [Math]::Max(20, [int][Math]::Ceiling(([double]$server.startup_timeout_ms) / 1000.0))

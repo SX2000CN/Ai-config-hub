@@ -92,11 +92,10 @@ foreach ($definition in @($Manifest.Mcp.Servers)) {
 
 $browserPackagePath = Join-Path $Root 'tools\browser-mcp-runtime\package.json'
 $browserLockPath = Join-Path $Root 'tools\browser-mcp-runtime\package-lock.json'
-if (-not $IsNormalizedV1 -and $sourceByDefinition.ContainsKey('playwright') -and $sourceByDefinition.ContainsKey('chrome-devtools')) { try {
+if (-not $IsNormalizedV1 -and $sourceByDefinition.ContainsKey('chrome-devtools')) { try {
     $browserPackage = Get-Content -Raw -Encoding UTF8 -LiteralPath $browserPackagePath | ConvertFrom-Json
     $expectedBrowserPackages = @{
         'chrome-devtools' = @{ Name = 'chrome-devtools-mcp'; Version = '1.6.0' }
-        'playwright' = @{ Name = '@playwright/mcp'; Version = '0.0.78' }
     }
     foreach ($entry in $expectedBrowserPackages.GetEnumerator()) {
         $sourceServer = $sourceByDefinition[$entry.Key].servers.PSObject.Properties[[string]$entry.Key].Value
@@ -110,7 +109,7 @@ if (-not $IsNormalizedV1 -and $sourceByDefinition.ContainsKey('playwright') -and
 const fs = require('fs');
 const manifest = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
 const lock = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-const expected = { '@playwright/mcp': '0.0.78', 'chrome-devtools-mcp': '1.6.0' };
+const expected = { 'chrome-devtools-mcp': '1.6.0' };
 for (const [name, version] of Object.entries(expected)) {
   if (manifest.dependencies[name] !== version || lock.packages[`node_modules/${name}`]?.version !== version) {
     console.error(`${name} must be pinned to ${version}`);
@@ -195,9 +194,6 @@ foreach ($profileName in $profileNames) {
             if ([regex]::Matches($grokContent, "(?m)^\[mcp_servers\.$([regex]::Escape($serverName))\]$").Count -ne 1) { Fail "Grok profile $profileName must contain one server section for $serverName" }
             if (-not ($grokContent -match "(?ms)\[mcp_servers\.$([regex]::Escape($serverName))\].*?startup_timeout_sec\s*=")) {
                 Fail "Grok profile $profileName must set startup_timeout_sec for $serverName"
-            }
-            if ($serverName -eq 'playwright' -and $grokContent -notmatch '--headless') {
-                Fail "Grok profile $profileName playwright must default to --headless"
             }
         }
     }

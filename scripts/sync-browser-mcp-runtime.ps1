@@ -40,7 +40,7 @@ if (-not $Apply) {
     Write-Output "target`t$RuntimeRoot"
     Write-Output "entry`t$RuntimeEntry"
     Write-Output $(if (Test-Path -LiteralPath $RuntimeEntry) { "status`tinstalled runtime entry exists" } else { "status`truntime entry is missing" })
-    Write-Output 'would stage pinned production dependencies, validate both browser servers, then atomically swap the runtime'
+    Write-Output 'would stage the pinned Chrome DevTools production dependency, validate the server, then atomically swap the runtime'
     return
 }
 
@@ -75,7 +75,7 @@ try {
     & $node.Source --check $stagedEntry
     if ($LASTEXITCODE -ne 0) { throw "browser MCP staged syntax check failed with exit code $LASTEXITCODE" }
     & $node.Source $stagedEntry --doctor | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "browser MCP staged doctor failed with exit code $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "Chrome DevTools MCP staged doctor failed with exit code $LASTEXITCODE" }
 
     Install-AiConfigHubStagedDirectory $context 'browser-mcp' $stagedRuntime $RuntimeRoot -ExpectedFingerprint $RuntimeExpectedFingerprint | Out-Null
     Complete-AiConfigHubOperation $context

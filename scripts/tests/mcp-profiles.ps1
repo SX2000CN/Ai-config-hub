@@ -26,10 +26,12 @@ Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\claude-code.mcp.json') 
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\codex.mcp.toml') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'Codex' 'core') 'core Codex rendered path changed'
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\grok.mcp.toml') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'Grok' 'core') 'core Grok rendered path changed'
 Assert-Equal (Join-Path $Root 'tool-configs\mcp\rendered\opencode.mcp.json') (Get-AiConfigHubMcpRenderedPath $Root $manifest 'OpenCode' 'core') 'core OpenCode rendered path changed'
-Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -contains 'Grok') 'local-webfetch must target Grok'
-Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -contains 'OpenCode') 'local-webfetch must target OpenCode'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -contains 'ClaudeCode') 'local-webfetch must target Claude Code'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -notcontains 'Grok') 'local-webfetch must not target Grok'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -notcontains 'OpenCode') 'local-webfetch must not target OpenCode'
 Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'context-thread').Targets -contains 'OpenCode') 'context-thread must target OpenCode'
-Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'playwright').Targets -contains 'Grok') 'playwright must target Grok'
+Assert-True ($null -eq (Get-AiConfigHubMcpServerDefinition $manifest 'playwright')) 'playwright must not remain an active MCP server'
+Assert-True (@($manifest.Mcp.RetiredServers | Where-Object { $_.Name -eq 'playwright' }).Count -eq 1) 'playwright retirement metadata is missing'
 
 & (Join-Path $Root 'scripts\render-mcp.ps1') -Check | Out-Null
 & (Join-Path $Root 'scripts\check-mcp.ps1') | Out-Null
