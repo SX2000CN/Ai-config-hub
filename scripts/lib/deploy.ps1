@@ -378,15 +378,11 @@ function Assert-AiConfigHubNodeVersion {
 function Invoke-AiConfigHubPreflight {
     param(
         [Parameter(Mandatory = $true)][string]$Root,
-        [Parameter(Mandatory = $true)][string]$UserHome,
-        [switch]$IncludeCodexLegacy
+        [Parameter(Mandatory = $true)][string]$UserHome
     )
 
     $checkAll = Join-Path $Root 'scripts\check-all.ps1'
     $parameters = @{ UserHome = $UserHome }
-    if ($IncludeCodexLegacy) {
-        $parameters.IncludeCodexLegacy = $true
-    }
     & $checkAll @parameters
     if ($LASTEXITCODE -ne 0) {
         throw "Full preflight failed with exit code $LASTEXITCODE."

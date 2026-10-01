@@ -65,6 +65,20 @@ $McpGroups = @($McpGroups) + @(
         }
     }
 )
+# Machine-local env values (proxy, tokens) live in a gitignored private overlay so shared,
+# distributable fragments never carry this machine's network facts. Merged at sync time only.
+$PrivateMcpRoot = Join-Path $Root 'tool-configs\mcp\private'
+
+function Add-PrivateMcpEnv($ServerName, $Entry) {
+    if ($null -eq $Entry) { return $Entry }
+    $overlayPath = Join-Path $PrivateMcpRoot ("$ServerName.env.json")
+    if (-not (Test-Path -LiteralPath $overlayPath -PathType Leaf)) { return $Entry }
+    $overlay = Get-Content -Raw -Encoding UTF8 -LiteralPath $overlayPath | ConvertFrom-Json
+    $overlayEntry = $overlay.servers.PSObject.Properties[$ServerName]
+    if ($null -eq $overlayEntry -or $null -eq $overlayEntry.Value.env) { return $Entry }
+    return ($Entry | Add-Member -MemberType NoteProperty -Name env -Value $overlayEntry.Value.env -Force -PassThru)
+}
+
 $LocalMcpServers = @($Manifest.Mcp.LocalServers)
 $ProfileLocalMcpServers = @($ProfileDefinition.LocalServers)
 $ProfileManagedDefinitions = @(Get-AiConfigHubMcpServerDefinitionsForProfile $Manifest $ProfileDefinition)
@@ -196,7 +210,7 @@ function New-ClaudeServerFromLegacySignature($Signature) {
 function Get-CurrentClaudeManagedServer($ServerName) {
     $group = Get-McpGroupForServer $ServerName
     if ($null -eq $group -or $null -eq $group.Source -or $null -eq $group.Source.servers.$ServerName) { return $null }
-    $server = $group.Source.servers.$ServerName
+    $server = Add-PrivateMcpEnv $ServerName $group.Source.servers.$ServerName
     $arguments = @($server.args | ForEach-Object { [string]$_ })
     if (-not [string]::IsNullOrWhiteSpace([string]$server.runtime_entry)) { $arguments += @([string]$server.runtime_entry) }
     if (-not [string]::IsNullOrWhiteSpace([string]$server.repo_script)) { $arguments += @(Join-Path $Root ([string]$server.repo_script)) }
@@ -205,6 +219,8 @@ function Get-CurrentClaudeManagedServer($ServerName) {
     if (-not [string]::IsNullOrWhiteSpace([string]$server.type)) { $entry.type = [string]$server.type }
     $entry.command = [string]$server.command
     $entry.args = $arguments
+    # Env participates in ownership comparison; keep in sync with render-mcp.ps1.
+    if ($null -ne $server.env) { $entry.env = $server.env }
     return Resolve-McpServerUserPaths ([pscustomobject]$entry)
 }
 
@@ -214,7 +230,14 @@ function Test-ClaudeManagedOwnership($ServerName, $ExistingServer, $CurrentServe
     $group = Get-McpGroupForServer $ServerName
     if ($null -eq $group) { return $false }
     foreach ($signature in @($group.LegacySignatures)) {
-        if (Test-SameJsonObject $ExistingServer (New-ClaudeServerFromLegacySignature $signature)) { return $true }
+        $legacyServer = New-ClaudeServerFromLegacySignature $signature
+        if (Test-SameJsonObject $ExistingServer $legacyServer) { return $true }
+        # Installed legacy-shaped entries may already carry the env we now manage.
+        # Without this, an owned entry looks like a user-custom conflict and blocks Apply.
+        if ($null -ne $CurrentServer -and $null -ne $CurrentServer.env) {
+            $legacyWithEnv = $legacyServer | Add-Member -MemberType NoteProperty -Name env -Value $CurrentServer.env -PassThru
+            if (Test-SameJsonObject $ExistingServer $legacyWithEnv) { return $true }
+        }
     }
     return $false
 }
@@ -297,7 +320,7 @@ function Get-ClaudeMergedContent($TargetPath, $SourcePath) {
             continue
         }
 
-        $newServer = Resolve-McpServerUserPaths $sourceServers.$serverName
+        $newServer = Resolve-McpServerUserPaths (Add-PrivateMcpEnv $serverName $sourceServers.$serverName)
         if ($null -eq $newServer) {
             throw "Rendered Claude MCP fragment is missing managed server: $serverName"
         }
@@ -542,6 +565,10 @@ function Test-SameJsonObject($Left, $Right) {
 function Normalize-CodexOwnershipBlock($Content) {
     $lines = ([string]$Content).Replace("`r`n", "`n").Split("`n") | ForEach-Object {
         $line = $_.TrimEnd()
+        $line = [regex]::Replace($line, "'([^']*)'", {
+            param($match)
+            Format-TomlString ([string]$match.Groups[1].Value)
+        })
         if ($line -match '^\s*args\s*=') {
             $line = $line -replace '\[\s+', '['
             $line = $line -replace '\s+\]$', ']'

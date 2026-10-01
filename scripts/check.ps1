@@ -18,6 +18,7 @@ function Fail($Message) {
 
 & (Join-Path $PSScriptRoot 'render.ps1') -Check
 
+$renderedHashes = @{}
 foreach ($target in $Manifest.Rules.Targets) {
     $file = Join-Path $Root ([string]$target.Rendered)
     if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
@@ -32,20 +33,20 @@ foreach ($target in $Manifest.Rules.Targets) {
     if (-not $content.TrimStart().StartsWith('# ')) {
         Fail "Missing markdown title in $file"
     }
-    if ([string]$target.Name -eq 'ClaudeCode' -and -not $content.Contains('Claude Code')) {
-        Fail "Missing Claude Code marker in $file"
-    }
-    if ([string]$target.Name -eq 'Codex' -and -not $content.Contains('Codex')) {
-        Fail "Missing Codex marker in $file"
-    }
-    if ([string]$target.Name -eq 'OpenCode' -and -not $content.Contains('OpenCode')) {
-        Fail "Missing OpenCode marker in $file"
+    $renderedHashes[$file] = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash
+}
+
+# Rules are a single shared content distributed to every tool. If the rendered
+# targets diverge, per-tool drift has crept back in and must be removed.
+if ($renderedHashes.Count -gt 1) {
+    $distinctHashes = @($renderedHashes.Values | Sort-Object -Unique)
+    if ($distinctHashes.Count -gt 1) {
+        Fail 'Rendered rule targets are not identical; rules must remain one shared content'
     }
 }
 
 $currentGuidanceFiles = @(
     Get-ChildItem -LiteralPath (Join-Path $Root 'rules\shared') -Recurse -File
-    Get-ChildItem -LiteralPath (Join-Path $Root 'rules\tools') -Recurse -File
     Get-Item -LiteralPath (Join-Path $Root 'README.md')
     Get-ChildItem -LiteralPath (Join-Path $Root 'docs') -Recurse -File | Where-Object {
         -not $_.FullName.StartsWith((Join-Path $Root 'docs\archive'), [StringComparison]::OrdinalIgnoreCase)
@@ -69,17 +70,22 @@ foreach ($file in $currentGuidanceFiles) {
     }
 }
 
-$claudeSupplement = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\tools\claude-code.md')
-$codexSupplement = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\tools\codex.md')
-$openCodeSupplement = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\tools\opencode.md')
-if (-not $claudeSupplement.Contains('~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js')) {
-    Fail 'Claude context-thread CLI contract is missing its real runtime path'
+# The context-thread CLI contract lives in exactly one place: the skill that uses it.
+# Rules must not repeat it (that duplication is what caused drift).
+$contextThreadContract = '~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js'
+$contextThreadSkill = Join-Path $Root 'skills\shared\global-context-thread\workflow.md'
+if (-not (Test-Path -LiteralPath $contextThreadSkill -PathType Leaf)) {
+    Fail "Missing context-thread skill workflow: $contextThreadSkill"
 }
-if (-not $codexSupplement.Contains('~/.ai-config-hub/mcp/context-thread/dist/bin/context-thread.js')) {
-    Fail 'Codex context-thread CLI contract is missing its real runtime path'
+elseif (-not (Get-Content -Raw -Encoding UTF8 -LiteralPath $contextThreadSkill).Contains($contextThreadContract)) {
+    Fail 'context-thread CLI contract is missing its real runtime path in the global-context-thread skill'
 }
-if (-not $openCodeSupplement.Contains('~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js')) {
-    Fail 'OpenCode context-thread CLI contract is missing its real runtime path'
+$rulesCore = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\shared\core.md')
+if ($rulesCore.Contains('context-thread.js')) {
+    Fail 'rules/shared/core.md must not carry the context-thread CLI contract; it belongs to the global-context-thread skill'
+}
+if (Test-Path -LiteralPath (Join-Path $Root 'rules\tools') -PathType Container) {
+    Fail 'rules/tools must stay empty: tool-specific facts belong in a skill reference, not in always-on rules'
 }
 
 $scanPaths = @(

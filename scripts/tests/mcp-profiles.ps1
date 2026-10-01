@@ -30,6 +30,7 @@ Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Tar
 Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -notcontains 'Grok') 'local-webfetch must not target Grok'
 Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'local-webfetch').Targets -notcontains 'OpenCode') 'local-webfetch must not target OpenCode'
 Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'context-thread').Targets -contains 'OpenCode') 'context-thread must target OpenCode'
+Assert-True ((Get-AiConfigHubMcpServerDefinition $manifest 'chrome-devtools').Targets -contains 'OpenCode') 'chrome-devtools must target OpenCode'
 Assert-True ($null -eq (Get-AiConfigHubMcpServerDefinition $manifest 'playwright')) 'playwright must not remain an active MCP server'
 Assert-True (@($manifest.Mcp.RetiredServers | Where-Object { $_.Name -eq 'playwright' }).Count -eq 1) 'playwright retirement metadata is missing'
 

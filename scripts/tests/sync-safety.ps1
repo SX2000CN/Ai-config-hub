@@ -211,7 +211,7 @@ function Assert-RulesApplied($TestRoot, $UserHome) {
 
 function Assert-SkillsApplied($TestRoot, $UserHome) {
     $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $TestRoot 'config\managed-assets.psd1')
-    foreach ($definition in @($manifest.Skills.Targets | Where-Object { $_.Name -ne 'CodexLegacy' })) {
+    foreach ($definition in @($manifest.Skills.Targets)) {
         foreach ($skillName in $manifest.Skills.Names) {
             $source = Join-Path (Join-Path $TestRoot ([string]$definition.RenderedRoot)) ([string]$skillName)
             $target = Join-Path (Join-Path $UserHome ([string]$definition.UserRelativeRoot)) ([string]$skillName)
@@ -436,7 +436,7 @@ try {
     Assert-Equal $unmanagedSkillContent (Get-Content -Raw -Encoding UTF8 -LiteralPath $unmanagedSkillTarget) 'Rejected unmanaged skill content was changed'
 
     $testManifest = Import-AiConfigHubManagedAssetsManifest (Join-Path $testRepository 'config\managed-assets.psd1')
-    foreach ($definition in @($testManifest.Skills.Targets | Where-Object { $_.Name -ne 'CodexLegacy' })) {
+    foreach ($definition in @($testManifest.Skills.Targets)) {
         foreach ($skillName in $testManifest.Skills.Names) {
             $candidate = Join-Path (Join-Path $unmanagedApplyHome ([string]$definition.UserRelativeRoot)) ([string]$skillName)
             if ([System.IO.Path]::GetFullPath($candidate) -eq [System.IO.Path]::GetFullPath((Split-Path -Parent $unmanagedSkillTarget))) {
@@ -626,7 +626,6 @@ PROGRAMFILES = "C:\\Program Files"
         }
     }
     Write-Utf8NoBom $historicalClaudeTarget ($historicalClaude | ConvertTo-Json -Depth 8)
-    $historicalContextToml = $historicalContextEntry.Replace('\', '\\')
     Write-Utf8NoBom $historicalCodexTarget @"
 model = "preserve-historical-switch"
 
@@ -638,7 +637,7 @@ args = [ "-y", "chrome-devtools-mcp@latest" ]
 [mcp_servers.context-thread]
 type = "stdio"
 command = "node"
-args = [ "$historicalContextToml", "serve", "--mcp" ]
+args = [ '$historicalContextEntry', "serve", "--mcp" ]
 
 [mcp_servers.playwright]
 type = "stdio"

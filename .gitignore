@@ -22,3 +22,6 @@ state/
 
 /.playwright-mcp/
 /.playwright-cli/
+
+# Machine-local MCP env overlays (proxy, tokens): never distributed with the shared fragments.
+/tool-configs/mcp/private/

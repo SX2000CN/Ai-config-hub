@@ -30,20 +30,19 @@ function Write-Text($Path, $Content) {
     [System.IO.File]::WriteAllText($Path, [string]$Content, (New-Object System.Text.UTF8Encoding($false)))
 }
 
+# One content for every tool. Rules describe how the user works with the model;
+# tool-specific facts are not rules and live in a skill reference instead.
 $sharedCore = (Read-Text (Join-Path $Root ([string]$Manifest.Rules.SharedCore))).TrimEnd()
+$template = Read-Text (Join-Path $Root ([string]$Manifest.Rules.Template))
+$expected = $template.Replace('{{shared_core}}', $sharedCore).TrimEnd() + "`n"
+
+if ($expected -match '\{\{[^}]+\}\}') {
+    throw "Unresolved template placeholder in $([string]$Manifest.Rules.Template)"
+}
+
 $failed = $false
-
 foreach ($target in $Manifest.Rules.Targets) {
-    $templatePath = Join-Path $Root ([string]$target.Template)
-    $supplementPath = Join-Path $Root ([string]$target.Supplement)
     $renderedPath = Join-Path $Root ([string]$target.Rendered)
-    $template = Read-Text $templatePath
-    $supplement = (Read-Text $supplementPath).TrimEnd()
-    $expected = $template.Replace('{{shared_core}}', $sharedCore).Replace([string]$target.Placeholder, $supplement).TrimEnd() + "`n"
-
-    if ($expected -match '\{\{[^}]+\}\}') {
-        throw "Unresolved template placeholder for $($target.Name): $templatePath"
-    }
 
     if ($Check) {
         if (-not (Test-Path -LiteralPath $renderedPath -PathType Leaf)) {

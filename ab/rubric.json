@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "note": "Binary claims with an appliesIf gate. A claim whose surface never appears in the diff is reported as held-by-inertia, never as a pass. hiddenFromConfig lists claims the config is never shown, so the rubric cannot be gamed by writing rules that satisfy it.",
+  "hiddenFromConfig": ["claim-scoped-comments"],
+  "claims": [
+    {
+      "id": "no-new-sibling-implementation",
+      "text": "不引入同类新方案，优先复用既有模式与组件",
+      "appliesIf": "^\\+\\s*(export\\s+)?(async\\s+)?function\\s+\\w+|^\\+\\s*class\\s+\\w+",
+      "holds": "^\\+.*(reuse|复用|既有|existing)",
+      "rationale": "防止重复造轮子；触发面是新增函数或类"
+    },
+    {
+      "id": "no-unverified-conclusion",
+      "text": "未经验证的结论不作为结论交付",
+      "appliesIf": "^\\+.*\\b(结论|conclusion|therefore|so we)\\b",
+      "holds": "^\\+.*\\b(verified|已验证|测试通过|tests? pass|confirmed)\\b",
+      "rationale": "防止把推测当结论交付；触发面是出现结论性表述"
+    },
+    {
+      "id": "no-irrelevant-doc",
+      "text": "不写对理解、使用、维护无影响的变化文档",
+      "appliesIf": "^diff --git .*\\.(md|rst)\\b",
+      "holds": "^\\+#+\\s*\\S",
+      "rationale": "防止文档噪音；触发面是改动 Markdown 文件"
+    },
+    {
+      "id": "commit-message-chinese",
+      "text": "提交信息使用中文，说明目的与影响",
+      "appliesIf": "^\\+\\s*\"?(message|subject)\"?\\s*[:=]",
+      "holds": "[\\u4e00-\\u9fff]",
+      "rationale": "用户明确偏好；触发面是出现提交信息字段"
+    },
+    {
+      "id": "claim-scoped-comments",
+      "text": "（留组）改写时保持既有注释密度，不额外增写说明性注释",
+      "appliesIf": "^\\+\\s*(//|#|/\\*)",
+      "holds": "^\\+\\s*(//|#|/\\*).*[\\u4e00-\\u9fff]",
+      "rationale": "留组判据：配置永远不会看到这条，用来检测 rubric 被钻空子"
+    }
+  ]
+}

@@ -105,7 +105,6 @@ render 脚本也可以单独做非写入一致性检查：
    - `skills/shared/<skill-name>/`
     - `skills/claude-code/<skill-name>/SKILL.md`
     - `skills/codex/<skill-name>/SKILL.md`
-    - `skills/grok/<skill-name>/SKILL.md`
 
    当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread`。退役：`pencil-design-workflow`（Apply 时删除托管副本）。
 
@@ -133,28 +132,19 @@ render 脚本也可以单独做非写入一致性检查：
 .\scripts\sync-skills.ps1 -Apply
 ```
 
-如需同时写入历史 Codex 兼容目录：
+默认同步目标只有两个：
 
-```powershell
-.\scripts\sync-skills.ps1 -Apply -IncludeCodexLegacy
-```
+- `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`（Claude Code 不读 `.agents/`，必须保留专属副本）
+- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（Codex、OpenCode、Grok 共用）
 
-默认同步目标：
-
-- `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`
-- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（Codex 与 OpenCode 共用）
-- `skills/rendered/grok/<skill-name>/` → `C:\Users\sx200\.grok\skills\<skill-name>\`
-
-可选历史兼容目标：
-
-- `skills/rendered/codex-legacy/<skill-name>/` → `C:\Users\sx200\.codex\skills\<skill-name>\`
+已退役目标由 manifest 的 `RetiredTargets` 清理，只在 marker 匹配时删除：`~/.codex/skills/`、`~/.config/opencode/skills/`、`~/.grok/skills/`。
 
 注意事项：
 
 - 不要直接编辑 `skills/rendered/` 作为长期源头；应修改 `skills/shared/` 或工具专属入口源。
-- `.codex\skills` 不是新 Codex skill 的默认目标，只在兼容已有环境时使用。
-- OpenCode 官方发现 `~/.agents/skills`；Hub 不再生成或同步 `~/.config/opencode/skills` 原生副本，旧托管副本只在 marker 匹配时退役。
-- Grok 原生目标是 `~/.grok/skills`，不要把 `~/.agents/skills` 或 Claude skills 当作 Grok 主路径。
+- `.codex\skills` 已退役：Codex 当前读取 `~/.agents/skills`。
+- OpenCode 官方发现 `~/.agents/skills`；不生成也不同步 `~/.config/opencode/skills` 原生副本，旧托管副本只在 marker 匹配时退役。
+- Grok 会扫描每一层的 `.agents/skills`，因此不再维护 `~/.grok/skills` 原生副本；Grok 侧的 `compat.claude.skills` 由 managed block 关闭，避免重复载入 Claude 副本。
 - 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
 - `sync-skills.ps1 -Apply` 只覆盖带对应 `ai-config-hub-managed` 标记的托管目录；同名但无标记的目录视为用户资产并拒绝覆盖，历史安装需先显式迁移（Grok 自带 bundled skills 无此 marker，不会被覆盖）。
 - skill 备份统一位于 `~/.ai-config-hub/backups/skills/<operation-id>/`，和工具的 skill 发现目录隔离，避免备份被误识别为可用 skill。
@@ -174,8 +164,8 @@ Profile 固定为：
 |---|---|
 | `core` | 只给 Claude Code 注册 local-webfetch；其他目标不注册 managed MCP |
 | `code-intel` | 支持的目标增加 context-thread |
-| `browser-debug` | 支持的目标增加 Chrome DevTools；OpenCode 暂不接入 |
-| `full` | 聚合各目标允许的 local-webfetch、context-thread、Chrome DevTools；OpenCode 只接入 context-thread |
+| `browser-debug` | 四个目标增加 Chrome DevTools |
+| `full` | 聚合各目标允许的 local-webfetch、context-thread、Chrome DevTools；OpenCode 接入 context-thread 和 Chrome DevTools |
 
 Playwright MCP 已退役。普通浏览器自动化使用官方 Playwright CLI + skill，CLI 不进入 managed manifest 或 browser MCP runtime。在用户主目录安装两个官方 skill target：
 
@@ -250,7 +240,7 @@ Hub 不复制这些 skill；Claude Code 使用 `claude` target，Codex/OpenCode/
 - Codex / Grok 通过 `# >>> ai-config-hub managed mcp: <server>` marker 识别托管 block；Claude JSON 通过与已登记 current/legacy 精确配置比较确认归属。
 - Grok 额外维护 `# >>> ai-config-hub managed compat` 块，将 `compat.claude.mcps/skills/agents/rules` 设为 false，避免 Claude JSON / home Claude 规则成为双源。
 - 可识别的 retired `pencil` 和 Playwright MCP 在 Apply 时从 Claude/Codex/Grok/OpenCode 配置安全移除；无法识别的同名自定义 server 保留并提示。
-- OpenCode 由 `sync-opencode-mcp.ps1` 独立合并 `opencode.json` 的 `mcp` 节，保留 provider、model、permission 和其他用户配置；OpenCode 当前只接入 context-thread，并会按 ownership 移除旧 local-webfetch。
+- OpenCode 由 `sync-opencode-mcp.ps1` 独立合并 `opencode.json` 的 `mcp` 节，保留 provider、model、permission 和其他用户配置；`code-intel` 接入 context-thread，`browser-debug` 接入 Chrome DevTools，`full` 同时接入两者，并按 ownership 移除旧 local-webfetch。
 - Chrome DevTools MCP 不在启动时运行 `npx -y`，只通过已安装且 lockfile 精确固定的 browser runtime 启动；检查脚本拒绝 `@latest` 和 managed `npx` 回流。Playwright CLI 是独立外部工具，不由这条 MCP 检查管线托管。
 - Grok hooks / plugins 不由本管线托管；用户自管 `~/.grok/hooks` 与 plugins。
 - 每个目标项目的 context-thread 索引仍是项目本地事实源。runtime 存在不等于项目已初始化；使用目标项目 wrapper，或用 `node` 加 `~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js` 完整路径执行，不假设存在裸 `context-thread` 命令。

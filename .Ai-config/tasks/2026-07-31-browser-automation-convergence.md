@@ -14,7 +14,7 @@
 
 - 不新增另一套 browser agent runtime。
 - 不在 Hub 复制官方 Playwright CLI skill。
-- OpenCode managed MCP 只保留 context-thread。
+- Chrome DevTools 覆盖四个 target；OpenCode 在 `browser-debug` / `full` 启用，不放入默认 profile。
 - 旧 Playwright/local-webfetch 只在 ownership 匹配时清理，同名自定义配置必须保留。
 
 ## 实施结果
@@ -22,7 +22,7 @@
 - active manifest、profiles、rendered 片段和 browser runtime 已收敛；`@playwright/mcp` 已从 runtime 删除。
 - ownership/retirement 迁移、相关测试、架构文档和 ADR 已更新。
 - 用户级 `@playwright/cli@0.1.17` 及官方 `claude`/`agents` skills 已安装。
-- Chrome-only runtime、Grok `core` 和 OpenCode `code-intel` 已 Apply；OpenCode 只保留 context-thread managed MCP。
+- Chrome-only runtime、Grok `core`、Codex `full` 与 OpenCode `full` 已 Apply；OpenCode 同时接入 context-thread 和 Chrome DevTools。
 
 ## 验证
 

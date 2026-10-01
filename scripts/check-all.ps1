@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$UserHome,
-    [switch]$IncludeCodexLegacy
+    [string]$UserHome
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +25,7 @@ function Invoke-CheckedScript {
 }
 
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'check.ps1')
+Invoke-CheckedScript (Join-Path $PSScriptRoot 'check-rules-hygiene.ps1')
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'check-skills.ps1')
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'check-mcp.ps1')
 
@@ -77,14 +77,14 @@ finally {
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'tests\sync-safety.ps1')
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'tests\mcp-profiles.ps1')
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'tests\mcp-doctor.ps1')
+Invoke-CheckedScript (Join-Path $PSScriptRoot 'tests\hooks-guard.ps1')
+Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-claude-guard.ps1') @{ UserHome = $ResolvedUserHome }
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-context-thread-runtime.ps1') @{ UserHome = $ResolvedUserHome }
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-local-webfetch-runtime.ps1') @{ UserHome = $ResolvedUserHome }
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-browser-mcp-runtime.ps1') @{ UserHome = $ResolvedUserHome }
 Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync.ps1') @{ UserHome = $ResolvedUserHome }
 
-$skillParameters = @{ UserHome = $ResolvedUserHome }
-if ($IncludeCodexLegacy) { $skillParameters.IncludeCodexLegacy = $true }
-Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-skills.ps1') $skillParameters
+Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-skills.ps1') @{ UserHome = $ResolvedUserHome }
 foreach ($profileName in Get-AiConfigHubMcpProfileNames (Import-AiConfigHubManagedAssetsManifest (Join-Path $Root 'config\managed-assets.psd1'))) {
     Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-mcp.ps1') @{ UserHome = $ResolvedUserHome; Profile = $profileName }
     Invoke-CheckedScript (Join-Path $PSScriptRoot 'sync-opencode-mcp.ps1') @{ UserHome = $ResolvedUserHome; Profile = $profileName }

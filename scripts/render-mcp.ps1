@@ -152,6 +152,11 @@ foreach ($profileName in $profileNames) {
             if (-not [string]::IsNullOrWhiteSpace([string]$server.type)) { $entry.type = [string]$server.type }
             $entry.command = [string]$server.command
             $entry.args = @(Get-ServerArgs $server)
+            if ($null -ne $server.env -and @($server.env.PSObject.Properties).Count -gt 0) {
+                $envTable = [ordered]@{}
+                foreach ($envName in Get-PropertyNames $server.env) { $envTable[$envName] = [string]$server.env.$envName }
+                $entry.env = $envTable
+            }
             $claudeServers[$serverName] = $entry
         }
     }

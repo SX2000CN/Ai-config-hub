@@ -168,7 +168,13 @@ export async function resolvePublicAddresses(hostname, { lookup = dnsLookup, sig
   return addresses
 }
 
-export async function validateTargetUrl(urlValue, { lookup = dnsLookup, signal } = {}) {
+// Resolution failures ("cannot answer") are eligible for the proxy fallback;
+// policy failures ("answered, but forbidden") never are.
+function isDnsResolutionFailure(error) {
+  return /^DNS lookup failed|^DNS lookup returned no addresses/.test(error?.message ?? "")
+}
+
+export async function validateTargetUrl(urlValue, { lookup = dnsLookup, signal, allowProxyFallback = false } = {}) {
   let parsed
   try {
     parsed = new URL(urlValue)
@@ -200,7 +206,18 @@ export async function validateTargetUrl(urlValue, { lookup = dnsLookup, signal }
     if (!hostname.includes(".")) {
       throw new Error(`Blocked single-label hostname "${hostname}"`)
     }
-    addresses = await resolvePublicAddresses(hostname, { lookup, signal })
+    try {
+      addresses = await resolvePublicAddresses(hostname, { lookup, signal })
+    } catch (error) {
+      // When an upstream proxy owns DNS (common behind Clash/TUN where local
+      // resolvers cannot answer public names), degrade to name-level checks
+      // only. Hostname policy above has already run; address pinning yields
+      // to the trusted proxy boundary.
+      if (signal?.aborted || !allowProxyFallback || !isDnsResolutionFailure(error)) {
+        throw error
+      }
+      addresses = []
+    }
   }
 
   return { url: parsed, hostname, addresses }
@@ -306,12 +323,13 @@ export async function fetchWithSafeRedirects(
     maxRedirects = MAX_REDIRECTS,
     headers = {},
     dispatcherFactory,
+    allowProxyFallback = false,
   } = {},
 ) {
   let current = new URL(initialUrl)
 
   for (let redirectCount = 0; ; redirectCount += 1) {
-    const validatedTarget = await validateTargetUrl(current.href, { lookup, signal })
+    const validatedTarget = await validateTargetUrl(current.href, { lookup, signal, allowProxyFallback })
     const dispatcher = dispatcherFactory?.(validatedTarget)
     let response
     try {
@@ -419,6 +437,7 @@ export async function fetchUrlBytes(
     maxRedirects = MAX_REDIRECTS,
     headers = {},
     dispatcherFactory,
+    allowProxyFallback = false,
   } = {},
 ) {
   const controller = new AbortController()
@@ -432,6 +451,7 @@ export async function fetchUrlBytes(
       maxRedirects,
       headers,
       dispatcherFactory,
+      allowProxyFallback,
     })
     try {
       if (!result.response.ok) {

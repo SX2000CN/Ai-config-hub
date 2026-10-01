@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
     [switch]$Apply,
-    [switch]$IncludeCodexLegacy,
     [string]$UserHome
 )
 
@@ -20,12 +19,7 @@ else {
     @($Manifest.Skills.Names | ForEach-Object { [pscustomobject]@{ Name = [string]$_ } })
 }
 
-$TargetDefinitions = foreach ($definition in $Manifest.Skills.Targets) {
-    if ([string]$definition.Name -eq 'CodexLegacy' -and -not $IncludeCodexLegacy) {
-        continue
-    }
-    $definition
-}
+$TargetDefinitions = @($Manifest.Skills.Targets)
 
 $Targets = New-Object System.Collections.Generic.List[object]
 foreach ($definition in $TargetDefinitions) {
@@ -41,7 +35,7 @@ foreach ($definition in $TargetDefinitions) {
 }
 
 if ($Apply) {
-    Invoke-AiConfigHubPreflight $Root $ResolvedUserHome -IncludeCodexLegacy:$IncludeCodexLegacy
+    Invoke-AiConfigHubPreflight $Root $ResolvedUserHome
 }
 
 $RetiredSkillNames = @()

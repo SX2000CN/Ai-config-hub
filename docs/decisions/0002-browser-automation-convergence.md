@@ -15,7 +15,7 @@ Hub 同时维护 Playwright MCP 和 Chrome DevTools MCP，普通浏览器操作�
 3. browser MCP runtime 只固定 `chrome-devtools-mcp@1.6.0`，由 `browser-debug` profile 按需启用。
 4. local-webfetch 只交付 Claude Code；context-thread 继续支持四个 target。
 5. manifest 保留 Playwright 的精确退役签名，Apply 只删除能够确认归属的历史配置，同名自定义 server 保留。
-6. OpenCode 的 managed MCP 面只保留 context-thread；旧 local-webfetch 仅在 ownership 匹配时移除。
+6. Chrome DevTools 支持 Claude Code、Codex、Grok 和 OpenCode；OpenCode 在 `browser-debug` / `full` 启用，旧 local-webfetch 仅在 ownership 匹配时移除。
 
 ## 后果
 

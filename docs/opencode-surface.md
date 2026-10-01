@@ -18,10 +18,10 @@
 |---|---|---|
 | `core` | 无 | 默认不注册 managed MCP |
 | `code-intel` | `context-thread` | 需要代码关系或影响面分析时使用 |
-| `browser-debug` | 无 | Chrome DevTools 不注册到 OpenCode |
-| `full` | `context-thread` | 保守聚合，不包含浏览器 server |
+| `browser-debug` | `chrome-devtools` | 性能、Lighthouse、内存和深度调试 |
+| `full` | `context-thread`、`chrome-devtools` | 聚合代码脉络与浏览器专项调试 |
 
-OpenCode 的日常浏览器自动化使用用户级官方 Playwright CLI `agents` skill，不注册 Playwright MCP。Chrome DevTools MCP 保持在 Claude Code、Codex 和 Grok 的专项调试 surface 内。OpenCode 曾经出现过配置 MCP 后宿主崩溃的历史问题，因此托管面保持为 context-thread。
+OpenCode 的日常浏览器自动化使用用户级官方 Playwright CLI `agents` skill，不注册 Playwright MCP。Chrome DevTools MCP 作为完整开发能力进入 OpenCode 的 `browser-debug` 和 `full` profile，并继续使用 Hub 锁定的本地 runtime；`core` 和 `code-intel` 不常驻浏览器工具。
 
 ## 合并与安全
 

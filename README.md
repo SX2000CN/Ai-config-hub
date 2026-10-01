@@ -91,7 +91,7 @@ MCP 配置片段管理流程：
 .\scripts\sync-opencode-mcp.ps1 -Profile code-intel
 ```
 
-MCP 按 profile 管理：`core` 只给 Claude Code 提供 local-webfetch；`code-intel` 为支持的目标增加 context-thread；`browser-debug` 为 Claude Code、Codex 和 Grok 增加 Chrome DevTools；`full` 聚合各目标允许的三项 managed 能力，OpenCode 仍只接入 context-thread。Playwright MCP 已退役，旧配置只在 ownership 匹配时移除；日常浏览器自动化改用官方 Playwright CLI + skill。Grok Apply 会关闭 Claude MCP/skills/agents/rules compat 双源。日常默认 `core`/`code-intel`，不要把 `full` 当常驻。Grok hooks/plugins 不由 Hub 托管。
+MCP 按 profile 管理：`core` 只给 Claude Code 提供 local-webfetch；`code-intel` 为支持的目标增加 context-thread；`browser-debug` 为四个目标增加 Chrome DevTools；`full` 聚合各目标允许的 managed 能力，OpenCode 接入 context-thread 和 Chrome DevTools。Playwright MCP 已退役，旧配置只在 ownership 匹配时移除；日常浏览器自动化改用官方 Playwright CLI + skill。Grok Apply 会关闭 Claude MCP/skills/agents/rules compat 双源。日常默认 `core`/`code-intel`，不要把 `full` 当常驻。Grok hooks/plugins 不由 Hub 托管。
 
 Playwright CLI 和官方 skill 不由 Hub 复制或同步；在用户主目录运行官方安装器：
 
@@ -142,10 +142,10 @@ playwright-cli install --skills=agents
 - 已支持 Claude Code、Codex、OpenCode 和 Grok 全局规则的源码化管理。
 - 已提供 Codex 安全示例配置模板。
 - 已支持四个全局 skill 的源码化、渲染、检查和 dry-run 同步流程；新增或变更的用户级安装需执行 `sync-skills.ps1 -Apply`。
-- 已支持 `core`、`code-intel`、`browser-debug`、`full` 四个 MCP profiles，并通过 doctor、runtime readiness、dry-run 和事务合并控制真实用户级配置；OpenCode MCP 以独立合并脚本保护 provider/model 配置。
+- 已支持 `core`、`code-intel`、`browser-debug`、`full` 四个 MCP profiles，并通过 doctor、runtime readiness、dry-run 和事务合并控制真实用户级配置；OpenCode MCP 以独立合并脚本保护 provider/model 配置。本机专属的 server `env`（代理等）放在未跟踪的 `tool-configs/mcp/private/<server>.env.json`，由 `sync-mcp.ps1` 在同步时合并，共享片段不携带任何机器本地事实。
 - 已用 `config/managed-assets.psd1` schema v2 统一登记托管规则目标、四个 skills、退役 skill/MCP 清理、三个 active MCP server、四个 profiles、三套 runtime 和用户目录相对路径，并保留 schema v1 规范化兼容；render 脚本支持非写入 `-Check`，`check-all.ps1` 会执行源码/rendered 一致性、三个 runtime 测试集、同步安全/profile/doctor 测试、runtime 和用户配置 dry-run、敏感信息检查及 `git diff --check`。
 - 用户级同步采用 staging 验证后再切换的事务式部署，备份统一保存在 `~/.ai-config-hub/backups/<pipeline>/<timestamp>-<guid>/`；中途失败会恢复本次管线已经更新的目标，不清理历史备份。
 - 脉络 MCP 的源码维护在 `tools/context-thread-engine/`，运行时由 `scripts/sync-context-thread-runtime.ps1 -Apply` 分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`，MCP 配置通过 `node` 启动该用户级 runtime，不依赖当前仓库路径或全局 `context-thread` 命令。
 - `local-webfetch` MCP 只交付给 Claude Code：运行时对每次目标和重定向做公共网络校验，流式限制响应大小，并把抓取内容标记为不可信外部数据。显式代理被视为可信网络边界。
 - 浏览器日常自动化使用外部官方 Playwright CLI + skill；浏览器 MCP runtime 只锁定 Chrome DevTools，用于性能、Lighthouse、内存和深度调试，不在 server 启动时通过 `npx -y` 临时下载包。
-- Codex 新 skill 默认同步到 `C:\Users\sx200\.agents\skills\<skill-name>\`，OpenCode 直接发现并复用该通用目录；Hub 不再同步 `~/.config/opencode/skills` 原生副本，`.codex\skills` 仅作为可选历史兼容目标。
+- 全局 skill 只有两个分发目标：Claude Code 专属的 `~/.claude/skills/`（官方文档明确不读 `.agents/` 目录），以及 Codex、OpenCode、Grok 共用的 `~/.agents/skills/`。`~/.codex/skills` 与 `~/.grok/skills` 已退役，旧托管副本只在 marker 匹配时删除。

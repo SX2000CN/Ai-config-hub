@@ -6,6 +6,8 @@
 
 > 2026-07-31：本 ADR 的 Grok 一等 target、原生规则/skills/MCP 与 compat 决策继续有效；其中 local-webfetch 和 Playwright MCP profile 细节已由 [ADR 0002](0002-browser-automation-convergence.md) 取代。
 
+> 2026-10-02：**第 3 条（Skills 原生分发到 `~/.grok/skills/`）已被取代。** Grok 官方文档说明它会扫描每一层的 `.agents/skills/`（"Grok also scans `.agents/skills/` ... at each tier (alongside `.grok/`)"），因此 Grok 改为复用 `~/.agents/skills/`；`skills/grok/` 源目录与 `~/.grok/skills/` 目标均已退役。规则、MCP 与 compat 决策继续有效。
+
 ## 背景
 
 Grok Build 此前主要依赖 harness compat 读取 Claude 全局规则、`~/.claude.json` MCP 与旁路发现的 `~/.agents/skills`。已出现的问题包括：

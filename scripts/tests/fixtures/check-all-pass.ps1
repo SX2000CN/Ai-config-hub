@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$UserHome,
-    [switch]$IncludeCodexLegacy
+    [string]$UserHome
 )
 
 $ErrorActionPreference = 'Stop'

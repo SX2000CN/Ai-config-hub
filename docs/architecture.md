@@ -109,11 +109,13 @@ C:\Users\sx200\.agents\skills\<skill-name>\
 ```text
 skills/shared/<skill-name>/
         +
-skills/grok/<skill-name>/SKILL.md
+skills/codex/<skill-name>/SKILL.md
         ↓
-skills/rendered/grok/<skill-name>/
+skills/rendered/codex/<skill-name>/
         ↓
-C:\Users\sx200\.grok\skills\<skill-name>\
+C:\Users\sx200\.agents\skills\<skill-name>\
+        ↓
+        Codex / OpenCode / Grok 共用该目录
 ```
 
 当前全局 skills：
@@ -125,13 +127,11 @@ C:\Users\sx200\.grok\skills\<skill-name>\
 
 路由元数据维护在 `config/managed-assets.psd1`：显式点名和平台强制触发优先，领域 skill 主导交付，`global-thinking-partner` 可作为辅助 reasoning mode，工具路由 skill 只在对应能力确实需要时加入。`skills/evals/routes.json` 保存路由正例、反例和 handoff 场景。
 
-可选历史兼容目标：
+已退役的分发目标（由 manifest 的 `RetiredTargets` / `RetiredRenderedRoots` 清理，只在能确认归属时删除）：
 
-```text
-skills/rendered/codex-legacy/<skill-name>/
-        ↓
-C:\Users\sx200\.codex\skills\<skill-name>\
-```
+- `~/.codex/skills/`：Codex 读取 `~/.agents/skills/`，历史兼容副本不再维护。
+- `~/.config/opencode/skills/`：OpenCode 官方发现 `~/.agents/skills/`。
+- `~/.grok/skills/`：Grok 扫描每一层的 `.agents/skills/`，原生副本冗余。
 
 ### MCP / 工具配置片段
 
@@ -197,7 +197,7 @@ C:\Users\sx200\.grok\config.toml
 C:\Users\sx200\.config\opencode\opencode.json
 ```
 
-默认 `core` 只给 Claude Code 启用 local-webfetch，其他目标不注册 managed MCP。`code-intel` 增加 context-thread，`browser-debug` 为 Claude Code、Codex 和 Grok 增加 Chrome DevTools；OpenCode 当前只接入 context-thread；`full` 聚合各目标允许的 managed server。Grok Apply 会写入 managed compat，关闭 Claude MCP/skills/agents/rules 扫描，避免双源。Profile 切换只删除能够用 marker 或 current/legacy 精确签名确认归属的 inactive server，同名用户配置不会被静默覆盖。Grok 完整 surface 见 [grok-build-surface.md](grok-build-surface.md) 与 [ADR 0001](decisions/0001-grok-first-class-target.md)；OpenCode 边界见 [opencode-surface.md](opencode-surface.md)。
+默认 `core` 只给 Claude Code 启用 local-webfetch，其他目标不注册 managed MCP。`code-intel` 增加 context-thread，`browser-debug` 为 Claude Code、Codex、Grok 和 OpenCode 增加 Chrome DevTools；`full` 聚合各目标允许的 managed server。Grok Apply 会写入 managed compat，关闭 Claude MCP/skills/agents/rules 扫描，避免双源。Profile 切换只删除能够用 marker 或 current/legacy 精确签名确认归属的 inactive server，同名用户配置不会被静默覆盖。Grok 完整 surface 见 [grok-build-surface.md](grok-build-surface.md) 与 [ADR 0001](decisions/0001-grok-first-class-target.md)；OpenCode 边界见 [opencode-surface.md](opencode-surface.md)。
 
 `mcp-doctor.ps1` 报告 profile、source/install 版本与 hash、漂移、runtime 路径、工具数量和 PreferredFor 冲突。可比较 hash 覆盖 runtime 的完整执行 payload、`package.json`、lockfile 和 lockfile 登记的生产依赖，忽略日志与缓存，因此已锁定包的内容修改或缺失会被 Readiness 识别。Apply 前运行所选 profile 的 Smoke；required runtime 不可用时阻断，`-AllowDegraded` 只能跳过 optional server。Smoke 在 Readiness 基础上增加本地 entry probe、initialize + `tools/list` 和预期工具数校验，默认不联网。
 
@@ -222,14 +222,14 @@ AI 接手入口和多任务状态总览
 - render 脚本的 `-Check` 模式只比较源文件与 rendered 产物，不写 tracked 文件；跨管线预检由 `check-all.ps1` 统一执行。
 - 同步真实全局规则文件必须显式执行 `sync.ps1 -Apply`。
 - 同步真实全局 MCP 配置片段必须显式执行 `sync-mcp.ps1 -Apply`；OpenCode 使用 `sync-opencode-mcp.ps1 -Apply` 只合并 `opencode.json` 的 `mcp` 节。完整 Claude Code / Codex / Grok / OpenCode 用户配置仍不自动管理，只合并明确托管的 MCP server，并安全移除可识别的 retired pencil。Grok hooks/plugins、api_key、auth 与外观配置不托管。
-- MCP 通过 profile 控制能力面；默认 `core` 只给 Claude Code 启用 local-webfetch。代码脉络由 `code-intel` 启用，Chrome DevTools 专项调试由 `browser-debug` 启用，OpenCode 不注册浏览器 MCP，`full` 只用于明确需要全部 managed 能力的临时场景。普通浏览器自动化使用 Hub 外部的官方 Playwright CLI + skill。
+- MCP 通过 profile 控制能力面；默认 `core` 只给 Claude Code 启用 local-webfetch。代码脉络由 `code-intel` 启用，Chrome DevTools 专项调试由四个目标的 `browser-debug` 启用，`full` 只用于明确需要全部 managed 能力的临时场景。普通浏览器自动化使用 Hub 外部的官方 Playwright CLI + skill。
 - Codex 完整 `config.toml` 不作为仓库事实源，只提供安全示例模板和托管 MCP 片段。
-- skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件；Codex 与 OpenCode 共用 `skills/codex/` 渲染到 `~/.agents/skills/` 的通用入口，不维护 OpenCode 原生副本。
+- skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件；只有两个分发目标：Claude Code 专属的 `~/.claude/skills/`（它不读 `.agents/`），以及 Codex / OpenCode / Grok 共用的 `~/.agents/skills/`。
 - skill rendered 包通过 `render-skills.ps1` 为每个已登记全局 skill 生成，不应手工作为长期事实源编辑。
 - `global-context-thread` 是“脉络”轻量结构化事实层：context-thread 只负责代码结构关系，非代码复杂工作流仍由 `.Ai-config` 任务卡关系索引承接；没有可用索引或 MCP 工具时回退到普通文件读取。
 - `scripts/sync-context-thread-runtime.ps1` 负责把 `tools/context-thread-engine/` 的构建产物和生产依赖分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`；`scripts/context-thread.ps1` 是面向人类和脚本的轻量 wrapper，默认调用该用户级 runtime，不要求 npm 全局安装 `context-thread`。
 - `.Ai-config/CURRENT.md` 是项目级 AI 接手入口和多任务状态总览，不是完整日志或完成记录；具体任务事实保存在 `.Ai-config/tasks/*.md`，未确认或有风险的任务不得直接丢弃。
 - `project-ai-config-hub` 的 rendered skill 包会带托管标记，便于 `sync-skills.ps1` 区分历史安装和本仓库产物。
-- `.codex\skills` 只作为历史兼容目标，Codex 当前官方路径优先使用 `.agents\skills`。
+- `.codex\skills` 已退役：Codex 当前官方路径是 `.agents\skills`，历史兼容副本不再渲染或同步。
 - 所有 `sync*.ps1 -Apply` 在写入前自动运行完整预检，并只允许把目标解析到当前或显式 `-UserHome` 内部。
 - 用户级部署先写入 `~/.ai-config-hub/staging/<pipeline>/<operation-id>/`，验证后再切换；原目标备份到 `~/.ai-config-hub/backups/<pipeline>/<operation-id>/`。同一管线中途失败时回滚本次已更新目标，历史备份保留。

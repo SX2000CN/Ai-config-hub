@@ -33,5 +33,5 @@
 - 普通目标项目中，`.Ai-config/skills/<skill-name>/` 是项目级 skill 的 canonical 事实源。
 - `.claude/skills/<skill-name>/SKILL.md` 是 Claude Code 项目入口，不承载长期规则。
 - `.agents/skills/<skill-name>/SKILL.md` 是 Codex 项目入口，不承载长期规则。
-- `.codex/skills/<skill-name>/SKILL.md` 只在历史兼容需要时维护。
+- `.codex/skills/` 已退役：Codex 读取 `.agents/skills/`。
 - 工具入口只做薄入口，不复制完整项目规则。

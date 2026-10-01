@@ -24,13 +24,22 @@
 context-thread MCP 可用时，先用 `context_thread_status` 判断索引是否可用。若提示未初始化：
 
 - 简单问答和局部任务：直接回退到 `rg` / 文件读取。
-- 跨模块关系、长期项目理解或持续接手任务：说明初始化会生成项目本地索引，征得确认后再按全局规则里的 CLI 调用契约执行 init（`context-thread` 不是可直接执行的裸命令，需要用 `node` 加真实入口路径，或目标项目自带的 wrapper 脚本，具体路径见 `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` 的 Claude Code / Codex 专用补充）。
+- 跨模块关系、长期项目理解或持续接手任务：说明初始化会生成项目本地索引，征得确认后再按下面的 CLI 调用契约执行 init。
 
 若 `context_thread_status` 提示存在 pending changes，说明索引落后于当前文件状态：
 
-- 能手动刷新且任务确实依赖关系判断时，按同一套 CLI 调用契约运行 sync（同样优先用目标项目提供的 wrapper，没有 wrapper 时用 node 加真实入口路径）。
+- 能手动刷新且任务确实依赖关系判断时，按同一套 CLI 调用契约运行 sync。
 - 不能刷新时，仍可用索引缩小范围，但最终判断必须读取当前文件确认。
 - 刚修改文件后，不要立刻把索引结果当成最新事实。
+
+### CLI 调用契约
+
+`context-thread` 不是全局命令：不在 PATH、不是 npm 全局包。唯一真实入口是用户级 runtime：
+
+- Windows 形态：`~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js`
+- POSIX 形态：`~/.ai-config-hub/mcp/context-thread/dist/bin/context-thread.js`
+
+调用方式固定为 `node <入口路径> <子命令>`。目标项目若自带 wrapper（`scripts/` 目录下的 `context-thread.ps1`），优先用 wrapper；否则用 `node` 加完整路径。不要假设 `context-thread` 可以作为裸命令执行。
 
 索引自动更新只在 MCP server 已运行、项目已初始化、文件 watcher 可用且变更文件类型受支持时成立。MCP 没启动、watcher 被禁用或平台不支持时，不会自动同步；这不是失败，小任务直接回退，大任务按需手动 sync。
 

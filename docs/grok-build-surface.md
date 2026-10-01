@@ -11,7 +11,7 @@
 | 主配置 | `~/.grok/config.toml` | `.grok/config.toml`（仅 MCP / plugins / permission / `[mcp] max_output_bytes`） | **部分**：用户级只合并 managed MCP + managed compat；不托管 auth、模型密钥、主题等 |
 | 全局指令 | `~/.grok/AGENTS.md` | 仓库内 `AGENTS.md` / `Claude.md` / `CLAUDE.md` 等（目录链自动加载） | **是**（用户级渲染同步）；项目级由项目规则 / `project-ai-config-hub` 维护 |
 | 规则目录 | `~/.grok/rules/*.md` | `.grok/rules/*.md` | **否**（默认用单文件 `AGENTS.md`；不强制拆 rules 目录） |
-| Skills | `~/.grok/skills/<name>/` | `.grok/skills/<name>/`；另扫描 `.agents/skills`、`.claude/skills`（compat） | **是**（用户级原生 `~/.grok/skills`）；项目级薄入口对齐 `.grok/skills` |
+| Skills | `~/.grok/skills/<name>/`；**每一层的 `.agents/skills/` 也会被扫描** | `.grok/skills/<name>/`；另扫描 `.agents/skills`、`.claude/skills`（compat） | **是**（用户级托管在 `~/.agents/skills`，不再写 `~/.grok/skills`）；项目级薄入口对齐 `.grok/skills` |
 | MCP | `~/.grok/config.toml` 的 `[mcp_servers.*]` | `.grok/config.toml` 的 `[mcp_servers.*]`（同名覆盖用户级） | **是**（用户级 marker 事务合并）；项目级按需生成，不默认塞满 |
 | Hooks | `~/.grok/hooks/*.json` | `.grok/hooks/*.json` | **否**（用户自管；见 ADR 非目标） |
 | Plugins | `~/.grok/plugins/`、`[plugins].paths` | `.grok/plugins/` | **否**（用户自管；见 ADR 非目标） |
@@ -31,7 +31,7 @@ Grok 默认可扫描 Claude / Cursor 资产。Hub 原生接入后的策略：
 | Compat 单元 | 默认官方 | Hub Apply 后（managed block） | 说明 |
 |---|---|---|---|
 | `compat.claude.mcps` | on | **off** | 原生 `[mcp_servers.*]` 生效后关闭 Claude JSON 双源，避免 BOM / 漂移 / 双份 server |
-| `compat.claude.skills` | on | **off** | 全局 skill 以 `~/.grok/skills` 为准；不再依赖 `~/.claude/skills` 作为主源 |
+| `compat.claude.skills` | on | **off** | 全局 skill 以 `~/.agents/skills` 为准；关闭此单元正是为了避免重复载入 `~/.claude/skills` |
 | `compat.claude.agents` | on | **off** | 全局指令以 `~/.grok/AGENTS.md` 为准；避免与 `~/.claude/CLAUDE.md` 双载 core |
 | `compat.claude.rules` | on | **off** | 与 agents 一并关闭 home Claude rules 扫描 |
 | `compat.claude.hooks` | on | 保持默认 / 不托管 | Hub 不写 hooks；用户可自管 |
@@ -53,14 +53,14 @@ rules = false
 
 dry-run 若检测到仍存在 Claude JSON MCP 或 home Claude 全局规则/skills 与原生目标并存，会提示双源风险；Apply 写入上述 block 后以原生为准。
 
-补充：Grok 仍会扫描用户级 `~/.agents/skills`（与 `.grok` 同层发现）。Hub 主路径是 `~/.grok/skills`；`sync-skills` 不同步到 `.agents` 作为 Grok 目标。若本机同时有 Codex 的 `~/.agents/skills` 同名 skill，以 Grok 发现顺序去重；验收以 `grok inspect` 中 source path 指向 `~/.grok/skills` 为准。
+补充：Grok 官方文档原文是「Grok also scans `.agents/skills/` (and `commands/`) at each tier (alongside `.grok/`)」。因此 Hub 把全局 skill 托管在 `~/.agents/skills`，与 Codex、OpenCode 共用一份，不再写 `~/.grok/skills`。验收以 `grok inspect` 中 managed skill 的 source path 指向 `~/.agents/skills/...` 为准。
 
 ## 3. Hub 管线映射
 
 | Hub 源 | Rendered | 用户目标 | 脚本 |
 |---|---|---|---|
 | `rules/shared/core.md` + `rules/tools/grok.md` + `templates/grok-AGENTS.md.tpl` | `rules/rendered/grok-AGENTS.md` | `~/.grok/AGENTS.md` | `render.ps1` / `check.ps1` / `sync.ps1` |
-| `skills/shared/*` + `skills/grok/*/SKILL.md` | `skills/rendered/grok/*` | `~/.grok/skills/*` | `render-skills.ps1` / `check-skills.ps1` / `sync-skills.ps1` |
+| `skills/shared/*` + `skills/codex/*/SKILL.md` | `skills/rendered/codex/*` | `~/.agents/skills/*`（与 Codex / OpenCode 共用） | `render-skills.ps1` / `check-skills.ps1` / `sync-skills.ps1` |
 | `tool-configs/mcp/shared/*.json` | `tool-configs/mcp/rendered/**/grok.mcp.toml` | `~/.grok/config.toml`（marker 合并） | `render-mcp.ps1` / `check-mcp.ps1` / `sync-mcp.ps1` |
 | managed runtimes | — | `~/.ai-config-hub/mcp/{context-thread,browser}` | context-thread 共用；browser runtime 只包含 Chrome DevTools MCP |
 
@@ -101,7 +101,7 @@ dry-run 若检测到仍存在 Claude JSON MCP 或 home Claude 全局规则/skill
 .\scripts\render-mcp.ps1 -Check
 .\scripts\check-all.ps1
 .\scripts\sync.ps1                  # dry-run，含 Grok AGENTS.md
-.\scripts\sync-skills.ps1           # dry-run，含 ~/.grok/skills
+.\scripts\sync-skills.ps1           # dry-run，含退役 ~/.grok/skills
 .\scripts\sync-mcp.ps1 -Profile full  # dry-run，含 ~/.grok/config.toml
 ```
 
@@ -113,7 +113,7 @@ grok mcp list
 grok mcp doctor
 ```
 
-期望：`Project Instructions` 出现 user `~/.grok/AGENTS.md`；managed skills 的 source 为 `~/.grok/skills/...`；managed MCP 的 source 为 `config.toml`（非仅 `[claude]`）。
+期望：`Project Instructions` 出现 user `~/.grok/AGENTS.md`；managed skills 的 source 为 `~/.agents/skills/...`（`~/.grok/skills` 已退役）；managed MCP 的 source 为 `config.toml`（非仅 `[claude]`）。
 
 ## 7. 非目标（摘要）
 

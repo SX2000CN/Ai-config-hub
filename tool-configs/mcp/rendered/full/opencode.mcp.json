@@ -10,6 +10,18 @@
                                                    ],
                                        "enabled":  true,
                                        "timeout":  30000
-                                   }
+                                   },
+                "chrome-devtools":  {
+                                        "type":  "local",
+                                        "command":  [
+                                                        "node",
+                                                        "~\\.ai-config-hub\\mcp\\browser\\bin\\browser-mcp-runtime.js",
+                                                        "chrome-devtools",
+                                                        "--no-performance-crux",
+                                                        "--no-usage-statistics"
+                                                    ],
+                                        "enabled":  true,
+                                        "timeout":  30000
+                                    }
             }
 }

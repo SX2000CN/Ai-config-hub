@@ -63,8 +63,9 @@
 
 - `rules/tools/claude-code.md`
 - `rules/tools/codex.md`
-- `templates/CLAUDE.md.tpl`
-- `templates/AGENTS.md.tpl`
+- `rules/tools/grok.md`
+- `rules/tools/opencode.md`
+- `templates/*.md.tpl`（CLAUDE / AGENTS / grok-AGENTS / opencode-AGENTS）
 
 这一层只处理工具差异，例如 Claude Code 和 Codex 各自的规则入口、配置位置、MCP 机制、项目文档 fallback 和命令习惯。通用行为不写在这里，避免同一条原则在多个工具里复制后漂移。
 

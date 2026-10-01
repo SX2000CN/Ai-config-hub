@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { EnvHttpProxyAgent } from "undici"
+import { EnvHttpProxyAgent, fetch as undiciFetch } from "undici"
 import TurndownService from "turndown"
 import { z } from "zod"
 import { readFileSync } from "node:fs"
@@ -21,11 +21,17 @@ if (nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 19) || nodeMajor >= 25) {
 }
 
 function createRequestDispatcher({ hostname, addresses }) {
-  return new EnvHttpProxyAgent({
-    connect: {
-      lookup: createPinnedLookup({ hostname, addresses }),
-    },
-  })
+  // Empty addresses means proxy-resolved mode: the upstream proxy owns DNS for
+  // the target too, so there is nothing local to pin — hand resolution and
+  // routing to EnvHttpProxyAgent entirely.
+  const agentOptions = addresses.length > 0
+    ? {
+        connect: {
+          lookup: createPinnedLookup({ hostname, addresses }),
+        },
+      }
+    : {}
+  return new EnvHttpProxyAgent(agentOptions)
 }
 
 const BROWSER_USER_AGENT =
@@ -73,9 +79,20 @@ server.registerTool(
   async ({ url, format, timeout }) => {
     try {
       const timeoutMs = (timeout ?? DEFAULT_TIMEOUT_SEC) * 1000
+      // Behind a local proxy that owns DNS (Clash/TUN style), the OS resolver
+      // often cannot answer public names at all; without this fallback every
+      // request would die in pre-validation before reaching the proxy.
+      const proxyConfigured = Boolean(
+        process.env.HTTPS_PROXY || process.env.https_proxy ||
+        process.env.HTTP_PROXY || process.env.http_proxy,
+      )
       const result = await fetchUrlBytes(url, {
         timeoutMs,
+        // Same-library fetch keeps the dispatcher wire protocol consistent;
+        // Node's bundled fetch speaks a different undici Handler version.
+        fetchImpl: undiciFetch,
         dispatcherFactory: createRequestDispatcher,
+        allowProxyFallback: proxyConfigured,
         headers: {
           "User-Agent": BROWSER_USER_AGENT,
           Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5",

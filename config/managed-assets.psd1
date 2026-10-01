@@ -3,36 +3,27 @@
 
     Rules = @{
         SharedCore = 'rules\shared\core.md'
+        # One template, one content: every target receives byte-identical rules.
+        # Tool-specific facts are NOT rules; see skills/shared/project-ai-config-hub/references/tool-surfaces.md.
+        Template = 'templates\rules.md.tpl'
         Targets = @(
             @{
                 Name = 'ClaudeCode'
-                Template = 'templates\CLAUDE.md.tpl'
-                Supplement = 'rules\tools\claude-code.md'
-                Placeholder = '{{claude_code_supplement}}'
                 Rendered = 'rules\rendered\CLAUDE.md'
                 UserRelativePath = '.claude\CLAUDE.md'
             }
             @{
                 Name = 'Codex'
-                Template = 'templates\AGENTS.md.tpl'
-                Supplement = 'rules\tools\codex.md'
-                Placeholder = '{{codex_supplement}}'
                 Rendered = 'rules\rendered\AGENTS.md'
                 UserRelativePath = '.codex\AGENTS.md'
             }
             @{
                 Name = 'Grok'
-                Template = 'templates\grok-AGENTS.md.tpl'
-                Supplement = 'rules\tools\grok.md'
-                Placeholder = '{{grok_supplement}}'
                 Rendered = 'rules\rendered\grok-AGENTS.md'
                 UserRelativePath = '.grok\AGENTS.md'
             }
             @{
                 Name = 'OpenCode'
-                Template = 'templates\opencode-AGENTS.md.tpl'
-                Supplement = 'rules\tools\opencode.md'
-                Placeholder = '{{opencode_supplement}}'
                 Rendered = 'rules\rendered\opencode-AGENTS.md'
                 UserRelativePath = '.config\opencode\AGENTS.md'
             }
@@ -50,7 +41,7 @@
         Retired = @(
             'pencil-design-workflow'
         )
-        # OpenCode discovers ~/.agents/skills, so its former native copies are redundant.
+        # OpenCode and Grok both discover ~/.agents/skills, so their native skill copies are redundant.
         RetiredTargets = @(
             @{
                 Name = 'OpenCode'
@@ -62,9 +53,21 @@
                     'global-context-thread'
                 )
             }
+            @{
+                Name = 'Grok'
+                UserRelativeRoot = '.grok\skills'
+                SkillNames = @(
+                    'project-ai-config-hub'
+                    'global-frontend-design'
+                    'global-thinking-partner'
+                    'global-context-thread'
+                )
+            }
         )
         RetiredRenderedRoots = @(
             'skills\rendered\opencode'
+            'skills\rendered\codex-legacy'
+            'skills\rendered\grok'
         )
         Definitions = @(
             @{
@@ -109,24 +112,11 @@
                 RequireWhenToUse = $true
             }
             @{
+                # Codex, OpenCode and Grok all discover ~/.agents/skills: keep the single shared copy.
                 Name = 'Codex'
                 SourceRoot = 'skills\codex'
                 RenderedRoot = 'skills\rendered\codex'
                 UserRelativeRoot = '.agents\skills'
-                RequireWhenToUse = $false
-            }
-            @{
-                Name = 'CodexLegacy'
-                SourceRoot = 'skills\codex'
-                RenderedRoot = 'skills\rendered\codex-legacy'
-                UserRelativeRoot = '.codex\skills'
-                RequireWhenToUse = $false
-            }
-            @{
-                Name = 'Grok'
-                SourceRoot = 'skills\grok'
-                RenderedRoot = 'skills\rendered\grok'
-                UserRelativeRoot = '.grok\skills'
                 RequireWhenToUse = $false
             }
         )
@@ -168,7 +158,7 @@
             @{
                 Name = 'chrome-devtools'
                 Source = 'tool-configs\mcp\shared\chrome-devtools.json'
-                Targets = @('ClaudeCode', 'Codex', 'Grok')
+                Targets = @('ClaudeCode', 'Codex', 'Grok', 'OpenCode')
                 LegacyServers = @()
                 LegacySignatures = @(
                     @{ Command = 'npx'; Args = @('-y', 'chrome-devtools-mcp@1.6.0'); StartupTimeoutMs = 20000 }
