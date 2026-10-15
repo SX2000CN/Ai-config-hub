@@ -9,7 +9,7 @@
 ## 总体结构
 
 ```text
-skills/shared/global-context-thread/
+.agents/skills/global-context-thread/
         ↓
 AI 使用规则和工具选择
 

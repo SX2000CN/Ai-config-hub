@@ -10,7 +10,7 @@
 - `tasks/`：多任务工作状态卡，保存单个任务的无损接手信息。
 - `archive/`：可选长期整理目录，只在用户明确要求整理或归档长期摘要时使用。
 - `skills-registry.md`：项目级 skills 清单、事实源、入口和状态。
-- `skills/`：保留的旧占位目录，不是 Skill 内容事实源；不要在此新增包。本仓库的完整包源位于 `skills/shared/<name>/`；普通目标项目可按本仓库约定将完整包放在 `.agents/skills/<name>/`，再按客户端需要导出。
+- `skills/`：仅保留历史入口说明，不保存 Skill 包、评测或导出。本仓库完整包源位于 `.agents/skills/<name>/`，评测位于 `skills/evals/`。
 
 ## 与 docs/ 的边界
 
@@ -26,8 +26,8 @@
 
 `CURRENT.md` 是接手入口和状态总览，不替代 README、CHANGELOG、issue、PR 或 git log；具体任务事实保存在 `.Ai-config/tasks/*.md`。
 
-切换任务前应保存旧任务状态，不能直接覆盖。完成一轮工作但用户尚未确认，且涉及文件修改、配置修改、同步风险、验证缺失或残留风险时，应保持为待用户确认或等价状态，并记录验证情况、残留风险和下一步。日常关闭任务不要求移动到 `archive/`，但必须记录关闭依据。
+切换任务前应保存旧任务状态，不能直接覆盖。只有被打断、等待确认、验证缺失或有残留风险的跨会话任务才持续记录状态；普通仓库内可逆修改通过相关验证后可结束。仍需独立处理的问题应保留事实与下一步，不能写成已通过。日常关闭任务不要求移动到 `archive/`，但必须记录关闭依据。
 
 ## Skills 约定
 
-`.Ai-config/skills-registry.md` 只登记包位置和客户端 adapter。本仓库自身的完整包源位于 `skills/shared/<skill-name>/`；普通目标项目可采用 `.agents/skills/<skill-name>/` 作为完整包源，这是项目约定，不是 Agent Skills 规范规定的发现路径。Claude Code 使用 `.claude/skills/<skill-name>/` 发现同一完整包的 adapter 导出。不要把 `.Ai-config/` 当作规则或 Skill 内容事实源。
+`.Ai-config/skills-registry.md` 只登记包位置和客户端 adapter。本仓库自身的完整包源位于 `.agents/skills/<skill-name>/`；`.agents/skills/` 同时是本项目首选的发现路径，但不是 Agent Skills 规范规定的唯一发现路径。Claude Code 需要 `.claude/skills/<skill-name>/` adapter 才能发现包；本仓库当前暂停该导出。不要把 `.Ai-config/` 当作规则或 Skill 内容事实源。

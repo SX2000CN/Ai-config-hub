@@ -10,6 +10,7 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 
 $Manifest = Import-PowerShellDataFile -LiteralPath $ManifestPath
 $Failed = $false
+$RulesRoot = Join-Path $Root ([string]$Manifest.Rules.SourceRoot)
 
 function Fail($Message) {
     Write-Output "ERROR: $Message"
@@ -46,7 +47,7 @@ if ($renderedHashes.Count -gt 1) {
 }
 
 $currentGuidanceFiles = @(
-    Get-ChildItem -LiteralPath (Join-Path $Root 'rules\shared') -Recurse -File
+    Get-ChildItem -LiteralPath $RulesRoot -Recurse -File
     Get-Item -LiteralPath (Join-Path $Root 'README.md')
     Get-ChildItem -LiteralPath (Join-Path $Root 'docs') -Recurse -File | Where-Object {
         -not $_.FullName.StartsWith((Join-Path $Root 'docs\archive'), [StringComparison]::OrdinalIgnoreCase)
@@ -73,22 +74,23 @@ foreach ($file in $currentGuidanceFiles) {
 # The context-thread CLI contract lives in exactly one place: the skill that uses it.
 # Rules must not repeat it (that duplication is what caused drift).
 $contextThreadContract = '~\.ai-config-hub\mcp\context-thread\dist\bin\context-thread.js'
-$contextThreadSkill = Join-Path $Root 'skills\shared\global-context-thread\workflow.md'
+$contextThreadSkill = Join-Path (Join-Path $Root ([string]$Manifest.Skills.SourceRoot)) 'global-context-thread\workflow.md'
 if (-not (Test-Path -LiteralPath $contextThreadSkill -PathType Leaf)) {
     Fail "Missing context-thread skill workflow: $contextThreadSkill"
 }
 elseif (-not (Get-Content -Raw -Encoding UTF8 -LiteralPath $contextThreadSkill).Contains($contextThreadContract)) {
     Fail 'context-thread CLI contract is missing its real runtime path in the global-context-thread skill'
 }
-$rulesCore = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'rules\shared\core.md')
+$rulesCore = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $RulesRoot 'core.md')
 if ($rulesCore.Contains('context-thread.js')) {
-    Fail 'rules/shared/core.md must not carry the context-thread CLI contract; it belongs to the global-context-thread skill'
+    Fail '.agents/rules/core.md must not carry the context-thread CLI contract; it belongs to the global-context-thread skill'
 }
 if (Test-Path -LiteralPath (Join-Path $Root 'rules\tools') -PathType Container) {
     Fail 'rules/tools must stay empty: tool-specific facts belong in a skill reference, not in always-on rules'
 }
 
 $scanPaths = @(
+    $RulesRoot,
     (Join-Path $Root 'rules'),
     (Join-Path $Root 'templates'),
     (Join-Path $Root 'docs'),

@@ -13,17 +13,17 @@
 先确定本次是在改配置内容本体、客户端 adapter，还是项目状态/索引：
 
 1. 优先读取 `.Ai-config/CURRENT.md`、`.Ai-config/skills-registry.md`、相关任务卡。
-2. 配置本体：规则读 `rules/shared/core.md`；Skill 读 `skills/shared/<name>/` 完整包；设计说明读对应 `docs/`。
+2. 配置本体：规则读 `.agents/rules/core.md`；Skill 读 `.agents/skills/<name>/` 完整包；设计说明读对应 `docs/`。
 3. Adapter 或本机部署任务：只读相关 `config/`、`scripts/`、`tool-configs/`、`tools/` 和 adapter 文档。不要把用户级配置与仓库源默认视为双向事实源。
 
-普通配置维护以仓库内 canonical source 为准，不要求读取或追平用户级全局目录。发现 adapter 导出与源不同步时，先更新并检查仓库内导出物；从用户级目录反向覆盖源文件属于单独迁移决策。
+普通配置维护以仓库内 canonical source 为准，不要求读取或追平用户级全局目录。规则适配文件从源生成；Skill 包直接从源同步到对应发现目录。从用户级目录反向覆盖源文件属于单独迁移决策。
 
 ## 本仓库验证边界
 
 本仓库把规则与完整 Agent Skill 包作为内容本体，把路径导出和本机集成作为可选 adapter。验证要求只在这里维护，不进入分发给所有项目的共享规则：
 
 - 规则改动：运行 `render.ps1 -Check` 和 `check.ps1`。
-- Skill 包改动：运行 `render-skills.ps1 -Check` 和 `check-skills.ps1`。
+- Skill 包改动：运行 `check-skills.ps1`；没有仓库内 Skill 渲染步骤。
 - 跨管线改动：运行 `scripts/check-all.ps1`。
 - 仅当任务明确涉及本机部署时，才运行对应 sync dry-run；Apply 不属于配置源修改的默认步骤。
 - 用户级 Apply：先审阅完整 dry-run，确认后由同步脚本执行 preflight、staging、备份和回滚。

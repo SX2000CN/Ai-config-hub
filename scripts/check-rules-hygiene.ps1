@@ -6,8 +6,8 @@ $ErrorActionPreference = 'Stop'
 # makes that class of rot structurally impossible instead of policed.
 
 $Root = Split-Path -Parent $PSScriptRoot
-$CorePath = Join-Path $Root 'rules\shared\core.md'
-$RationalePath = Join-Path $Root 'rules\shared\core-rationale.md'
+$CorePath = Join-Path $Root '.agents\rules\core.md'
+$RationalePath = Join-Path $Root '.agents\rules\core-rationale.md'
 $Failed = $false
 
 function Fail($Message) {
@@ -34,7 +34,7 @@ $pathPatterns = @(
 foreach ($item in $pathPatterns) {
     foreach ($match in [regex]::Matches($content, $item.Pattern)) {
         $line = ($content.Substring(0, $match.Index) -split "`n").Count
-        Fail "rules/shared/core.md must not carry a $($item.Name) (rot risk) at line ${line}: $($match.Value)"
+        Fail ".agents/rules/core.md must not carry a $($item.Name) (rot risk) at line ${line}: $($match.Value)"
     }
 }
 
@@ -49,11 +49,11 @@ else {
     $rationale = Get-Content -Raw -Encoding UTF8 -LiteralPath $RationalePath
     $sections = [regex]::Matches($content, '(?m)^##\s+(.+)$') | ForEach-Object { $_.Groups[1].Value.Trim() }
     if (@($sections).Count -eq 0) {
-        Fail 'rules/shared/core.md has no sections; expected a sectioned collaboration contract'
+        Fail '.agents/rules/core.md has no sections; expected a sectioned collaboration contract'
     }
     foreach ($section in $sections) {
         if ($rationale -notmatch [regex]::Escape($section)) {
-            Fail "rules/shared/core.md section '$section' has no rationale entry; every rule needs the concrete failure it prevents"
+            Fail ".agents/rules/core.md section '$section' has no rationale entry; every rule needs the concrete failure it prevents"
         }
     }
 }

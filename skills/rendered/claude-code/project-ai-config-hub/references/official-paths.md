@@ -59,4 +59,4 @@ Claude Code 不自动扫描 `.agents/skills/`，官方说明也明确不读取 `
 
 ## 本仓库的包约定
 
-本仓库将完整包源保存在 `skills/shared/<name>/`。`render-skills.ps1` 将相同文件导出到 `skills/rendered/claude-code/` 和 `skills/rendered/codex/`，分别对应 `.claude/skills/` 与 `.agents/skills/`。这些是仓库的 source/export 约定，不是客户端规定的事实源布局。
+本仓库将完整包源保存在 `.agents/skills/<name>/`。`render-skills.ps1` 将相同文件导出到 `skills/rendered/claude-code/` 和 `skills/rendered/codex/`，分别对应 `.claude/skills/` 与 `.agents/skills/`。这些是仓库的 source/export 约定，不是客户端规定的事实源布局。

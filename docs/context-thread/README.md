@@ -14,8 +14,8 @@
 
 ## 相关事实源
 
-- `rules/shared/core.md`：结构化事实优先的全局短规则。
-- `skills/shared/global-context-thread/`：AI 何时触发脉络、如何选择工具、何时回退。
+- `.agents/rules/core.md`：结构化事实优先的全局短规则。
+- `.agents/skills/global-context-thread/`：AI 何时触发脉络、如何选择工具、何时回退。
 - `tools/context-thread-engine/`：本仓库维护的本地引擎源码。
 - `tool-configs/mcp/shared/context-thread.json`：MCP server 配置源。
 - `scripts/context-thread.ps1`：面向人类和脚本的 wrapper。
@@ -27,7 +27,7 @@
 
 - 想知道“为什么要有脉络、它解决什么问题”：读 [design.md](design.md)。
 - 想优化引擎、MCP 或索引同步：读 [implementation.md](implementation.md)。
-- 想判断某个实际任务该不该用脉络：读 [scenarios.md](scenarios.md) 和 `skills/shared/global-context-thread/workflow.md`。
+- 想判断某个实际任务该不该用脉络：读 [scenarios.md](scenarios.md) 和 `.agents/skills/global-context-thread/workflow.md`。
 - 想看当前项目索引状态和命令：读 `.Ai-config/context-thread/README.md`。
 
 ## 文档维护规则

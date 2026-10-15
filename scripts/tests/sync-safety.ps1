@@ -59,11 +59,10 @@ function New-TestRepository($Path) {
     New-Item -ItemType Directory -Force -Path $Path | Out-Null
     foreach ($relativePath in @(
         'config\managed-assets.psd1',
-        'rules\rendered\CLAUDE.md',
+        '.agents\skills',
         'rules\rendered\AGENTS.md',
         'rules\rendered\grok-AGENTS.md',
         'rules\rendered\opencode-AGENTS.md',
-        'skills\rendered',
         'tool-configs\mcp\rendered',
         'tool-configs\mcp\shared',
         'tools\local-webfetch',
@@ -212,9 +211,10 @@ function Assert-RulesApplied($TestRoot, $UserHome) {
 
 function Assert-SkillsApplied($TestRoot, $UserHome) {
     $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $TestRoot 'config\managed-assets.psd1')
+    $skillNames = @(Get-ChildItem -LiteralPath (Join-Path $TestRoot ([string]$manifest.Skills.SourceRoot)) -Directory | ForEach-Object { $_.Name })
     foreach ($definition in @($manifest.Skills.Targets)) {
-        foreach ($skillName in $manifest.Skills.Names) {
-            $source = Join-Path (Join-Path $TestRoot ([string]$definition.RenderedRoot)) ([string]$skillName)
+        foreach ($skillName in $skillNames) {
+            $source = Join-Path (Join-Path $TestRoot ([string]$manifest.Skills.SourceRoot)) ([string]$skillName)
             $target = Join-Path (Join-Path $UserHome ([string]$definition.UserRelativeRoot)) ([string]$skillName)
             Assert-Equal (Get-AiConfigHubPathFingerprint $source) (Get-AiConfigHubPathFingerprint $target) "Skill Apply failed for $($definition.Name)-$skillName"
         }
@@ -421,7 +421,7 @@ try {
     $testRepository = New-TestRepository (Join-Path $tempRoot 'repository')
     $unmanagedApplyHome = Join-Path $tempRoot 'unmanaged-apply-home'
     New-Item -ItemType Directory -Force -Path $unmanagedApplyHome | Out-Null
-    $unmanagedSkillTarget = Join-Path $unmanagedApplyHome '.claude\skills\project-ai-config-hub\SKILL.md'
+    $unmanagedSkillTarget = Join-Path $unmanagedApplyHome '.agents\skills\project-ai-config-hub\SKILL.md'
     $unmanagedSkillContent = "---`nname: project-ai-config-hub`n---`n`n# User-owned skill`n"
     Write-Utf8NoBom $unmanagedSkillTarget $unmanagedSkillContent
 
@@ -437,8 +437,9 @@ try {
     Assert-Equal $unmanagedSkillContent (Get-Content -Raw -Encoding UTF8 -LiteralPath $unmanagedSkillTarget) 'Rejected unmanaged skill content was changed'
 
     $testManifest = Import-AiConfigHubManagedAssetsManifest (Join-Path $testRepository 'config\managed-assets.psd1')
+    $testSkillNames = @(Get-ChildItem -LiteralPath (Join-Path $testRepository ([string]$testManifest.Skills.SourceRoot)) -Directory | ForEach-Object { $_.Name })
     foreach ($definition in @($testManifest.Skills.Targets)) {
-        foreach ($skillName in $testManifest.Skills.Names) {
+        foreach ($skillName in $testSkillNames) {
             $candidate = Join-Path (Join-Path $unmanagedApplyHome ([string]$definition.UserRelativeRoot)) ([string]$skillName)
             if ([System.IO.Path]::GetFullPath($candidate) -eq [System.IO.Path]::GetFullPath((Split-Path -Parent $unmanagedSkillTarget))) {
                 continue
@@ -450,7 +451,7 @@ try {
     $applyHome = Join-Path $tempRoot 'apply-home'
     New-Item -ItemType Directory -Force -Path $applyHome | Out-Null
 
-    foreach ($relativePath in @('.claude\CLAUDE.md', '.codex\AGENTS.md', '.grok\AGENTS.md', '.config\opencode\AGENTS.md')) {
+    foreach ($relativePath in @('.codex\AGENTS.md', '.grok\AGENTS.md', '.config\opencode\AGENTS.md')) {
         Write-Utf8NoBom (Join-Path $applyHome $relativePath) 'old rule content'
     }
     & (Join-Path $testRepository 'scripts\sync.ps1') -Apply -UserHome $applyHome | Out-Null
@@ -754,11 +755,14 @@ function Copy-AiConfigHubStagedFile {
 
     $raceHome = Join-Path $tempRoot 'race-home'
     New-Item -ItemType Directory -Force -Path $raceHome | Out-Null
-    $raceClaudeTarget = Join-Path $raceHome '.claude\CLAUDE.md'
-    $raceCodexTarget = Join-Path $raceHome '.codex\AGENTS.md'
-    Write-Utf8NoBom $raceClaudeTarget 'planned version'
-    Write-Utf8NoBom $raceCodexTarget 'planned version'
-    $env:AI_CONFIG_HUB_TEST_CONCURRENT_TARGET = $raceClaudeTarget
+    $raceManifest = Import-AiConfigHubManagedAssetsManifest (Join-Path $raceRepository 'config\managed-assets.psd1')
+    $raceTargets = @($raceManifest.Rules.Targets)
+    Assert-True ($raceTargets.Count -ge 2) 'Rule concurrency test requires at least two managed rule targets'
+    $raceConcurrentTarget = Join-Path $raceHome ([string]$raceTargets[0].UserRelativePath)
+    $raceLaterTarget = Join-Path $raceHome ([string]$raceTargets[1].UserRelativePath)
+    Write-Utf8NoBom $raceConcurrentTarget 'planned version'
+    Write-Utf8NoBom $raceLaterTarget 'planned version'
+    $env:AI_CONFIG_HUB_TEST_CONCURRENT_TARGET = $raceConcurrentTarget
 
     $raceRejected = $false
     try {
@@ -769,8 +773,8 @@ function Copy-AiConfigHubStagedFile {
         Assert-Contains $_.Exception.Message 'changed after planning' 'Concurrent target update failed for the wrong reason'
     }
     Assert-True $raceRejected 'A target changed after preflight must not be overwritten'
-    Assert-Equal 'concurrent update' (Get-Content -Raw -Encoding UTF8 -LiteralPath $raceClaudeTarget) 'Concurrent target update was overwritten'
-    Assert-Equal 'planned version' (Get-Content -Raw -Encoding UTF8 -LiteralPath $raceCodexTarget) 'A later rule target changed despite transaction rejection'
+    Assert-Equal 'concurrent update' (Get-Content -Raw -Encoding UTF8 -LiteralPath $raceConcurrentTarget) 'Concurrent target update was overwritten'
+    Assert-Equal 'planned version' (Get-Content -Raw -Encoding UTF8 -LiteralPath $raceLaterTarget) 'A later rule target changed despite transaction rejection'
 
     $preflightHomes = @(Get-Content -LiteralPath $env:AI_CONFIG_HUB_TEST_PREFLIGHT_LOG | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     Assert-True ($preflightHomes.Count -ge 4) 'Expected every full Apply test to run its preflight'

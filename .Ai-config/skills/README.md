@@ -1,7 +1,5 @@
 # Legacy skills directory
 
-This directory is retained as a migration and cleanup candidate. Do not add Skill content here.
+This directory is a retained historical entry, not a Skill content source. This repository's complete packages live in `.agents/skills/<name>/`; `.Ai-config/skills-registry.md` records package paths and client adapters. `.agents/skills/` is a discovery path supported by some clients, not a path prescribed by the Agent Skills format. This repository's Claude Code adapter is paused; historical exports are retained for a separate migration or cleanup decision.
 
-For ordinary target projects, this repository's convention is to store a complete Agent Skill package in `.agents/skills/<name>/`; `.Ai-config/skills-registry.md` records package paths and client adapters. This repository's own packages live in `skills/shared/<name>/`. `.agents/skills/` is a discovery path supported by some clients, not a path prescribed by the Agent Skills format. Claude Code uses an exported package under `.claude/skills/`.
-
-The hub's own global Skill packages remain under `skills/shared/<name>/` because they are source packages owned by this repository. Their rendered copies are adapters, not additional sources.
+Do not add Skill content here. Historical rendered copies are not checked or synchronized by the current Skill pipeline.

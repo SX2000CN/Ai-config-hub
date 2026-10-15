@@ -12,8 +12,8 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 }
 
 $Manifest = Import-PowerShellDataFile -LiteralPath $ManifestPath
-$CanonicalRoot = Join-Path $Root 'skills\shared'
-$ExpectedSkillNames = @($Manifest.Skills.Names | ForEach-Object { [string]$_ })
+$CanonicalRoot = Join-Path $Root ([string]$Manifest.Skills.SourceRoot)
+$ExpectedSkillNames = @(Get-ChildItem -LiteralPath $CanonicalRoot -Directory -Force | Sort-Object Name | ForEach-Object { $_.Name })
 
 function Invoke-ContentCheck {
     param(
@@ -58,39 +58,17 @@ function Test-CanonicalSkillRegistry {
         }
     }
 
-    foreach ($package in Get-ChildItem -LiteralPath $CanonicalRoot -Directory -Force) {
-        if (-not $seenNames.ContainsKey($package.Name)) {
-            throw "Canonical skill package is not registered in config/managed-assets.psd1: $($package.FullName)"
-        }
-    }
-
     $renderedRoot = Join-Path $Root 'skills\rendered'
-    if (-not (Test-Path -LiteralPath $renderedRoot -PathType Container)) {
-        throw "Missing rendered skill root: $renderedRoot"
-    }
-    $activeRenderedRoots = @($Manifest.Skills.Targets | ForEach-Object {
-        [System.IO.Path]::GetFileName(([string]$_.RenderedRoot).TrimEnd('\', '/'))
-    })
     $retiredRenderedRoots = @($Manifest.Skills.RetiredRenderedRoots | ForEach-Object {
         [System.IO.Path]::GetFileName(([string]$_).TrimEnd('\', '/'))
     })
-    $allowedRenderedRoots = @($activeRenderedRoots + $retiredRenderedRoots)
-    foreach ($entry in Get-ChildItem -LiteralPath $renderedRoot -Force) {
-        if ($entry.PSIsContainer -and $allowedRenderedRoots -notcontains $entry.Name) {
-            throw "Unregistered rendered skill root: $($entry.FullName)"
-        }
-        if (-not $entry.PSIsContainer) {
-            throw "Unexpected file directly under skills/rendered: $($entry.FullName)"
-        }
-    }
-    foreach ($rootName in $activeRenderedRoots) {
-        $activeRoot = Join-Path $renderedRoot $rootName
-        if (-not (Test-Path -LiteralPath $activeRoot -PathType Container)) {
-            throw "Missing active rendered skill root: $activeRoot"
-        }
-        foreach ($package in Get-ChildItem -LiteralPath $activeRoot -Directory -Force) {
-            if (-not $seenNames.ContainsKey($package.Name)) {
-                throw "Unregistered rendered skill package: $($package.FullName)"
+    if (Test-Path -LiteralPath $renderedRoot -PathType Container) {
+        foreach ($entry in Get-ChildItem -LiteralPath $renderedRoot -Force) {
+            if ($entry.PSIsContainer -and $retiredRenderedRoots -notcontains $entry.Name) {
+                throw "Unregistered historical rendered skill root: $($entry.FullName)"
+            }
+            if (-not $entry.PSIsContainer) {
+                throw "Unexpected file directly under skills/rendered: $($entry.FullName)"
             }
         }
     }
@@ -123,20 +101,18 @@ function Invoke-GitDiffCheck {
 Test-CanonicalSkillRegistry
 Write-Output 'Verified canonical skill registry'
 
-# These checks are deliberately limited to repository content and rendered
-# content. They do not invoke MCP, runtime, hooks, user-sync, or doctor steps.
-# check.ps1 and check-skills.ps1 own their corresponding render consistency
-# checks. Calling the render scripts here as well would run the same work twice.
+# These checks are deliberately limited to repository content. Skills are
+# checked in their canonical package tree and synced from that tree directly.
+# They do not invoke MCP, runtime, hooks, user-sync, or doctor steps.
 Invoke-ContentCheck 'check.ps1'
 Invoke-ContentCheck 'check-rules-hygiene.ps1'
 Invoke-ContentCheck 'check-skills.ps1'
 
 $contentPaths = @(
-    (Join-Path $Root 'rules\shared'),
+    (Join-Path $Root ([string]$Manifest.Rules.SourceRoot)),
     (Join-Path $Root 'rules\rendered'),
     (Join-Path $Root 'templates'),
-    (Join-Path $Root 'skills\shared'),
-    (Join-Path $Root 'skills\rendered'),
+    $CanonicalRoot,
     (Join-Path $Root 'skills\evals')
 )
 $contentFiles = Get-AiConfigHubScanFiles -Paths $contentPaths -Root $Root

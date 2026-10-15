@@ -59,8 +59,8 @@ dry-run 若检测到仍存在 Claude JSON MCP 或 home Claude 全局规则/skill
 
 | Hub 源 | Rendered | 用户目标 | 脚本 |
 |---|---|---|---|
-| `rules/shared/core.md` + `templates/rules.md.tpl` | `rules/rendered/grok-AGENTS.md` | `~/.grok/AGENTS.md` | `render.ps1` / `check.ps1` / `sync.ps1` |
-| `skills/shared/<name>/**` 完整包 | `skills/rendered/codex/<name>/` | `~/.agents/skills/<name>/`（Codex / OpenCode；Grok 依本机版本验证） | `render-skills.ps1` / `check-skills.ps1` / `sync-skills.ps1` |
+| `.agents/rules/core.md` + `templates/rules.md.tpl` | `rules/rendered/grok-AGENTS.md` | `~/.grok/AGENTS.md` | `render.ps1` / `check.ps1` / `sync.ps1` |
+| `.agents/skills/<name>/**` 完整包 | 直接使用 `.agents/skills/<name>/`；仓库不再维护客户端专属 Skill 副本 | `~/.agents/skills/<name>/`（Codex / OpenCode；Grok 依本机版本验证） | `check-skills.ps1` / `sync-skills.ps1` |
 | `tool-configs/mcp/shared/*.json` | `tool-configs/mcp/rendered/**/grok.mcp.toml` | `~/.grok/config.toml`（marker 合并） | `render-mcp.ps1` / `check-mcp.ps1` / `sync-mcp.ps1` |
 | managed runtimes | — | `~/.ai-config-hub/mcp/{context-thread,browser}` | context-thread 共用；browser runtime 只包含 Chrome DevTools MCP |
 

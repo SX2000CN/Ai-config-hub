@@ -12,9 +12,8 @@ $ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
 
 $Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
 $ResolvedUserHome = Resolve-AiConfigHubUserHome $UserHome
-# Names is the single managed skill inventory. Renderer and sync must not accept
-# separate role/activation definitions that can drift from the package list.
-$SkillNames = @($Manifest.Skills.Names | ForEach-Object { [string]$_ })
+$CanonicalRoot = Join-Path $Root ([string]$Manifest.Skills.SourceRoot)
+$SkillNames = @(Get-ChildItem -LiteralPath $CanonicalRoot -Directory -Force | Sort-Object Name | ForEach-Object { $_.Name })
 
 $TargetDefinitions = @($Manifest.Skills.Targets)
 
@@ -24,7 +23,7 @@ foreach ($definition in $TargetDefinitions) {
         $Targets.Add([pscustomobject]@{
             Name = "$($definition.Name)-$skillName"
             SkillName = [string]$skillName
-            Source = Join-Path (Join-Path $Root ([string]$definition.RenderedRoot)) ([string]$skillName)
+            Source = Join-Path $CanonicalRoot ([string]$skillName)
             Target = Join-Path (Join-Path $ResolvedUserHome ([string]$definition.UserRelativeRoot)) ([string]$skillName)
         }) | Out-Null
     }
@@ -92,7 +91,7 @@ foreach ($definition in @($Manifest.Skills.RetiredTargets)) {
 $Changes = New-Object System.Collections.Generic.List[object]
 foreach ($item in $Targets) {
     if (-not (Test-Path -LiteralPath $item.Source -PathType Container)) {
-        throw "Missing rendered source: $($item.Source). Run scripts\render-skills.ps1 first."
+        throw "Missing canonical skill source: $($item.Source)"
     }
     Assert-AiConfigHubPathInside $item.Target $ResolvedUserHome $item.Name | Out-Null
 

@@ -2,16 +2,12 @@
     SchemaVersion = 2
 
     Rules = @{
-        SharedCore = 'rules\shared\core.md'
+        SourceRoot = '.agents\rules'
+        SharedCore = '.agents\rules\core.md'
         # One template, one content: every target receives byte-identical rules.
-        # Tool-specific facts are NOT rules; see skills/shared/project-ai-config-hub/references/tool-surfaces.md.
+        # Tool-specific facts are NOT rules; see .agents/skills/project-ai-config-hub/references/tool-surfaces.md.
         Template = 'templates\rules.md.tpl'
         Targets = @(
-            @{
-                Name = 'ClaudeCode'
-                Rendered = 'rules\rendered\CLAUDE.md'
-                UserRelativePath = '.claude\CLAUDE.md'
-            }
             @{
                 Name = 'Codex'
                 Rendered = 'rules\rendered\AGENTS.md'
@@ -31,14 +27,7 @@
     }
 
     Skills = @{
-        # Names identify canonical packages under skills\shared\<name>\; this manifest
-        # records adapters and deployment cleanup only, never a second Skill content source.
-        Names = @(
-            'project-ai-config-hub'
-            'global-frontend-design'
-            'global-thinking-partner'
-            'global-context-thread'
-        )
+        SourceRoot = '.agents\skills'
         # Managed skill directories that must be removed from user targets on sync-skills -Apply.
         Retired = @(
             'pencil-design-workflow'
@@ -68,24 +57,19 @@
                 )
             }
         )
-        # Historical output paths are cleanup candidates; render-skills.ps1 never removes them.
+        # Historical output paths are cleanup candidates; sync-skills.ps1 reads the package source directly.
         RetiredRenderedRoots = @(
+            'skills\rendered\claude-code'
+            'skills\rendered\codex'
             'skills\rendered\opencode'
             'skills\rendered\codex-legacy'
             'skills\rendered\grok'
+            'skills\rendered\agents'
         )
         Targets = @(
             @{
-                # Claude Code discovers project Skills under .claude/skills, not .agents/skills.
-                Name = 'ClaudeCode'
-                RenderedRoot = 'skills\rendered\claude-code'
-                UserRelativeRoot = '.claude\skills'
-            }
-            @{
-                # Codex and OpenCode can discover .agents/skills; this is a path adapter,
-                # not an Agent Skills format or cross-client discovery guarantee.
+                # These clients discover the canonical package tree directly.
                 Name = 'AgentsSkills'
-                RenderedRoot = 'skills\rendered\codex'
                 UserRelativeRoot = '.agents\skills'
             }
         )

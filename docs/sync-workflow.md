@@ -22,19 +22,18 @@
 
 `check-all.ps1` 是非修改型预检，不会重新生成 tracked rendered 文件。它会执行：
 
-- 三条 render 管线的 `-Check` 一致性检查，以及规则、skills、MCP 专项 check。
+- 规则与 MCP 的 render 一致性检查、规则 hygiene，以及 Skill 源包结构、frontmatter、引用和 eval fixtures 检查；Skill 不生成中间副本。
 - context-thread、local-webfetch、browser MCP 三个 runtime 测试集，以及 local-webfetch/browser 入口语法检查。
 - `scripts/tests/sync-safety.ps1`、`mcp-profiles.ps1` 和 `mcp-doctor.ps1`。
-- 三套 runtime、规则、skills 和五个 MCP profile 的用户级 dry-run。
+- guard、三套 runtime、规则、skills 和四个 MCP profile 的用户级 dry-run，以及 MCP Source doctor。
 - 高置信度敏感信息检查、禁止 `@latest` 检查和 `git diff --check`。
 
 确认输出中的 `would update` / `missing target` 与本次预期一致后，才考虑后续 `-Apply`。规则和 Skill 的 `-Apply` 会在首次用户级写入前自动运行内容本体预检；MCP、runtime 和 guard 的 `-Apply` 继续运行完整集成预检。
 
-render 脚本也可以单独做非写入一致性检查：
+规则与 MCP render 脚本也可以单独做非写入一致性检查：
 
 ```powershell
 .\scripts\render.ps1 -Check
-.\scripts\render-skills.ps1 -Check
 .\scripts\render-mcp.ps1 -Check
 ```
 
@@ -54,9 +53,9 @@ render 脚本也可以单独做非写入一致性检查：
 
 ## 全局规则
 
-1. 修改共享规则源 `rules/shared/core.md`。客户端行为差异应查对应 adapter 文档；本仓库没有 `rules/tools/` 目录。
+1. 修改共享规则源 `.agents/rules/core.md`。客户端行为差异应查对应 adapter 文档；本仓库没有 `rules/tools/` 目录。
 
-   当前工作状态约定属于共享规则，维护在 `rules/shared/core.md`。
+   当前工作状态约定属于共享规则，维护在 `.agents/rules/core.md`。
 
 2. 渲染输出：
 
@@ -84,42 +83,39 @@ render 脚本也可以单独做非写入一致性检查：
 
 `sync.ps1 -Apply` 会先运行内容本体预检，再按上述事务机制更新规则。它不会因为可选 MCP/runtime 集成预检失败而阻断规则同步；需要验证完整部署链时单独运行 `check-all.ps1`。
 
-- `rules/rendered/CLAUDE.md` → `C:\Users\sx200\.claude\CLAUDE.md`
 - `rules/rendered/AGENTS.md` → `C:\Users\sx200\.codex\AGENTS.md`
 - `rules/rendered/grok-AGENTS.md` → `C:\Users\sx200\.grok\AGENTS.md`
 - `rules/rendered/opencode-AGENTS.md` → `C:\Users\sx200\.config\opencode\AGENTS.md`
 
+Claude Code 规则 adapter 当前暂停；历史 `rules/rendered/CLAUDE.md` 不再生成或同步。
+
 ## 注意事项
 
-- 不要直接编辑 rendered 文件作为长期源头；应修改 `rules/` 下的源文件。
-- 如果手动改过真实全局文件，应先把差异同步回本项目源文件，再重新渲染。
+- 不要直接编辑 rendered 文件作为长期源头；应修改 `.agents/rules/` 下的源文件。
+- 如果手动改过真实全局文件，应先审阅与仓库源的差异；从用户级目录反向覆盖源文件属于单独迁移决策，不自动回写。
 - 完整 `C:\Users\sx200\.codex\config.toml` / `C:\Users\sx200\.grok\config.toml` / `C:\Users\sx200\.config\opencode\opencode.json` 不作为仓库事实源；只有 MCP 配置片段流程会合并明确托管的 server section（Grok 另含 managed compat 块，OpenCode 只合并 `mcp` 节）。
 
 ## Skills
 
-1. 修改完整 package source：`skills/shared/<skill-name>/`，包括标准 `SKILL.md` 和该包所需资源。`skills/claude-code/`、`skills/codex/` 是未接入 renderer 的旧入口候选，不再作为源文件。
+1. 修改完整 package source：`.agents/skills/<skill-name>/`，包括标准 `SKILL.md` 和该包所需资源。旧的 `skills/claude-code/`、`skills/codex/` 源目录已经移除，不要重新创建。Claude adapter 当前暂停维护。
 
    当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread`。退役：`pencil-design-workflow`（Apply 时删除托管副本）。
 
-2. 渲染输出：
-
-```powershell
-.\scripts\render-skills.ps1
-```
-
-3. 检查生成结果：
+2. 检查源包、frontmatter、引用与 eval fixtures：
 
 ```powershell
 .\scripts\check-skills.ps1
 ```
 
-4. 预览同步目标：
+Skill 不需要中间渲染；同步脚本直接读取 `.agents/skills/`。旧的 `render-skills.ps1` 命令只保留包目录与入口检查兼容性，不生成客户端专属副本。
+
+3. 预览同步目标：
 
 ```powershell
 .\scripts\sync-skills.ps1
 ```
 
-5. 确认无误后应用：
+4. 确认无误后应用：
 
 ```powershell
 .\scripts\sync-skills.ps1 -Apply
@@ -127,20 +123,19 @@ render 脚本也可以单独做非写入一致性检查：
 
 `sync-skills.ps1 -Apply` 会先运行内容本体预检，再按上述事务机制更新 Skill。它不会因为可选 MCP/runtime 集成预检失败而阻断 Skill 同步；需要验证完整部署链时单独运行 `check-all.ps1`。
 
-当前仓库内导出对应两种发现路径：
+当前同步目标只有支持 `.agents/skills/` 的客户端：`.agents/skills/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`。该目录不是 Agent Skills 标准规定的唯一路径。
 
-- `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`
-- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（供支持该发现路径的客户端使用；该目录不是共享内容源）
+历史 `skills/rendered/` 下的 Claude、Codex 和其他客户端副本不再生成或同步；它们保留作迁移和清理候选。
 
-已退役目标由 manifest 的 `RetiredTargets` 清理，只在 marker 匹配时删除：`~/.codex/skills/`、`~/.config/opencode/skills/`、`~/.grok/skills/`。
+已退役目标由 manifest 的 `RetiredTargets` 清理，只在 marker 匹配时删除：`~/.config/opencode/skills/`、`~/.grok/skills/`。历史 `~/.codex/skills/` 不是当前同步目标，也未登记为自动清理目标。
 
 注意事项：
 
-- 不要直接编辑 `skills/rendered/` 作为长期源头；只修改 `skills/shared/<name>/` 完整包。
+- 不要直接编辑 `skills/rendered/` 作为长期源头；只修改 `.agents/skills/<name>/` 完整包。
 - `.codex\skills` 已退役：Codex 当前读取 `~/.agents/skills`。
 - OpenCode 官方同时发现 `~/.agents/skills` 和 `~/.claude/skills` 兼容目录；Hub 只同步前者，不生成也不同步 `~/.config/opencode/skills` 原生副本。若 Claude 目录中存在同名包，应确保 OpenCode 只暴露一个发现根；目标版本若提供关闭兼容扫描的开关，可在 adapter 层核验后使用，不把人工环境变量当作跨版本标准。旧托管副本只在 marker 匹配时退役。
 - Grok 会扫描每一层的 `.agents/skills`，因此不再维护 `~/.grok/skills` 原生副本；Grok 侧的 `compat.claude.skills` 由 managed block 关闭，避免重复载入 Claude 副本。
-- 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
+- 当前源包的 `SKILL.md` 带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记，同步时随完整包复制。
 - `sync-skills.ps1 -Apply` 只覆盖带对应 `ai-config-hub-managed` 标记的托管目录；同名但无标记的目录视为用户资产并拒绝覆盖，历史安装需先显式迁移（Grok 自带 bundled skills 无此 marker，不会被覆盖）。
 - skill 备份统一位于 `~/.ai-config-hub/backups/skills/<operation-id>/`，和工具的 skill 发现目录隔离，避免备份被误识别为可用 skill。
 

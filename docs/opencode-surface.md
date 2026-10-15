@@ -51,4 +51,4 @@ OpenCode 的日常浏览器自动化使用用户级官方 Playwright CLI `agents
 .\scripts\sync-skills.ps1
 ```
 
-当前发现路径参考：[官方路径核验与版本快照](../skills/shared/project-ai-config-hub/references/official-paths.md)。
+当前发现路径参考：[官方路径核验与版本快照](../.agents/skills/project-ai-config-hub/references/official-paths.md)。

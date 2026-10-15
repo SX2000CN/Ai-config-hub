@@ -36,7 +36,7 @@
 ## 在 AI 配置中的位置
 
 ```text
-rules/shared/core.md
+.agents/rules/core.md
         ↓
 global-context-thread skill
         ↓
@@ -48,7 +48,7 @@ global-context-thread skill
 
 各层职责：
 
-- `rules/shared/core.md`：只放短规则，告诉 AI 在复杂关系任务中优先使用结构化事实源。
+- `.agents/rules/core.md`：只放短规则，告诉 AI 在复杂关系任务中优先使用结构化事实源。
 - `global-context-thread`：决定何时触发、先用哪个工具、什么时候回退。
 - `context-thread` MCP：把代码图谱查询暴露给 AI。
 - `.Ai-config/tasks/*.md`：记录非代码复杂关系，例如任务依赖、状态、证据和下一步。

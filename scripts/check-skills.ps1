@@ -10,7 +10,8 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 
 $Manifest = Import-PowerShellDataFile -LiteralPath $ManifestPath
 $Failed = $false
-$SkillNames = @($Manifest.Skills.Names | ForEach-Object { [string]$_ })
+$CanonicalRoot = Join-Path $Root ([string]$Manifest.Skills.SourceRoot)
+$SkillNames = @(Get-ChildItem -LiteralPath $CanonicalRoot -Directory -Force | Sort-Object Name | ForEach-Object { $_.Name })
 
 function Fail($Message) {
     Write-Output "ERROR: $Message"
@@ -158,7 +159,7 @@ function Test-ThinkingPartnerEvals {
     }
 
     $thinkingSource = Get-AiConfigHubScanFiles -Paths @(
-        (Join-Path $Root 'skills\shared\global-thinking-partner')
+        (Join-Path $CanonicalRoot 'global-thinking-partner')
     ) -Root $Root
     $forbidden = @(
         ([string]::Concat([char[]]@(0x56FA, 0x5B9A, 0x56DB, 0x4E2A, 0x955C, 0x5934))),
@@ -176,12 +177,11 @@ function Test-ThinkingPartnerEvals {
     }
 }
 
-& (Join-Path $PSScriptRoot 'render-skills.ps1') -Check
 Test-SkillRouteFixtures
 Test-ThinkingPartnerEvals
 
 foreach ($skillName in $SkillNames) {
-    $packageRoot = Join-Path $Root "skills\shared\$skillName"
+    $packageRoot = Join-Path $CanonicalRoot $skillName
     if (-not (Test-Path -LiteralPath $packageRoot -PathType Container)) {
         Fail "Missing canonical skill package: $packageRoot"
         continue
@@ -195,29 +195,13 @@ foreach ($skillName in $SkillNames) {
     Test-Frontmatter $sourceSkillFile $skillName
     Test-PackageReferences $packageRoot
 
-    foreach ($target in $Manifest.Skills.Targets) {
-        $rootPath = Join-Path (Join-Path $Root ([string]$target.RenderedRoot)) ([string]$skillName)
-        if (-not (Test-Path -LiteralPath $rootPath -PathType Container)) {
-            Fail "Missing rendered skill directory: $rootPath"
-            continue
-        }
-
-        $skillFile = Join-Path $rootPath 'SKILL.md'
-        if (-not (Test-Path -LiteralPath $skillFile -PathType Leaf)) {
-            Fail "Missing SKILL.md: $skillFile"
-            continue
-        }
-
-        Test-Frontmatter $skillFile $skillName
-    }
 }
 
-# Validate only the maintained package source, generated exports, and eval
+# Validate only the maintained package source and eval
 # fixtures. Historical client-entry directories under skills\ are migration
 # candidates and must not participate in canonical content validation.
 $skillScanPaths = @(
-    (Join-Path $Root 'skills\shared'),
-    (Join-Path $Root 'skills\rendered'),
+    $CanonicalRoot,
     (Join-Path $Root 'skills\evals')
 )
 $skillScanFiles = Get-AiConfigHubScanFiles -Paths $skillScanPaths -Root $Root

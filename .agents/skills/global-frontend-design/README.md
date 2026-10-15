@@ -36,7 +36,7 @@
 - 改产品层级/状态/文案工程 → `references/product-ui-engineering.md`
 - 改归属 → `ATTRIBUTION.md` 与归档目录
 - 本目录是完整 Skill 包的唯一内容源；客户端发现目录需要导出时，复制整个包，不单独维护工具版本的 `SKILL.md`
-- 验证包和导出物：`render-skills.ps1` → `check-skills.ps1`。用户级同步属于可选部署流程，不是内容维护的完成条件
+- 验证源包：`check-skills.ps1` 或 `check-content.ps1`；本仓库不生成中间 Skill 副本。用户级同步属于可选部署流程，不是内容维护的完成条件
 
 ## 当前状态
 
