@@ -7,7 +7,7 @@
 
 1. 先读本文件，判断是否有当前活动任务和任务卡。
 2. 如有当前活动任务，读取对应 `.Ai-config/tasks/*.md`。
-3. 按任务类型读取项目事实源；项目级 skill 规则从 `.Ai-config/skills/<skill-name>/` 开始。
+3. 按任务类型读取项目事实源；项目级 skill 规则从 `.agents/skills/<skill-name>/` 开始。
 4. README / 运维文档 / 架构文档只在需要时再读，不要把它们复制进本文件。
 
 ## 当前活动任务

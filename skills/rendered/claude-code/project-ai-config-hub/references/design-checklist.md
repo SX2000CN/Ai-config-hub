@@ -17,19 +17,20 @@
 
 - 项目级 AI 配置按需分层：小项目可只保留项目规则；需要接手状态时才创建 `.Ai-config/CURRENT.md`；需要跨会话任务时才创建 `.Ai-config/tasks/`。
 - 项目级 AI 配置中枢位于 `.Ai-config/`。
-- 旧版 `docs/ai/` 只作为迁移来源和兼容事实源；新配置统一写入 `.Ai-config/`。
+- `.Ai-config/` 只保存项目状态、任务卡、registry 和索引；规则与完整 Skill 包分别维护在各自的 canonical 内容源。
 - AI 接手入口和多任务状态总览位于 `.Ai-config/CURRENT.md`。
 - 任务卡目录位于 `.Ai-config/tasks/`，任务说明位于 `.Ai-config/tasks/README.md`，但不是所有项目的必需文件。
 - `.Ai-config/archive/` 仅作为可选长期整理目录，不是日常关闭任务的必需步骤。
 - 项目级 skill 清单位于 `.Ai-config/skills-registry.md`，只在存在项目级 skill 或用户要求登记时创建。
-- 项目级 skill 的 canonical 事实源位于 `.Ai-config/skills/<skill-name>/`，只在确有可复用项目工作流时创建。
-- 项目已有目录、README、docs、脚本说明、旧版 `docs/ai/` 或工具入口只能作为迁移来源、支持性引用或兼容入口，不得作为长期 skill 事实源。
-- `.claude/skills/<skill-name>/SKILL.md` 只是 Claude Code 工具入口。
-- `.agents/skills/<skill-name>/SKILL.md` 是 Codex / OpenCode 共用工具入口。
-- `.grok/skills/<skill-name>/SKILL.md` 只是 Grok Build 工具入口。
-- 既有 `.opencode/skills/<skill-name>/SKILL.md` 只作为迁移来源；Hub 不生成重复入口。
+- 项目级完整 Skill 包默认位于 `.agents/skills/<skill-name>/`，这是目录约定而非格式规范要求；只在确有可复用工作流时创建。
+- 项目已有目录、README、docs、脚本说明、旧版 `docs/ai/` 或失效入口可作为 Skill 内容迁移来源或支持性引用，不得维护冲突的长期 Skill 内容；项目规则仍由规则入口承载。
+- `.agents/skills/<skill-name>/` 是完整 Skill 包；其发现行为由客户端决定。
+- OpenCode 会同时扫描 `.agents/skills/` 与 `.claude/skills/`；同时适配 Codex、Claude Code 和 OpenCode 时，必须避免 OpenCode 看见同名重复包，或按当前版本文档关闭 Claude Skills 兼容扫描。
+- Claude Code 需要 `.claude/skills/<skill-name>/` 时，导出相同完整包，不维护另一份 Skill 正文。
+- 其他客户端只有在不发现现有目录时才添加对应 adapter。
+- `.Ai-config/skills-registry.md` 只索引完整包和所需 adapter。
 - `.codex/skills/<skill-name>/SKILL.md` 只在需要兼容时存在。
-- 工具入口明确列出 `.Ai-config/skills/<skill-name>/` canonical 事实源路径和必读文件。
+- `.Ai-config/skills-registry.md` 明确登记完整包路径与所需 adapter。
 
 ## 工作状态质量
 
@@ -53,8 +54,8 @@
 ## 内容质量
 
 - 文档描述真实状态，明确区分已完成、计划中、暂时方案和推断。
-- durable 的项目级 skill 规则、触发、workflow、checklist、references 和 templates 已收敛到 `.Ai-config/skills/<skill-name>/`。
-- 支持性项目 docs 由 `.Ai-config/skills/<skill-name>/` 内的主文件索引，不反过来让工具入口直接引用一堆散落文档。
+- durable 的项目级 skill 规则、触发、workflow、checklist、references 和 templates 已收敛到唯一完整包。
+- 支持性项目 docs 由完整包内的主文件索引，不反过来让 adapter 直接引用一堆散落文档。
 - 不复制大段业务流程到多个工具入口。
 - 不写入真实 token、密钥、密码、生产凭证。
 - 高风险操作有确认要求。
@@ -63,13 +64,13 @@
 ## 实施后
 
 - frontmatter 有稳定 `name` 和清晰 `description`。
-- 工具入口指向的 `.Ai-config/skills/<skill-name>/` canonical 事实源真实存在。
+- `.agents/skills/<skill-name>/SKILL.md` 和 package resources 符合 Agent Skills 格式且可解析。
 - 不存在多个互相冲突的事实源；非 canonical 完整规则已标记为迁移来源、支持性引用或兼容入口。
-- `.Ai-config/skills-registry.md` 的事实源列指向 `.Ai-config/skills/<skill-name>/`；普通目标项目不得把 README、docs、`.claude/skills`、`.agents/skills`、`.grok/skills`、`.opencode/skills` 或 `.codex/skills` 登记为长期事实源。
+- `.Ai-config/skills-registry.md` 的包路径指向唯一完整包；不得把 README、docs 或 adapter 导出登记为另一份长期事实源。
 - `.Ai-config/CURRENT.md` 已按需创建或刷新；若没有创建，原因是任务没有持续接手价值。
 - `.Ai-config/tasks/README.md` 已按需创建。
 - `.Ai-config/tasks/*.md` 已按需创建或迁移，且可让后续 AI 无损接手。
 - `.Ai-config/skills-registry.md` 已按需记录项目 skill 的事实源、入口和状态。
-- 修改已有项目级 skill 后，双端入口和 registry 仍指向同一事实源。
+- 修改已有项目级 skill 后，registry 和各发现 adapter 均对应同一完整包。
 - 项目文档索引已按需更新。
 - 已运行最小相关验证。

@@ -10,22 +10,22 @@
 
 ## 处理流程
 
-先做低风险只读判断：
+先确定本次是在改配置内容本体、客户端 adapter，还是项目状态/索引：
 
 1. 优先读取 `.Ai-config/CURRENT.md`、`.Ai-config/skills-registry.md`、相关任务卡。
-2. 对比 `rules/rendered/*` 与用户级全局规则文件（`~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、`~/.grok/AGENTS.md`、`~/.config/opencode/AGENTS.md`）。
-3. 对比 `skills/rendered/*` 与用户级全局 skill 目录（`~/.claude/skills/`、`~/.agents/skills/`、`~/.grok/skills/`、`~/.config/opencode/skills/`）。
+2. 配置本体：规则读 `rules/shared/core.md`；Skill 读 `skills/shared/<name>/` 完整包；设计说明读对应 `docs/`。
+3. Adapter 或本机部署任务：只读相关 `config/`、`scripts/`、`tool-configs/`、`tools/` 和 adapter 文档。不要把用户级配置与仓库源默认视为双向事实源。
 
-若 rendered/global 已一致，只刷新项目内 AI 状态文档；若不一致，先报告差异，再询问以项目源为准同步全局，还是以本机全局为准反向整理项目源。
-
-只读审计和低风险项目状态追平（包括对比 `rules/rendered/*`、`skills/rendered/*` 与本机全局目标的一致性）可以直接执行；把本机全局内容反向覆盖项目源文件，或执行 `sync.ps1 -Apply`、`sync-skills.ps1 -Apply`、`sync-mcp.ps1 -Apply`、`sync-opencode-mcp.ps1 -Apply` 写入用户级目录，必须先确认。
+普通配置维护以仓库内 canonical source 为准，不要求读取或追平用户级全局目录。发现 adapter 导出与源不同步时，先更新并检查仓库内导出物；从用户级目录反向覆盖源文件属于单独迁移决策。
 
 ## 本仓库验证边界
 
-本仓库的规则、skills、MCP 和 runtime 属于配置分发管线，验证要求只在这里维护，不进入分发给所有项目的全局核心规则：
+本仓库把规则与完整 Agent Skill 包作为内容本体，把路径导出和本机集成作为可选 adapter。验证要求只在这里维护，不进入分发给所有项目的共享规则：
 
-- 单一管线改动：运行对应 render `-Check`、check 和 sync/runtime dry-run。
-- 跨管线改动、审计或准备任何用户级 Apply：运行 `scripts/check-all.ps1`。
+- 规则改动：运行 `render.ps1 -Check` 和 `check.ps1`。
+- Skill 包改动：运行 `render-skills.ps1 -Check` 和 `check-skills.ps1`。
+- 跨管线改动：运行 `scripts/check-all.ps1`。
+- 仅当任务明确涉及本机部署时，才运行对应 sync dry-run；Apply 不属于配置源修改的默认步骤。
 - 用户级 Apply：先审阅完整 dry-run，确认后由同步脚本执行 preflight、staging、备份和回滚。
 - 本仓库任务涉及多个配置管线、跨会话接手或未完成验证时，使用 `.Ai-config/CURRENT.md` 和任务卡记录状态；普通局部修复不强制建卡。
 

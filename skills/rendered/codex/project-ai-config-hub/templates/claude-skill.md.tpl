@@ -5,19 +5,18 @@ description: {{description}}
 
 # {{skill_name}}
 
-这是当前仓库的 Claude Code 项目级 skill 工具入口，只负责让工具发现并路由到项目 canonical 事实源。
+此文件是历史薄入口模板，默认不应单独生成可发现的 Skill。Claude Code 需要该能力时，应把 `.agents/skills/{{skill_name}}/` 的完整包导出到 `.claude/skills/{{skill_name}}/`，确保入口包含 package resources。
 
 ## 事实源
 
-canonical 事实源：`.Ai-config/skills/{{skill_name}}/`
+完整包源：`.agents/skills/{{skill_name}}/`
 
-不要把 workflow、checklists、references、templates、长期规则或业务事实写在本入口里；这些内容应维护在 canonical 事实源下。本入口可以保留简短触发说明和读取顺序。
+不要把此模板当作独立 Skill 包。若客户端需要无法放入标准包的扩展，单独维护 adapter 配置，不复制触发语义和 workflow。
 
 ## 读取顺序
 
 1. 仅当任务有接手价值、可能跨会话、已有活动任务、影响多个模块或涉及高风险写入时，读取 `.Ai-config/CURRENT.md`。
 2. 如果存在相关活动任务卡，再读取 `.Ai-config/tasks/*.md` 中对应文件。
-3. 读取 `.Ai-config/skills/{{skill_name}}/README.md`。
-4. 按 README 指引读取同目录下的 `workflow.md`、`checklists.md`、`references/` 或 `templates/`。
+3. 读取当前 `.claude/skills/{{skill_name}}/` 包内的 `SKILL.md` 和相关资源。
 
-如果 `.Ai-config/skills/{{skill_name}}/` 缺失、过期，或只是跳转到散落在项目各处的文档，先停止并修复 / 收敛事实源，不要继续把规则写进工具入口。
+如果导出包与 `.agents/skills/{{skill_name}}/` 不一致，先重新导出并验证。

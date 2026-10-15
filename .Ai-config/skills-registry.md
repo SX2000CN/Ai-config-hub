@@ -1,27 +1,28 @@
 # 项目级 Skills 清单
 
-最后更新时间：2026-10-02
+最后更新时间：2026-10-15
 
-| Skill | 状态 | 事实源 | Claude Code 入口 | 通用入口 | 备注 |
+| Skill | 状态 | 完整包事实源 | Claude 导出 | `.agents/skills` 导出 | 备注 |
 |---|---|---|---|---|---|
-<!-- 本表登记的是本仓库维护并同步到用户级目录的全局 managed skills，因此事实源位于 `skills/shared/<skill-name>/`。普通目标项目的项目级 skill 应使用 `.Ai-config/skills/<skill-name>/` 作为 canonical 事实源。 -->
-<!-- Claude Code 不读 `.agents/` 目录，必须保留 `~/.claude/skills` 专属副本；Codex、OpenCode、Grok 都发现 `~/.agents/skills`，因此共用同一份通用入口。 -->
-| project-ai-config-hub | active | `skills/shared/project-ai-config-hub/` | `skills/claude-code/project-ai-config-hub/SKILL.md` | `skills/codex/project-ai-config-hub/SKILL.md` | 本仓库维护并渲染到用户级目录的全局 skill；默认按风险和接手价值轻量启用项目级 AI 配置，不是 `.Ai-config/skills/` 下的新项目入口。 |
-| global-frontend-design | active | `skills/shared/global-frontend-design/` | `skills/claude-code/global-frontend-design/SKILL.md` | `skills/codex/global-frontend-design/SKILL.md` | 顶级前端领域 skill（Design Read / 双轨 / 三旋钮 / anti-slop + 产品工程）；来源归档见 `.Ai-config/archive/global-frontend-design-sources/`。 |
-| global-thinking-partner | active | `skills/shared/global-thinking-partner/` | `skills/claude-code/global-thinking-partner/SKILL.md` | `skills/codex/global-thinking-partner/SKILL.md` | 可组合 reasoning mode；显式触发深度对话，隐式触发静默检查，不使用固定镜头或强制简报。行为评测见 `skills/evals/global-thinking-partner/`。 |
-| global-context-thread | active | `skills/shared/global-context-thread/` | `skills/claude-code/global-context-thread/SKILL.md` | `skills/codex/global-context-thread/SKILL.md` | 工具路由 skill；复杂代码关系使用 context-thread，非代码工作流使用 `.Ai-config` 关系索引，普通局部任务直接回退文件读取。CLI 调用契约在本 skill 的 `workflow.md` 内，是唯一事实源。 |
+<!-- 本表是索引，不是内容源。每个完整包只在 `skills/shared/<name>/` 维护；两个导出目录由同一包生成。 -->
+<!-- `.agents/skills` 是部分客户端支持的发现路径，不是 Agent Skills 规范定义的路径；Claude 使用自己的发现目录。 -->
+<!-- OpenCode 也扫描 `.claude/skills`；同名双导出时需在其进程环境关闭 Claude Skills 兼容扫描，见 project-ai-config-hub 的 official-paths.md。 -->
+| project-ai-config-hub | active | `skills/shared/project-ai-config-hub/` | `skills/rendered/claude-code/project-ai-config-hub/` | `skills/rendered/codex/project-ai-config-hub/` | 项目级状态/索引维护 skill；项目目标包默认位于 `.agents/skills/<name>/`，`.Ai-config` 只登记路径。 |
+| global-frontend-design | active | `skills/shared/global-frontend-design/` | `skills/rendered/claude-code/global-frontend-design/` | `skills/rendered/codex/global-frontend-design/` | 前端设计领域 skill；来源归档见 `.Ai-config/archive/global-frontend-design-sources/`。 |
+| global-thinking-partner | active | `skills/shared/global-thinking-partner/` | `skills/rendered/claude-code/global-thinking-partner/` | `skills/rendered/codex/global-thinking-partner/` | 可组合 reasoning mode；行为评测见 `skills/evals/global-thinking-partner/`。 |
+| global-context-thread | active | `skills/shared/global-context-thread/` | `skills/rendered/claude-code/global-context-thread/` | `skills/rendered/codex/global-context-thread/` | 关系检索工具路由 skill；CLI 调用契约在包内 `workflow.md`。 |
 | pencil-design-workflow | deprecated | - | - | - | 已退役；`sync-skills.ps1 -Apply` 只删除能够确认归属的用户级托管副本。 |
 
 ## 状态说明
 
 - `planned`：计划中，尚未实现。
-- `active`：源文件、入口和 rendered 包已启用；若任务卡标记为待同步，则真实用户级目录仍需执行对应 `sync-*.ps1 -Apply`。
+- `active`：完整包和仓库内导出已启用；用户级安装状态不由本表暗示。
 - `partial`：部分可用。
 - `deprecated`：已废弃。
 - `compat`：仅为历史兼容保留。
 
 ## 维护约定
 
-本仓库当前表格记录的是全局 managed skills：它们的事实源在 `skills/shared/<skill-name>/`，再由 `render-skills.ps1` 生成 rendered 包并同步到用户级目录。分发目标只有两个：Claude Code 专属的 `~/.claude/skills/`，以及 Codex / OpenCode / Grok 共用的 `~/.agents/skills/`。
+本表只登记本仓库维护的全局 package 和 adapter 输出。事实源在 `skills/shared/<skill-name>/`，`render-skills.ps1` 将同一完整包导出到两种发现路径；用户级安装是可选的后续部署操作。
 
-普通目标项目新增项目级 skill 时，默认且稳定的 canonical 事实源必须放在 `.Ai-config/skills/<skill-name>/`，并在这里记录双端入口和状态。项目既有目录、README、docs、脚本说明或工具入口只能作为迁移来源、支持性引用或兼容入口；不要把它们登记为长期事实源，避免多个互相冲突的事实源。
+普通目标项目新增项目级 skill 时，默认完整包放在 `.agents/skills/<skill-name>/`；这里是本项目的目录约定，也被 Codex/OpenCode 等支持，不能泛化成开放规范要求。Claude 入口由相同 package 导出到 `.claude/skills/`。`.Ai-config/skills-registry.md` 只记录路径、适配和状态，不保存 Skill 内容。

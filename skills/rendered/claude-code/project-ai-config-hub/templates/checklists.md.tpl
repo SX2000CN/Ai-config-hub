@@ -2,24 +2,25 @@
 
 ## 使用前检查
 
-- 已确认 `.Ai-config/skills/{{skill_name}}/` 存在，并且是本 skill 的 canonical 事实源。
+- 已确认 `.agents/skills/{{skill_name}}/` 存在，并且是本 skill 的 canonical 事实源。
 - 仅当任务有接手价值、可能跨会话、已有活动任务、影响多个模块或涉及高风险写入时，才读取 `.Ai-config/CURRENT.md`。
 - 已读取 `.Ai-config/skills-registry.md`，确认本 skill 的 canonical 事实源、入口和状态。
-- 已读取 `.Ai-config/skills/{{skill_name}}/README.md`，并按需读取同目录下的 `workflow.md`、`checklists.md`、`references/` 或 `templates/`。
+- 已读取 `.agents/skills/{{skill_name}}/README.md`，并按需读取同目录下的 `workflow.md`、`checklists.md`、`references/` 或 `templates/`。
 - 如果存在相关活动任务卡，已读取 `.Ai-config/tasks/*.md` 中对应文件。
 
 ## 事实源检查
 
-- durable 规则、触发、workflow、checklist、references 和 templates 只维护在 `.Ai-config/skills/{{skill_name}}/` 下。
-- `.claude/skills/{{skill_name}}/SKILL.md`、`.agents/skills/{{skill_name}}/SKILL.md` 和可选 `.codex/skills/{{skill_name}}/SKILL.md` 只是工具入口，不承载完整规则。
+- durable Skill 指令、触发、workflow、checklist、references 和 templates 只维护在 `.agents/skills/{{skill_name}}/` 完整包下；项目级通用规则留在规则入口。
+- `.claude/skills/{{skill_name}}/` 和其他 discovery path 都应由完整包导出；不同客户端间不得复制出不同规则。
+- OpenCode 同时发现 `.agents/skills/` 和 `.claude/skills/`；若两处都含该包，已为目标 OpenCode 进程关闭 Claude Skills 兼容扫描，或避免 OpenCode 看到重复来源。
 - 如果发现完整规则散落在 README、docs、脚本说明、旧版 `docs/ai/` 或工具入口中，已标记为迁移来源或支持性引用，并计划收敛到 canonical 目录。
-- `.Ai-config/skills-registry.md` 的事实源列指向 `.Ai-config/skills/{{skill_name}}/`；非 canonical 路径只写在备注中说明迁移、兼容或支持关系。
+- `.Ai-config/skills-registry.md` 的事实源列指向 `.agents/skills/{{skill_name}}/`；非 canonical 路径只写在备注中说明迁移、兼容或支持关系。
 
 ## 修改检查
 
-- 修改规则前，先修改 `.Ai-config/skills/{{skill_name}}/` 下的事实源。
-- 工具入口只保留薄入口，不复制完整流程。
-- 修改后检查 `.claude/skills/{{skill_name}}/SKILL.md` 和 `.agents/skills/{{skill_name}}/SKILL.md` 是否仍指向同一 canonical 事实源。
+- 修改 Skill 前，先修改 `.agents/skills/{{skill_name}}/` 完整包事实源；修改项目规则时，先修改目标项目自己的 canonical 规则入口（例如 `AGENTS.md` 或 `CLAUDE.md`），不要把规则复制进 Skill 包。
+- 多个客户端发现目录应包含同一完整包，不维护不同版本的流程。
+- 修改后检查 Claude 和其他 discovery adapter 导出是否与完整包一致。
 - 只有历史兼容或用户明确要求时，才维护 `.codex/skills/{{skill_name}}/SKILL.md`。
 
 ## 工作状态检查

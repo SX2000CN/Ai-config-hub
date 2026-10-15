@@ -1,40 +1,32 @@
 # Skills
 
-这里用于整理 AI 编程工具的可复用 skills、工作流和提示词片段。
+`skills/shared/<name>/` 保存本仓库维护的完整 Agent Skill 包：标准 `SKILL.md` 与该 skill 所需的相对资源。它是每个包唯一的内容事实源。
 
-当前目录结构：
+## 当前目录
 
-- `shared/`：跨工具通用能力和事实源。
-- `claude-code/`：Claude Code 专属入口源。
-- `codex/`：Codex / OpenCode 共用的 `.agents/skills` 入口源。
-- `grok/`：Grok 专属入口源。
-- `rendered/`：由 `scripts/render-skills.ps1` 生成的安装包。
+- `shared/`：完整标准包源码。
+- `evals/`：路由和行为审查样例，不是运行时注册表。
+- `rendered/`：同一包导出到不同客户端发现目录的生成物。
+- `claude-code/`、`codex/`：旧入口源目录，当前渲染流程不再读取；保留作迁移和清理候选，不要继续编辑。
 
-当前已实现：
+## 发现 adapter
 
-- `project-ai-config-hub`：`ai-config-hub` 的项目级分身，用于在目标项目中按风险和接手价值创建 `.Ai-config/` AI 配置中枢，并创建、迁移、审计和修复多端项目 skills。
-- `global-frontend-design`：全局前端设计 skill，用于创建、重设计或 review 前端界面，先建立鲜明视觉方向，再落地生产级 UI 工程约束。
-- `global-thinking-partner`：可组合 reasoning mode，用于多轮脑暴、假设挑战、情景和二阶影响推演，以及按需决策收敛。
-- `global-context-thread`：“脉络”工具路由 skill，仅在结构化关系查询比普通文件读取更有效时使用 context-thread 或 `.Ai-config` 关系索引。
+Agent Skills 定义包格式，不规定自动发现路径。当前 renderer 将相同 package 导出到：
 
-维护流程：
+- `rendered/claude-code/<name>/`，用于 Claude Code 的 `.claude/skills/<name>/`。
+- `rendered/codex/<name>/`，用于 `.agents/skills/<name>/`，供支持该路径的 Codex、OpenCode 和 Grok 使用。
+
+`when_to_use` 不属于可移植 frontmatter；skill 触发和反触发语义写入标准 `description` 与正文。客户端专属字段只能由明确的 adapter 处理，不能成为共享包的第二份语义源。
+
+## 维护与验证
+
+编辑 `skills/shared/<name>/` 后运行：
 
 ```powershell
 .\scripts\render-skills.ps1
 .\scripts\check-skills.ps1
-.\scripts\sync-skills.ps1
 ```
 
-确认 dry-run 后才执行：
+`render-skills.ps1 -Check` 和 `check-skills.ps1` 不写文件。用户级部署由 `sync-skills.ps1` 独立处理，默认 dry-run；它不是更新 Skill 内容源的必需步骤。
 
-```powershell
-.\scripts\sync-skills.ps1 -Apply
-```
-
-新增 skill 时，应同时记录适用工具、安装位置、调用方式和验证方式。
-
-内容风格：
-
-- 面向用户和维护者的正文默认使用中文。
-- `name`、路径、命令、工具名和必要英文关键词保留原文。
-- `description` 可以中文为主，但应保留 Claude Code、Codex、Grok、OpenCode、`.claude/skills`、`.agents/skills` 等关键触发词。
+当前包：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread`。

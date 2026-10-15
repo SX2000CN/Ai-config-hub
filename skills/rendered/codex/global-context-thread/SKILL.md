@@ -1,6 +1,6 @@
 ---
 name: global-context-thread
-description: 在调用链、影响面、模块关系或复杂工作流关系确实需要结构化事实源时，路由到 context-thread 或 .Ai-config 关系索引；它只辅助关系定位，不主导 AI 配置修复、纯状态分析或普通局部任务。
+description: 在调用链、影响面、模块关系或复杂工作流关系需要结构化事实源时，路由到 context-thread 或 .Ai-config 关系索引，以减少大范围搜索。简单问答、局部修复、单文件任务和纯状态分析不触发。
 ---
 
 # 全局脉络

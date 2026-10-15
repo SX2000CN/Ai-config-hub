@@ -8,6 +8,10 @@
 
 > 2026-10-02：**第 3 条（Skills 原生分发到 `~/.grok/skills/`）已被取代。** Grok 官方文档说明它会扫描每一层的 `.agents/skills/`（"Grok also scans `.agents/skills/` ... at each tier (alongside `.grok/`)"），因此 Grok 改为复用 `~/.agents/skills/`；`skills/grok/` 源目录与 `~/.grok/skills/` 目标均已退役。规则、MCP 与 compat 决策继续有效。
 
+> 2026-10-15：项目方向调整为可移植规则与完整 Agent Skill 包优先。本 ADR 保留为既有 Grok adapter 的历史决策记录，不再把“Grok 一等 target”解释为扩展更多客户端、MCP profile 或 runtime 的授权。当前 Skill 内容事实源为 `skills/shared/<name>/` 完整包；客户端发现路径只生成或同步同包 adapter。规则源、MCP/runtime 与用户级同步仍是不同责任层。
+>
+> 下文保留当时的方案与实现记录。涉及 `rules/tools/grok.md`、`.Ai-config/skills/<name>/`、独立 Grok Skill 正文或旧发现路径的描述不代表当前仓库事实；以 `docs/architecture.md`、`skills/shared/project-ai-config-hub/references/official-paths.md` 和 `config/managed-assets.psd1` 为准。
+
 ## 背景
 
 Grok Build 此前主要依赖 harness compat 读取 Claude 全局规则、`~/.claude.json` MCP 与旁路发现的 `~/.agents/skills`。已出现的问题包括：

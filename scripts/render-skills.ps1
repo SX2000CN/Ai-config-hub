@@ -13,12 +13,7 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 }
 
 $Manifest = Import-PowerShellDataFile -LiteralPath $ManifestPath
-$SkillDefinitions = if ($null -ne $Manifest.Skills.Definitions -and @($Manifest.Skills.Definitions).Count -gt 0) {
-    @($Manifest.Skills.Definitions)
-}
-else {
-    @($Manifest.Skills.Names | ForEach-Object { [pscustomobject]@{ Name = [string]$_ } })
-}
+$SkillNames = @($Manifest.Skills.Names | ForEach-Object { [string]$_ })
 
 function Assert-Path($Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -26,26 +21,20 @@ function Assert-Path($Path) {
     }
 }
 
-function Copy-CleanDirectory($Source, $Destination) {
-    Assert-Path $Source
-
-    if (Test-Path -LiteralPath $Destination) {
-        Remove-Item -LiteralPath $Destination -Recurse -Force
+function Assert-RenderedDestination($Destination) {
+    $renderedRoot = [System.IO.Path]::GetFullPath((Join-Path $Root 'skills\rendered')).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    $destinationFull = [System.IO.Path]::GetFullPath($Destination)
+    if (-not $destinationFull.StartsWith($renderedRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Rendered skill destination must stay under skills\rendered: $destinationFull"
     }
+}
+
+function Copy-PackageDirectory($Source, $Destination) {
+    Assert-Path $Source
 
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
-    }
-}
-
-function Copy-SharedPayload($SharedSource, $Destination) {
-    foreach ($item in Get-ChildItem -LiteralPath $SharedSource -Force) {
-        $target = Join-Path $Destination $item.Name
-        if (Test-Path -LiteralPath $target) {
-            Remove-Item -LiteralPath $target -Recurse -Force
-        }
-        Copy-Item -LiteralPath $item.FullName -Destination $Destination -Recurse -Force
     }
 }
 
@@ -65,7 +54,7 @@ function Add-ExpectedFiles($Map, $SourceRoot) {
     }
 }
 
-function Test-RenderedDirectory($ToolSource, $SharedSource, $Destination) {
+function Test-RenderedDirectory($PackageSource, $Destination) {
     $messages = New-Object System.Collections.Generic.List[string]
     if (-not (Test-Path -LiteralPath $Destination -PathType Container)) {
         $messages.Add("ERROR: Missing rendered skill directory: $Destination") | Out-Null
@@ -76,8 +65,7 @@ function Test-RenderedDirectory($ToolSource, $SharedSource, $Destination) {
     }
 
     $expected = @{}
-    Add-ExpectedFiles $expected $ToolSource
-    Add-ExpectedFiles $expected $SharedSource
+    Add-ExpectedFiles $expected $PackageSource
 
     $actual = @{}
     foreach ($file in Get-ChildItem -LiteralPath $Destination -Recurse -File) {
@@ -125,27 +113,26 @@ foreach ($relativeRoot in @($Manifest.Skills.RetiredRenderedRoots)) {
         continue
     }
     if ($Check) {
-        Write-Output "ERROR: Retired rendered skill root still exists: $retiredRoot"
-        $failed = $true
+        Write-Output "INFO: Retaining legacy rendered skill root as a cleanup candidate: $retiredRoot"
     }
     else {
-        Remove-Item -LiteralPath $retiredRoot -Recurse -Force
-        Write-Output "Removed retired rendered skill root $retiredRoot"
+        Write-Output "Retaining legacy rendered skill root as a cleanup candidate: $retiredRoot"
     }
 }
 
-foreach ($skillDefinition in $SkillDefinitions) {
-    $skillName = [string]$skillDefinition.Name
-    $sharedSource = Join-Path $Root "skills\shared\$skillName"
-    Assert-Path $sharedSource
+foreach ($skillName in $SkillNames) {
+    if ($skillName -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$') {
+        throw "Invalid skill name in managed assets manifest: $skillName"
+    }
+    $packageSource = Join-Path $Root "skills\shared\$skillName"
+    Assert-Path $packageSource
 
     foreach ($target in $Manifest.Skills.Targets) {
-        $toolSource = Join-Path (Join-Path $Root ([string]$target.SourceRoot)) ([string]$skillName)
         $destination = Join-Path (Join-Path $Root ([string]$target.RenderedRoot)) ([string]$skillName)
-        Assert-Path $toolSource
+        Assert-RenderedDestination $destination
 
         if ($Check) {
-            $result = Test-RenderedDirectory $toolSource $sharedSource $destination
+            $result = Test-RenderedDirectory $packageSource $destination
             foreach ($message in $result.Messages) {
                 Write-Output $message
             }
@@ -158,8 +145,7 @@ foreach ($skillDefinition in $SkillDefinitions) {
             continue
         }
 
-        Copy-CleanDirectory $toolSource $destination
-        Copy-SharedPayload $sharedSource $destination
+        Copy-PackageDirectory $packageSource $destination
         Write-Output "Rendered $destination"
     }
 }

@@ -10,12 +10,12 @@
 - `tasks/`：多任务工作状态卡，保存单个任务的无损接手信息。
 - `archive/`：可选长期整理目录，只在用户明确要求整理或归档长期摘要时使用。
 - `skills-registry.md`：项目级 skills 清单、事实源、入口和状态。
-- `skills/`：面向项目自身的项目级 skill 事实源目录。
+- `skills/`：保留的旧占位目录，不是 Skill 内容事实源；不要在此新增包。本仓库的完整包源位于 `skills/shared/<name>/`；普通目标项目可按本仓库约定将完整包放在 `.agents/skills/<name>/`，再按客户端需要导出。
 
 ## 与 docs/ 的边界
 
 - 长期设计文档放在 `docs/`，例如 `docs/ai-config-design.md`、`docs/context-thread/`、`docs/work-state-design.md`。
-- `.Ai-config/` 只保存当前项目 AI 接手所需状态、任务事实和项目级 skill 登记。
+- `.Ai-config/` 只保存当前项目 AI 接手所需状态、任务事实、路径 registry 和项目结构索引；不保存通用规则或完整 Skill 内容。
 - 任务卡可以链接长期文档，但不要把长期设计说明复制进任务卡。
 
 本仓库自己作为全局配置源时的特殊语义（例如"更新项目配置"在这里的含义），记录在仓库根目录的 `CLAUDE.md`，不在本文件展开。
@@ -30,8 +30,4 @@
 
 ## Skills 约定
 
-- 普通目标项目中，`.Ai-config/skills/<skill-name>/` 是项目级 skill 的 canonical 事实源。
-- `.claude/skills/<skill-name>/SKILL.md` 是 Claude Code 项目入口，不承载长期规则。
-- `.agents/skills/<skill-name>/SKILL.md` 是 Codex 项目入口，不承载长期规则。
-- `.codex/skills/` 已退役：Codex 读取 `.agents/skills/`。
-- 工具入口只做薄入口，不复制完整项目规则。
+`.Ai-config/skills-registry.md` 只登记包位置和客户端 adapter。本仓库自身的完整包源位于 `skills/shared/<skill-name>/`；普通目标项目可采用 `.agents/skills/<skill-name>/` 作为完整包源，这是项目约定，不是 Agent Skills 规范规定的发现路径。Claude Code 使用 `.claude/skills/<skill-name>/` 发现同一完整包的 adapter 导出。不要把 `.Ai-config/` 当作规则或 Skill 内容事实源。

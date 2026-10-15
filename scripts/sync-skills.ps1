@@ -12,19 +12,15 @@ $ManifestPath = Join-Path $Root 'config\managed-assets.psd1'
 
 $Manifest = Import-AiConfigHubManagedAssetsManifest $ManifestPath
 $ResolvedUserHome = Resolve-AiConfigHubUserHome $UserHome
-$SkillDefinitions = if ($null -ne $Manifest.Skills.Definitions -and @($Manifest.Skills.Definitions).Count -gt 0) {
-    @($Manifest.Skills.Definitions)
-}
-else {
-    @($Manifest.Skills.Names | ForEach-Object { [pscustomobject]@{ Name = [string]$_ } })
-}
+# Names is the single managed skill inventory. Renderer and sync must not accept
+# separate role/activation definitions that can drift from the package list.
+$SkillNames = @($Manifest.Skills.Names | ForEach-Object { [string]$_ })
 
 $TargetDefinitions = @($Manifest.Skills.Targets)
 
 $Targets = New-Object System.Collections.Generic.List[object]
 foreach ($definition in $TargetDefinitions) {
-    foreach ($skillDefinition in $SkillDefinitions) {
-        $skillName = [string]$skillDefinition.Name
+    foreach ($skillName in $SkillNames) {
         $Targets.Add([pscustomobject]@{
             Name = "$($definition.Name)-$skillName"
             SkillName = [string]$skillName

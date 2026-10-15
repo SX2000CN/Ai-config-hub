@@ -79,8 +79,8 @@
 ```text
 1. 先读 .Ai-config/CURRENT.md，判断是否有当前任务和任务卡。
 2. 再按 CURRENT.md 指引读取 .Ai-config/README.md，理解 AI 协作中枢边界。
-3. 如果任务涉及全局规则，读 rules/shared/core.md、rules/tools/*、templates/*。
-4. 如果任务涉及 project-ai-config-hub skill，读 skills/shared/project-ai-config-hub/ 和工具入口源。
+3. 如果任务涉及共享规则，读 rules/shared/core.md；只有改客户端 adapter 时才读对应 adapter 文档与模板。
+4. 如果任务涉及 project-ai-config-hub skill，读 skills/shared/project-ai-config-hub/ 完整包；旧工具入口目录不作为事实源。
 5. 如果任务涉及渲染/同步，读 scripts/render*.ps1、check*.ps1、sync*.ps1 和 docs/sync-workflow.md。
 6. 需要理解整体数据流时，读 docs/architecture.md。
 7. README.md 只作为项目概览补充，不作为强制第一入口。

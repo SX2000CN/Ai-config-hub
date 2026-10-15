@@ -1,12 +1,7 @@
-# 项目级 Skill 事实源
+# Legacy skills directory
 
-本目录用于保存当前项目自己的项目级 skill 事实源。
+This directory is retained as a migration and cleanup candidate. Do not add Skill content here.
 
-约定：
+For ordinary target projects, this repository's convention is to store a complete Agent Skill package in `.agents/skills/<name>/`; `.Ai-config/skills-registry.md` records package paths and client adapters. This repository's own packages live in `skills/shared/<name>/`. `.agents/skills/` is a discovery path supported by some clients, not a path prescribed by the Agent Skills format. Claude Code uses an exported package under `.claude/skills/`.
 
-- 每个项目级 skill 使用独立目录：`.Ai-config/skills/<skill-name>/`。
-- 这里是普通目标项目项目级 skill 的 canonical 事实源；durable 规则、workflow、checklists、references 和 templates 应收敛到这里。
-- `.claude/skills`、`.agents/skills` 和 `.codex/skills` 只保留工具入口或兼容入口，指向这里的事实源。
-- 新增、迁移或废弃 skill 后，同步更新 `.Ai-config/skills-registry.md`。
-
-当前没有放在本目录下的项目级 skill。`project-ai-config-hub` 等全局 managed skills 的事实源仍在 `skills/shared/<skill-name>/`，因为它们由本仓库维护、渲染并同步到用户级目录；不要把这个全局分发管线当作普通目标项目的事实源范式。
+The hub's own global Skill packages remain under `skills/shared/<name>/` because they are source packages owned by this repository. Their rendered copies are adapters, not additional sources.

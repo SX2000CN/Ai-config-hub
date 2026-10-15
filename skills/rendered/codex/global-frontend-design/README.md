@@ -35,12 +35,12 @@
 - 改营销防模板 → `references/anti-slop.md`
 - 改产品层级/状态/文案工程 → `references/product-ui-engineering.md`
 - 改归属 → `ATTRIBUTION.md` 与归档目录
-- 工具入口只放在 `skills/{claude-code,codex,grok}/global-frontend-design/SKILL.md`；payload 以本目录为事实源
-- 同步用户级目录前：`render-skills.ps1` → `check-skills.ps1` → `sync-skills.ps1` dry-run；Apply 需用户授权
+- 本目录是完整 Skill 包的唯一内容源；客户端发现目录需要导出时，复制整个包，不单独维护工具版本的 `SKILL.md`
+- 验证包和导出物：`render-skills.ps1` → `check-skills.ps1`。用户级同步属于可选部署流程，不是内容维护的完成条件
 
 ## 当前状态
 
-共享事实源与维护稿在本目录。历史来源快照说明见：
+完整 Skill 包与维护源在本目录。历史来源快照说明见：
 
 ```text
 .Ai-config/archive/global-frontend-design-sources/

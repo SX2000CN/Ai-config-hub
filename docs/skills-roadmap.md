@@ -1,80 +1,28 @@
 # Skills 路线图
 
-`skills/` 目录是这套 AI 配置的可复用能力层，不只是可分发文件包。它把项目中枢、前端设计、思维扩展和脉络关系等专门工作流沉淀为 AI 可按需触发的能力。
-
-当前已实现 `project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread` 的源码化、渲染、检查和 dry-run 同步流程。`pencil-design-workflow` 已退役：由 frontend 的 UI brief 路径承接设计先行，sync-skills 会删除托管副本。
-
-`project-ai-config-hub` 的历史计划和设计已归档到：[archive/project-ai-config-hub/](archive/project-ai-config-hub/)。当前实现继续维护在本页下方。
-
-## 可能方向
-
-- `skills/shared/`
-- 跨 Claude Code / Codex / OpenCode / Grok 通用的工作流说明；Claude Code 用专属 `~/.claude/skills` 入口，其余三者共用 `.agents/skills` 入口。
-  - 例如发版检查、文档同步检查、安全审查清单。
-
-- `skills/claude-code/`
-  - Claude Code skill 或 slash command 相关素材。
-  - 可结合 Claude Code settings、hooks、MCP 使用。
-
-- `skills/codex/`
-  - Codex 侧的 skill、prompt、插件或 AGENTS 片段。
-  - 保持和 Codex 官方支持能力对齐。
+本页维护 Skill 包的能力边界和评测状态。完整包遵循 Agent Skills 格式；本地路径和客户端发现方式是单独的 adapter。
 
 ## 已实现
 
-- 当前工作状态文档
-  - 设计文档：[work-state-design.md](work-state-design.md)
-  - 定位：项目级 AI 接手入口、多任务状态总览和任务无损接手卡，用于中断、隔天继续、切换任务或切换 AI 编程工具时恢复当前工作现场。
-  - 当前实现：已接入 `rules/shared/core.md`、`project-ai-config-hub` 流程和模板；核心形态是项目内极简 Markdown 状态文件和按需任务卡，不以 hook 或 skill 作为核心机制。轻量项目可以只保留项目规则或 `.Ai-config/CURRENT.md`，只有跨会话、多任务、等待确认或有残留风险时才创建任务卡。
+- `project-ai-config-hub`：按项目复杂度维护项目状态与配置索引；项目级完整 skill 包默认位于 `.agents/skills/<name>/`，`.Ai-config` registry 只引用包和 adapter。
+- `global-frontend-design`：前端设计领域 skill，包含 Design Read、产品/营销双轨、VARIANCE / MOTION / DENSITY、signature 和工程约束。
+- `global-thinking-partner`：可组合 reasoning mode；显式请求时多轮探索，隐式触发时静默做健全性检查。
+- `global-context-thread`：仅在结构化关系检索能减少搜索成本时路由到 context-thread 或 `.Ai-config` 关系索引。
 
-- `project-ai-config-hub`
-  - 定位：`ai-config-hub` 的项目级分身，用于在目标项目中按风险和接手价值创建或升级 `.Ai-config/` 中枢、多任务工作状态机制和多端项目 skills。
-  - 共享源：`skills/shared/project-ai-config-hub/`
-   - Claude Code 入口源：`skills/claude-code/project-ai-config-hub/SKILL.md`
-   - 通用入口源（Codex / OpenCode / Grok）：`skills/codex/project-ai-config-hub/SKILL.md`
-  - rendered 包：`skills/rendered/`
-  - 脚本：`scripts/render-skills.ps1`、`scripts/check-skills.ps1`、`scripts/sync-skills.ps1`
+每个本仓库全局 skill 的唯一内容源为 `skills/shared/<name>/`。`SKILL.md` 的 `description` 承载触发与反触发边界；`skills/evals/` 存放审查样例。不要在工具入口或 `config/managed-assets.psd1` 复制一份运行时路由规则。
 
-- `global-frontend-design`
-  - 定位：顶级全局前端领域 skill；Design Read、product/marketing 双轨、三旋钮（VARIANCE/MOTION/DENSITY）、一个 signature、anti-slop 与产品工程门禁；渐进加载，不依赖 Pencil。
-  - 共享源：`skills/shared/global-frontend-design/`
-   - Claude Code 入口源：`skills/claude-code/global-frontend-design/SKILL.md`
-   - 通用入口源（Codex / OpenCode / Grok）：`skills/codex/global-frontend-design/SKILL.md`
-  - rendered 包：`skills/rendered/`
-  - 来源归档：`.Ai-config/archive/global-frontend-design-sources/`（方法融合 Anthropic frontend-design、产品 UI 工程源、taste-skill 方法；非上游全文再发布）
-  - 2026-07-24：路线 C 重做共享包（workflow / principles / dials / anti-slop / brief / preflight）
+## 目录与适配
 
-- `global-thinking-partner`
-  - 定位：可组合 reasoning mode；显式触发进入多轮协作探索、假设挑战、情景和二阶影响推演，隐式触发只做静默健全性检查。
-  - 共享源：`skills/shared/global-thinking-partner/`
-   - Claude Code 入口源：`skills/claude-code/global-thinking-partner/SKILL.md`
-   - 通用入口源（Codex / OpenCode / Grok）：`skills/codex/global-thinking-partner/SKILL.md`
-  - rendered 包：`skills/rendered/`
-  - 约束：低副作用表示不擅自扩大授权或写入状态，不限制推理深度；用户转入实现后不阻断领域 workflow。
-  - 评测：`skills/evals/global-thinking-partner/` 保存真实 prompt 夹具和定性 rubric，CI 不调用付费模型。
+- `skills/shared/<name>/`：完整 package source。
+- `skills/rendered/claude-code/`：Claude Code 路径的导出。
+- `skills/rendered/codex/`：`.agents/skills/` 路径的导出。
+- `skills/claude-code/`、`skills/codex/`：未接入新 renderer 的旧入口源，保留为清理候选。
+- `skills/evals/`：行为与路由样例，不负责自动发现或运行时调度。
 
-- `global-context-thread`
-  - 定位：“脉络”轻量结构化事实层 skill，用于代码关系、配置关系、影响面或复杂工作流关系分析，优先查询 context-thread 或 `.Ai-config` 关系索引来缩小上下文。
-  - 设计文档：`docs/context-thread/design.md`
-  - 技术实现文档：`docs/context-thread/implementation.md`
-  - 共享源：`skills/shared/global-context-thread/`
-   - Claude Code 入口源：`skills/claude-code/global-context-thread/SKILL.md`
-   - 通用入口源（Codex / OpenCode / Grok）：`skills/codex/global-context-thread/SKILL.md`
-  - rendered 包：`skills/rendered/`
-  - 约束：简单问答和普通局部任务不自动初始化索引、不创建任务卡；context-thread 只负责代码结构关系，非代码复杂工作流由任务卡关系索引承接。
+Agent Skills 规范不指定发现路径。新增客户端时先核实其当前官方 discovery 行为，再决定是否需要 adapter；不要因为它能读取 `SKILL.md` 就默认它会扫描 `.agents/skills/`。OpenCode 会同时扫描 `.agents/skills/` 和 `.claude/skills/`，因此多客户端导出可能形成重复发现；目标环境必须关闭其中一个发现根，或确保 OpenCode 看不到同名重复包。
 
-- ~~`pencil-design-workflow`~~（已退役）
-  - 原定位：Pencil 设计先行工具路由。
-  - 替代：`global-frontend-design` 的设计先行 / UI brief 路径。
-  - 清理：`Skills.Retired` + `sync-skills.ps1 -Apply` 删除用户级托管目录；项目内入口由 `project-ai-config-hub` audit+repair 清理。
+## 后续
 
-## 路由契约
-
-`config/managed-assets.psd1` 为每个 managed skill 登记 `Role`、`Activation`、`ExclusiveWith`、`HandoffTo` 和排除条件，`skills/evals/routes.json` 保存正例、反例和组合场景。Codex 的 `description` 必须同时包含触发能力和关键排除条件，因为正文只会在触发后加载。
-
-## 迭代原则
-
-- 先沉淀文档和手动流程，再自动化。
-- 不把工具专属机制强行抽象成通用机制。
-- 每新增一个 skill，都应说明适用工具、入口、限制和验证方式。
-- skill 正文默认中文为主；路径、命令、工具名和必要触发关键词保留原文，避免影响工具识别。
+1. 评估是否将旧入口源迁出维护路径；本轮不自动删除它们。
+2. 给共享 package conformance 检查补充边界用例，确保只接受标准字段并发现失效的包内链接。
+3. 只有确定新增客户端有实际用户和官方发现行为后，才增加新的导出路径。

@@ -1,6 +1,6 @@
 # 项目级 AI 配置中枢流程
 
-本 skill 是 `ai-config-hub` 的项目级分身。它不保存具体业务项目的长期规则，而是在目标项目里创建、升级、审计和修复轻量的 `.Ai-config/` 中枢、工作状态机制、项目级 skill canonical 事实源和多工具薄入口。
+本 skill 帮助目标项目维护项目规则、可移植 Agent Skill 包和按需工作状态索引。`.Ai-config/` 保存状态与索引；客户端发现目录、MCP、runtime 和用户级同步按需适配，不是配置本体。
 
 用户不需要显式点名本 skill，但只有在请求明确涉及新增、修改、迁移、审计、修复或同步项目级 AI 配置中枢 / 项目级 skill 时，才按本流程工作。只是读取 `.Ai-config` 状态、普通业务任务恰好提到任务卡路径、一次性问答或局部修复，不进入完整 audit / repair 流程。
 
@@ -11,11 +11,11 @@
 - 最小可用层：`AGENTS.md` 或 `CLAUDE.md` 加一段项目规则，适合小脚本、demo、一次性工具。
 - 接手状态层：`.Ai-config/CURRENT.md`，适合长期项目或经常跨会话继续的项目。
 - 任务卡层：`.Ai-config/tasks/`，只在任务会跨天、中断、多 AI 接手、等待确认、阻塞或有残留风险时使用。
-- Skill 层：项目级 skill 的 canonical 事实源统一放在 `.Ai-config/skills/<skill-name>/`；`.claude/skills` / `.agents/skills` / `.grok/skills` 只放工具发现薄入口，只在项目确实有可复用专门工作流时创建。OpenCode 与 Codex 共用 `.agents/skills`。
+- Skill 层：项目级完整 Agent Skill 包默认放在 `.agents/skills/<skill-name>/`。这是项目目录约定，不是格式规范指定的发现路径；Codex 与 OpenCode 可从该位置发现。Claude 使用 `.claude/skills/<skill-name>/` 的同包导出；OpenCode 也会扫描这个兼容目录，双路径导出时应在 OpenCode 进程环境关闭该兼容扫描，见 `references/official-paths.md`。
 
 默认先建立足够轻的机制。只有用户要求、项目复杂度需要，或已有状态必须保留时，才升级到下一层。不要因为目标项目已经存在 `.Ai-config/`、任务卡或 skill 目录，就把普通业务任务升级成中枢审计；本 skill 也不自动拉起脉络、思维伙伴或同步流程，确需跨域时回到主任务路由判断主次。
 
-项目级 skill 事实源必须收敛：普通目标项目中，durable 的 skill 规则、触发、workflow、checklist、references 和 templates 都应归入 `.Ai-config/skills/<skill-name>/`。项目 README、docs、脚本说明、旧版 `docs/ai/`、`.claude/skills`、`.agents/skills`、`.opencode/skills` 和 `.codex/skills` 可以作为迁移来源、支持性引用或工具入口，但不得作为长期主事实源。
+项目级 Skill 内容必须收敛到一个完整包：标准 `SKILL.md`、触发说明、workflow、checklist、references 和 templates 同处 `.agents/skills/<skill-name>/`。项目规则仍由 `AGENTS.md`、`CLAUDE.md` 或客户端规则入口承载，不要为了单源化把所有项目规则塞进 Skill。`.Ai-config/skills-registry.md` 只登记包路径和 adapter。若其他发现目录曾存有不同内容，应先将 Skill 内容迁入唯一包，再将同一包导出到所需路径；使用 OpenCode 的目标还要避免该包从 `.agents/` 和 `.claude/` 同时进入发现集合。
 
 ## 1. 识别当前项目
 
@@ -24,7 +24,8 @@
 - `AGENTS.md` / `AGENTS.override.md` / `CLAUDE.md` / `opencode.json`
 - `README.md`、`docs/`、`CHANGELOG.md`
 - `.Ai-config/`
-- 工具 skill 目录（`.claude/skills/`、`.agents/skills/`、`.grok/skills/`）：工具入口或迁移来源，不作为长期事实源；既有 `.opencode/skills/` 只作为迁移来源
+- Skill 包目录 `.agents/skills/`；检查其完整包与 `SKILL.md`。
+- 客户端发现目录 `.claude/skills/`、`.grok/skills/`、`.opencode/skills/`：只在目标客户端确实需要时检查；发现路径不等于新的内容事实源。
 
 再按项目类型补充查看工程入口，例如 `package.json`、`pyproject.toml`、`Cargo.toml`、`go.mod`、`Makefile`。
 
@@ -50,7 +51,7 @@
 ### audit + repair 必做清单（更新项目配置）
 
 1. 读 `.Ai-config/CURRENT.md` 与活动任务卡；按 `references/current-hygiene.md` 做 CURRENT 健康检查并修复膨胀/禁区/双写不一致。
-2. 检查项目级 skill 事实源是否收敛到 `.Ai-config/skills/`，薄入口是否仍指向 canonical。
+2. 检查项目级 Skill 是否是 `.agents/skills/` 下的完整标准包；需要 Claude 时检查导出包是否一致。
 3. 检查并清理已退役全局能力残留：如项目内 `pencil-design-workflow` 入口、registry 中的 pencil 行、过时 Pencil 说明；不要删除用户业务设计稿文件，除非用户明确要求。
 4. 检查 registry、任务卡状态与 CURRENT 三区是否一致。
 5. 低风险修复直接做；覆盖、删除非空事实源、写全局目录前先确认。
@@ -111,10 +112,10 @@
 .Ai-config/tasks/README.md
 .Ai-config/archive/
 .Ai-config/skills-registry.md
-.Ai-config/skills/<skill-name>/
+.agents/skills/<skill-name>/
 ```
 
-其中 `.Ai-config/skills/<skill-name>/` 是普通目标项目中项目级 skill 的 canonical 事实源。其他项目文档可以被引用为证据或背景，但不能作为 registry 中的长期事实源路径。
+其中 `.agents/skills/<skill-name>/` 是本项目约定的完整 Skill 包目录，Codex/OpenCode 可直接发现它。Agent Skills 格式本身不规定这个路径。`.Ai-config/skills-registry.md` 只索引该包和 Claude 等客户端的导出位置。
 
 `.Ai-config/CURRENT.md` 是 AI 接手入口和多任务状态总览；具体任务事实保存在 `.Ai-config/tasks/*.md`。它不是完整日志、日报或完成记录。
 
@@ -122,17 +123,14 @@
 
 ## 5. 生成工具入口
 
-默认生成：
+仅为目标客户端尚未扫描的发现路径生成同包 adapter。默认保留一个 `.agents/skills/` 完整包；Claude Code 需要单独发现路径时，复制同一完整包：
 
 ```text
 .claude/skills/<skill-name>/SKILL.md
 .agents/skills/<skill-name>/SKILL.md
-.grok/skills/<skill-name>/SKILL.md
 ```
 
-工具入口应包含 frontmatter、简短触发说明、canonical 事实源路径（`.Ai-config/skills/<skill-name>/`）、必读文件顺序、安全边界和确认条件。`.agents/skills` 同时服务 Codex 和 OpenCode。
-
-工具入口不承载 durable 规则、workflow、checklist、references 或 templates。Hub 不生成额外 `.opencode/skills/` 副本；历史兼容目录 `.codex/skills/` 只按需生成，见 `references/migration.md`。
+Codex 和 OpenCode 当前可从 `.agents/skills/` 发现包。Grok 是否扫描该路径应按目标版本文档和本机探针核实；只有该路径不可用时才考虑 `.grok/skills/` adapter。不要创建第二份触发语义或 workflow。Hub 不生成额外 `.opencode/skills/` 副本；历史兼容目录 `.codex/skills/` 只按需处理，见 `references/migration.md`。
 
 ## 6. 计划和确认
 

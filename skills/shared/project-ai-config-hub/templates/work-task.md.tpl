@@ -67,12 +67,7 @@
 |---|---|---|---|---|
 | `{{relation_object_1}}` | {{relation_status_1}} | {{relation_dependency_1}} | {{relation_evidence_1}} | {{relation_next_step_1}} |
 
-示例（来自一次真实的迁移任务，仅供参考格式，不要照抄内容）：
-
-| 对象 | 当前状态 | 依赖 / 影响 | 证据 | 下一步 |
-|---|---|---|---|---|
-| `.Ai-config/context-thread/` | 已初始化，`context-thread.db` 可跟踪 | 影响脉络索引和 MCP 查询工具的可用性 | `context-thread.ps1 status .` 输出 87 files / 1423 nodes / pending 0 | 代码结构变化后按需 `sync` 或重建索引 |
-| `global-context-thread` skill | 仓库源、rendered 与本机用户级目录已同步 | 影响 Claude Code / Codex 是否能发现这个 skill | `sync-skills.ps1` dry-run 显示 unchanged | 无，已完成 |
+填写与本任务直接相关的对象、状态、证据和下一步；不要复制其他项目的同步或部署状态作为通用示例。
 
 ## 下一步最小动作
 

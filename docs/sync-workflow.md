@@ -1,6 +1,6 @@
 # 同步流程
 
-本文记录全局规则、skills、MCP 配置片段和本地 runtime 的本机同步流程。托管目标统一登记在 `config/managed-assets.psd1`；各 MCP JSON 仍是单个 server 配置的事实源。所有同步脚本默认只 dry-run，只有显式 `-Apply` 才写入真实用户目录。
+本文只记录选择本机部署 adapter 时使用的规则、Skill、MCP 和 runtime 同步流程。它不是配置本体的维护入口。托管目标统一登记在 `config/managed-assets.psd1`；各 MCP JSON 是当前本机 adapter 的 server 配置源。所有同步脚本默认只 dry-run，只有显式 `-Apply` 才写入真实用户目录。
 
 ## 分层验证与全局同步前总检查
 
@@ -53,12 +53,7 @@ render 脚本也可以单独做非写入一致性检查：
 
 ## 全局规则
 
-1. 修改源文件：
-   - `rules/shared/core.md`
-    - `rules/tools/claude-code.md`
-    - `rules/tools/codex.md`
-    - `rules/tools/grok.md`
-    - `rules/tools/opencode.md`
+1. 修改共享规则源 `rules/shared/core.md`。客户端行为差异应查对应 adapter 文档；本仓库没有 `rules/tools/` 目录。
 
    当前工作状态约定属于共享规则，维护在 `rules/shared/core.md`。
 
@@ -101,10 +96,7 @@ render 脚本也可以单独做非写入一致性检查：
 
 ## Skills
 
-1. 修改源文件：
-   - `skills/shared/<skill-name>/`
-    - `skills/claude-code/<skill-name>/SKILL.md`
-    - `skills/codex/<skill-name>/SKILL.md`
+1. 修改完整 package source：`skills/shared/<skill-name>/`，包括标准 `SKILL.md` 和该包所需资源。`skills/claude-code/`、`skills/codex/` 是未接入 renderer 的旧入口候选，不再作为源文件。
 
    当前全局 skills：`project-ai-config-hub`、`global-frontend-design`、`global-thinking-partner`、`global-context-thread`。退役：`pencil-design-workflow`（Apply 时删除托管副本）。
 
@@ -132,18 +124,18 @@ render 脚本也可以单独做非写入一致性检查：
 .\scripts\sync-skills.ps1 -Apply
 ```
 
-默认同步目标只有两个：
+当前仓库内导出对应两种发现路径：
 
-- `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`（Claude Code 不读 `.agents/`，必须保留专属副本）
-- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（Codex、OpenCode、Grok 共用）
+- `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`
+- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（供支持该路径的客户端使用）
 
 已退役目标由 manifest 的 `RetiredTargets` 清理，只在 marker 匹配时删除：`~/.codex/skills/`、`~/.config/opencode/skills/`、`~/.grok/skills/`。
 
 注意事项：
 
-- 不要直接编辑 `skills/rendered/` 作为长期源头；应修改 `skills/shared/` 或工具专属入口源。
+- 不要直接编辑 `skills/rendered/` 作为长期源头；只修改 `skills/shared/<name>/` 完整包。
 - `.codex\skills` 已退役：Codex 当前读取 `~/.agents/skills`。
-- OpenCode 官方发现 `~/.agents/skills`；不生成也不同步 `~/.config/opencode/skills` 原生副本，旧托管副本只在 marker 匹配时退役。
+- OpenCode 官方同时发现 `~/.agents/skills` 和 `~/.claude/skills` 兼容目录；Hub 只同步前者，不生成也不同步 `~/.config/opencode/skills` 原生副本。若 Claude 目录中存在同名包，启动 OpenCode 时设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`，或确保 OpenCode 只暴露一个发现根；旧托管副本只在 marker 匹配时退役。
 - Grok 会扫描每一层的 `.agents/skills`，因此不再维护 `~/.grok/skills` 原生副本；Grok 侧的 `compat.claude.skills` 由 managed block 关闭，避免重复载入 Claude 副本。
 - 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
 - `sync-skills.ps1 -Apply` 只覆盖带对应 `ai-config-hub-managed` 标记的托管目录；同名但无标记的目录视为用户资产并拒绝覆盖，历史安装需先显式迁移（Grok 自带 bundled skills 无此 marker，不会被覆盖）。

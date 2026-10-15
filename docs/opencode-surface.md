@@ -1,6 +1,6 @@
 # OpenCode 适配边界
 
-本文记录 Hub 对 OpenCode 的原生托管面。OpenCode 不读取 Claude Code 的 `.claude.json` 作为 MCP 配置，也不读取 Codex 的 `config.toml`；MCP 必须合并到 OpenCode 自己的 `opencode.json`。
+本文记录 Hub 对 OpenCode 的可选 adapter。OpenCode 不读取 Claude Code 的 `.claude.json` 作为 MCP 配置，也不读取 Codex 的 `config.toml`；MCP 必须合并到 OpenCode 自己的 `opencode.json`。这些集成不属于共享规则或 Agent Skill 包本体。
 
 ## 用户路径
 
@@ -8,9 +8,12 @@
 ~/.config/opencode/AGENTS.md
 ~/.config/opencode/opencode.json
 ~/.agents/skills/<skill-name>/SKILL.md
+~/.claude/skills/<skill-name>/SKILL.md  # OpenCode 也会扫描 Claude 兼容目录
 ```
 
-规则由 `scripts/sync.ps1` 同步，skill 由 `scripts/sync-skills.ps1` 同步到 Codex/OpenCode 共用的官方兼容目录 `~/.agents/skills`，MCP 由 `scripts/sync-opencode-mcp.ps1` 合并。Hub 不再同步 `~/.config/opencode/skills` 原生副本；已存在的 Hub 托管副本会按 marker 安全退役。OpenCode 的 `opencode.json` 同时包含 provider、model、权限和 MCP，因此 MCP 脚本只拥有 `mcp` 节，不覆盖其他配置。
+OpenCode 官方同时扫描 `.agents/skills` 和 `.claude/skills`，并要求不同来源的 Skill 名称唯一。Hub 只同步自身管理的 `.agents/skills`；若 Claude 也安装了同名完整包，OpenCode 会看到两个来源。OpenCode 文档当前提供 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` 关闭 Claude Skills 兼容扫描；必须在启动 OpenCode 的进程环境中设置，且升级版本后重新核实该行为。本机文档快照为 OpenCode `1.18.11`。没有该环境控制时，应确保 OpenCode 会话只暴露一个包含这些 Skill 的发现根。
+
+规则由 `scripts/sync.ps1` 同步，skill 由 `scripts/sync-skills.ps1` 同步到 Codex/OpenCode 共用的 `.agents/skills` 发现目录，MCP 由 `scripts/sync-opencode-mcp.ps1` 合并。Hub 不再同步 `~/.config/opencode/skills` 原生副本；已存在的 Hub 托管副本会按 marker 安全退役。OpenCode 的 `opencode.json` 同时包含 provider、model、权限和 MCP，因此 MCP 脚本只拥有 `mcp` 节，不覆盖其他配置。
 
 ## MCP 能力
 
@@ -47,3 +50,5 @@ OpenCode 的日常浏览器自动化使用用户级官方 Playwright CLI `agents
 .\scripts\sync.ps1
 .\scripts\sync-skills.ps1
 ```
+
+当前发现路径参考：[官方路径核验与版本快照](../skills/shared/project-ai-config-hub/references/official-paths.md)。

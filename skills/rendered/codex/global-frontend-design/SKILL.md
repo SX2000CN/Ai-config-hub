@@ -1,6 +1,6 @@
 ---
 name: global-frontend-design
-description: 创建、重设计或审查非简单前端界面时，作为实现领域 skill：Design Read、product/marketing 双轨、三旋钮与一个 signature，落地可维护、可访问、响应式且状态完整的 UI；设计先行用短 UI brief，不依赖 Pencil；局部 UI bug fix、小样式修复、已有设计直接实现、后端/文档任务不使用。
+description: 创建、重设计或审查非简单前端界面，包括页面、组件、仪表盘、表单、落地页和布局；用户要求提升视觉质量、可访问性、响应式或状态覆盖时使用。局部 UI bug fix、小样式修复、已有设计稿的直接实现、后端和文档任务不触发。
 ---
 
 # 全局前端设计

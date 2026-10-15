@@ -1,5 +1,7 @@
 # 工作任务：迁移项目 AI 配置中枢到 .Ai-config
 
+> 历史记录：本文记录 2026-05-24 的 `.Ai-config/` 状态层迁移。其“新配置统一写入 `.Ai-config/`”表述只适用于当时的状态层迁移，已由 2026-10-15 的 portable-agent-config-source 任务取代；当前规则源和完整 Skill 包不放在 `.Ai-config/`。
+
 任务 ID：2026-05-24-ai-config-path-migration
 创建时间：2026-05-24 06:28
 更新时间：2026-05-25 18:38

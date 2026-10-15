@@ -64,60 +64,23 @@
                 )
             }
         )
+        # Historical output paths are cleanup candidates; render-skills.ps1 never removes them.
         RetiredRenderedRoots = @(
             'skills\rendered\opencode'
             'skills\rendered\codex-legacy'
             'skills\rendered\grok'
         )
-        Definitions = @(
-            @{
-                Name = 'project-ai-config-hub'
-                Role = 'domain'
-                Activation = 'deliverable'
-                ExclusiveWith = @()
-                HandoffTo = @('global-thinking-partner', 'global-context-thread')
-                Exclusions = @('ordinary-business-task', 'read-only-status', 'local-fix')
-            }
-            @{
-                Name = 'global-frontend-design'
-                Role = 'domain'
-                Activation = 'deliverable'
-                ExclusiveWith = @()
-                HandoffTo = @()
-                Exclusions = @('local-style-fix', 'backend-only')
-            }
-            @{
-                Name = 'global-thinking-partner'
-                Role = 'reasoning-mode'
-                Activation = 'explicit-visible-or-implicit-silent'
-                ExclusiveWith = @()
-                HandoffTo = @('project-ai-config-hub', 'global-frontend-design')
-                Exclusions = @('explicit-execution', 'local-fix', 'known-root-cause')
-            }
-            @{
-                Name = 'global-context-thread'
-                Role = 'tool-router'
-                Activation = 'conditional'
-                ExclusiveWith = @()
-                HandoffTo = @('project-ai-config-hub')
-                Exclusions = @('single-file-task', 'plain-status-analysis', 'stale-index')
-            }
-        )
         Targets = @(
             @{
                 Name = 'ClaudeCode'
-                SourceRoot = 'skills\claude-code'
                 RenderedRoot = 'skills\rendered\claude-code'
                 UserRelativeRoot = '.claude\skills'
-                RequireWhenToUse = $true
             }
             @{
-                # Codex, OpenCode and Grok all discover ~/.agents/skills: keep the single shared copy.
-                Name = 'Codex'
-                SourceRoot = 'skills\codex'
+                # Codex and OpenCode discover ~/.agents/skills; this is a path adapter, not a format standard.
+                Name = 'AgentsSkills'
                 RenderedRoot = 'skills\rendered\codex'
                 UserRelativeRoot = '.agents\skills'
-                RequireWhenToUse = $false
             }
         )
     }

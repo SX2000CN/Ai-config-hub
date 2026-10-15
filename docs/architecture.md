@@ -1,235 +1,73 @@
 # 架构说明
 
-`ai-config-hub` 的架构先是一套 AI 编程协作配置，再是一套把配置交付到工具中的分发系统。
+本项目维护配置内容本体，再按需适配客户端的发现路径。用户级部署、MCP servers 和本地 runtime 是可选基础设施；它们不能反过来决定共享规则与 Skill 包应写什么。
 
-配置本体负责规定 AI 如何工作：默认怎样直接推进、何时扩大证据范围、怎样组合 skills、何时读取 `.Ai-config` 或脉络索引、何时验证和交接。分发系统负责把这些配置渲染、检查并同步到 Claude Code、Codex、OpenCode、Grok Build 等工具中。
-
-设计总览见：[AI 配置设计与实现](ai-config-design.md)。
-脉络作为结构化事实层的详细设计见：[context-thread/](context-thread/README.md)。
-
-## 配置能力层
+## 主结构
 
 ```text
-核心行为层
-rules/shared/core.md
-        ↓
-工具适配层
-rules/tools/* + templates/*
-        ↓
-可复用能力层
-skills/shared/<skill-name>/
-        ↓
-项目状态层
-.Ai-config/CURRENT.md + .Ai-config/tasks/
-        ↓
-结构化事实层
-.Ai-config/context-thread/context-thread.db + 任务卡关系索引
-        ↓
-工具桥接层
-config/managed-assets.psd1 + tool-configs/ + tools/context-thread-engine/ + 按需临时验证产物
-        ↓
-分发与验证层
-render / check / sync 脚本
+可移植内容源
+  rules/shared/core.md
+  skills/shared/<name>/SKILL.md + package resources
+            |
+            +------> 项目状态与索引
+            |          .Ai-config/CURRENT.md / tasks / registry
+            |          .Ai-config/context-thread/ (project index data)
+            |
+            v
+客户端发现 adapter
+  AGENTS.md / CLAUDE.md / client skill paths
+  client-specific settings, permissions, hooks, subagents, plugins, MCP
+            |
+            v
+可选导出、验证与本机部署
+  scripts/ + config/managed-assets.psd1 + rendered/ + tools/
 ```
 
-各层职责：
+`AGENTS.md` 是规则文件名；`.agents/skills/` 是某些客户端采用的发现目录。两者不是同一种配置，也不是同一开放标准。Agent Skills 定义 skill 包格式，不规定上述目录由哪个客户端扫描。
 
-- 核心行为层：定义默认直接推进、证据扩展、授权与平台边界、比例验证、敏感信息和版本控制规则。
-- 工具适配层：处理 Claude Code、Codex、OpenCode、Grok Build 等工具差异，不复制通用原则。
-- 可复用能力层：把项目中枢和前端实现作为领域 skills，把思维伙伴作为 reasoning mode，把脉络作为工具路由 skill。
-- 项目状态层：在具体项目中保存当前工作状态、任务卡和接手入口；CURRENT 必须 hygiene。
-- 结构化事实层：用脉络索引和任务卡关系索引辅助复杂关系判断。
-- 工具桥接层：由单一 manifest 登记托管目标，提供 MCP、本地引擎能力，以及按需生成的临时浏览器验证产物。
-- 分发与验证层：提供非修改 preflight、staging、原子替换、统一备份和失败回滚，让配置可审阅、可检查、可安全同步。
+## 内容本体
 
-## 数据流
+### 规则
 
-### 全局规则
+`rules/shared/core.md` 是跨工具共享的协作约束源。规则保持与客户端配置语法无关。仓库根 `AGENTS.md` 和 `CLAUDE.md` 是本仓库自己的薄项目入口，不是全局分发源。
 
-```text
-rules/shared/core.md
-        +
-rules/tools/claude-code.md
-        +
-templates/CLAUDE.md.tpl
-        ↓
-rules/rendered/CLAUDE.md
-        ↓
-C:\Users\sx200\.claude\CLAUDE.md
-```
+本仓库生成的 `rules/rendered/*` 是客户端可读取的导出文件。具体工具的规则发现能力、优先级和回退行为由 adapter 文档记录；不能因为文件名相同就假设客户端行为相同。
 
-```text
-rules/shared/core.md
-        +
-rules/tools/codex.md
-        +
-templates/AGENTS.md.tpl
-        ↓
-rules/rendered/AGENTS.md
-        ↓
-C:\Users\sx200\.codex\AGENTS.md
-```
+### Agent Skills
 
-```text
-rules/shared/core.md
-        +
-rules/tools/grok.md
-        +
-templates/grok-AGENTS.md.tpl
-        ↓
-rules/rendered/grok-AGENTS.md
-        ↓
-C:\Users\sx200\.grok\AGENTS.md
-```
+每个包位于 `skills/shared/<name>/`，由 `SKILL.md` 和可选的相对资源文件组成。包是唯一的内容事实源。Claude 和 `.agents/skills` 的导出从同一目录复制，避免不同 frontmatter 触发语义导致行为分叉。
 
-### Skills
+可移植包只使用 Agent Skills 规范定义的 frontmatter 字段；触发与反触发语义写在 `description` 和正文中，不使用自定义的 `when_to_use` 字段。包引用的文件必须随包分发。
 
-每个全局 managed skill 使用同一条渲染和同步路径。注意：这是本仓库的全局 skill 分发管线；普通目标项目自己的项目级 skill，canonical 事实源应位于目标项目 `.Ai-config/skills/<skill-name>/`，`.claude/skills` 和 `.agents/skills` 只作为工具入口。OpenCode 官方发现 `.agents/skills`，因此与 Codex 共用该入口，不生成额外原生副本。
+`skills/claude-code/` 与 `skills/codex/` 仍保留为未接入渲染流程的旧入口来源，当前只作迁移和清理候选，不应编辑为事实源。`skills/rendered/` 是生成物。
 
-```text
-skills/shared/<skill-name>/
-        +
-skills/claude-code/<skill-name>/SKILL.md
-        ↓
-skills/rendered/claude-code/<skill-name>/
-        ↓
-C:\Users\sx200\.claude\skills\<skill-name>\
-```
+`.agents/skills/` 是 Codex/OpenCode 的客户端发现路径约定，不是 Agent Skills 开放规范规定的路径。Claude Code 需要 `.claude/skills/` 导出。发现路径映射由 `config/managed-assets.psd1` 管理；内容不按工具复制维护。
 
-```text
-skills/shared/<skill-name>/
-        +
-skills/codex/<skill-name>/SKILL.md
-        ↓
-skills/rendered/codex/<skill-name>/
-        ↓
-C:\Users\sx200\.agents\skills\<skill-name>\
-```
+路由样例位于 `skills/evals/`，用于审查触发边界，不是第二份运行时路由注册表。Manifest 只登记 package 名称和适配目标，不维护 `Role`、`Activation`、`Exclusions` 或 handoff 规则副本。
 
-```text
-skills/shared/<skill-name>/
-        +
-skills/codex/<skill-name>/SKILL.md
-        ↓
-skills/rendered/codex/<skill-name>/
-        ↓
-C:\Users\sx200\.agents\skills\<skill-name>\
-        ↓
-        Codex / OpenCode / Grok 共用该目录
-```
+## 项目状态与索引
 
-当前全局 skills：
+目标项目的 `.Ai-config/` 记录项目状态和索引：
 
-- `project-ai-config-hub`
-- `global-frontend-design`
-- `global-thinking-partner`
-- `global-context-thread`
+- `CURRENT.md` 是跨会话工作状态入口。
+- `tasks/*.md` 保存需要接手的任务事实。
+- `skills-registry.md` 只登记完整 Skill 包的位置、适配入口和状态。
+- `context-thread/` 保存当前项目结构索引和说明；数据库属于索引数据，不是配置源。
 
-路由元数据维护在 `config/managed-assets.psd1`：显式点名和平台强制触发优先，领域 skill 主导交付，`global-thinking-partner` 可作为辅助 reasoning mode，工具路由 skill 只在对应能力确实需要时加入。`skills/evals/routes.json` 保存路由正例、反例和 handoff 场景。
+可复用规则和完整 Skill 包放在其配置源或发现目录中，不放进 `.Ai-config/`。本仓库当前的 Skill 内容源放在 `skills/shared/`；目标项目的默认项目约定使用 `.agents/skills/<name>/` 作为完整包源，再为 Claude 导出相同包到 `.claude/skills/<name>/`。这是仓库约定，非开放标准要求。
 
-已退役的分发目标（由 manifest 的 `RetiredTargets` / `RetiredRenderedRoots` 清理，只在能确认归属时删除）：
+## 客户端 adapter 与 runtime
 
-- `~/.codex/skills/`：Codex 读取 `~/.agents/skills/`，历史兼容副本不再维护。
-- `~/.config/opencode/skills/`：OpenCode 官方发现 `~/.agents/skills/`。
-- `~/.grok/skills/`：Grok 扫描每一层的 `.agents/skills/`，原生副本冗余。
+客户端发现路径、MCP 配置格式、settings/permissions、hooks、subagents 和 plugins 都有各自的所有者与语法。它们不能被误称为可移植 Skill 或规则格式。OpenCode 会同时扫描 `.agents/skills/` 和 `.claude/skills/`；本仓库若为 Codex 与 Claude Code 导出同名包，OpenCode 使用方需通过 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` 关闭 Claude 兼容扫描，并在升级后复核该版本行为。需要共享行为时，共享内容本体；需要执行集成时，分别维护客户端 adapter，并在官方行为发生变化时核验。
 
-### MCP / 工具配置片段
+`config/managed-assets.psd1` 当前登记规则/Skill 导出目标和可选 MCP/runtime 托管资产。`scripts/render*.ps1` 与 `scripts/check*.ps1` 负责仓库内生成和校验；`scripts/sync*.ps1`、`tool-configs/`、`tools/` 承担本机部署与运行。它们是可替换的交付层，不是本体。
 
-MCP 配置只管理明确命名的非敏感片段，不保存完整用户配置。
+完整 MCP 和 runtime 操作见 [同步流程](sync-workflow.md)。OpenCode 与 Grok 的兼容边界分别见 [OpenCode surface](opencode-surface.md) 和 [Grok Build surface](grok-build-surface.md)。
 
-`config/managed-assets.psd1` schema v2 统一登记规则目标、四个 skills、三个 active MCP server、四个 profiles、三套 runtime、doctor 元数据、退役签名和用户目录相对路径；schema v1 由加载器先规范化。`tool-configs/mcp/shared/*.json` 继续作为 active 单 server 命令和参数的唯一事实源。
+## 维护决策
 
-```text
-tool-configs/mcp/shared/chrome-devtools.json
-tool-configs/mcp/shared/context-thread.json
-tool-configs/mcp/shared/local-webfetch.json
-scripts/mcp-local.ps1
-        ↓
-core / code-intel / browser-debug / full
-        ↓
-scripts/render-mcp.ps1
-        ↓
-core: tool-configs/mcp/rendered/*.json|toml
-others: tool-configs/mcp/rendered/<profile>/*
-        ↓
-scripts/mcp-doctor.ps1
-        ↓
-Source / Readiness / Smoke
-```
-
-运行时分成三套：
-
-```text
-tools/local-webfetch/
-        ↓
-scripts/sync-local-webfetch-runtime.ps1 -Apply
-        ↓
-C:\Users\sx200\.ai-config-hub\mcp\local-webfetch\
-
-tools/context-thread-engine/
-        ↓
-scripts/sync-context-thread-runtime.ps1 -Apply
-        ↓
-C:\Users\sx200\.ai-config-hub\mcp\context-thread\
-
-tools/browser-mcp-runtime/
-        ↓
-scripts/sync-browser-mcp-runtime.ps1 -Apply
-        ↓
-C:\Users\sx200\.ai-config-hub\mcp\browser\
-```
-
-三套 runtime 都通过 staging、生产依赖安装、smoke 和原子切换分发，Node.js 支持范围统一为 `>=22.19.0 <25.0.0`。浏览器 runtime 只精确固定 `chrome-devtools-mcp@1.6.0`，启动时不下载依赖；普通浏览器自动化由外部官方 `@playwright/cli` + skill 承担，不进入 MCP runtime。
-
-```text
-selected rendered profile
-        ↓
-scripts/sync-mcp.ps1 -Profile <name>
-        ↓
-Claude: merge confirmed managed mcpServers；安全移除可识别的 retired Pencil/Playwright
-Codex: replace confirmed managed marker blocks；安全移除 retired Pencil/Playwright
-Grok: replace confirmed managed marker blocks + managed compat；安全移除 retired Pencil/Playwright
-OpenCode: merge only the managed mcp object into opencode.json；安全移除 retired Pencil/Playwright 与 owned inactive server
-        ↓
-C:\Users\sx200\.claude.json
-C:\Users\sx200\.codex\config.toml
-C:\Users\sx200\.grok\config.toml
-C:\Users\sx200\.config\opencode\opencode.json
-```
-
-默认 `core` 只给 Claude Code 启用 local-webfetch，其他目标不注册 managed MCP。`code-intel` 增加 context-thread，`browser-debug` 为 Claude Code、Codex、Grok 和 OpenCode 增加 Chrome DevTools；`full` 聚合各目标允许的 managed server。Grok Apply 会写入 managed compat，关闭 Claude MCP/skills/agents/rules 扫描，避免双源。Profile 切换只删除能够用 marker 或 current/legacy 精确签名确认归属的 inactive server，同名用户配置不会被静默覆盖。Grok 完整 surface 见 [grok-build-surface.md](grok-build-surface.md) 与 [ADR 0001](decisions/0001-grok-first-class-target.md)；OpenCode 边界见 [opencode-surface.md](opencode-surface.md)。
-
-`mcp-doctor.ps1` 报告 profile、source/install 版本与 hash、漂移、runtime 路径、工具数量和 PreferredFor 冲突。可比较 hash 覆盖 runtime 的完整执行 payload、`package.json`、lockfile 和 lockfile 登记的生产依赖，忽略日志与缓存，因此已锁定包的内容修改或缺失会被 Readiness 识别。Apply 前运行所选 profile 的 Smoke；required runtime 不可用时阻断，`-AllowDegraded` 只能跳过 optional server。Smoke 在 Readiness 基础上增加本地 entry probe、initialize + `tools/list` 和预期工具数校验，默认不联网。
-
-### 当前工作状态
-
-```text
-.Ai-config/CURRENT.md
-        ↓
-AI 接手入口和多任务状态总览
-        ↓
-.Ai-config/tasks/*.md
-        ↓
-单个任务的无损接手卡；archive/ 仅作为可选长期整理目录
-```
-
-## 设计原则
-
-- AI 配置设计优先于分发实现；render、sync 和 MCP 合并只服务配置落地。
-- 共享规则只写一份，避免 Claude Code、Codex、OpenCode 和 Grok Build 长期漂移。
-- 工具专属内容放在 `rules/tools/`，不污染通用规则。
-- rendered 文件保留在仓库中，方便审阅最终效果。
-- render 脚本的 `-Check` 模式只比较源文件与 rendered 产物，不写 tracked 文件；跨管线预检由 `check-all.ps1` 统一执行。
-- 同步真实全局规则文件必须显式执行 `sync.ps1 -Apply`。
-- 同步真实全局 MCP 配置片段必须显式执行 `sync-mcp.ps1 -Apply`；OpenCode 使用 `sync-opencode-mcp.ps1 -Apply` 只合并 `opencode.json` 的 `mcp` 节。完整 Claude Code / Codex / Grok / OpenCode 用户配置仍不自动管理，只合并明确托管的 MCP server，并安全移除可识别的 retired pencil。Grok hooks/plugins、api_key、auth 与外观配置不托管。
-- MCP 通过 profile 控制能力面；默认 `core` 只给 Claude Code 启用 local-webfetch。代码脉络由 `code-intel` 启用，Chrome DevTools 专项调试由四个目标的 `browser-debug` 启用，`full` 只用于明确需要全部 managed 能力的临时场景。普通浏览器自动化使用 Hub 外部的官方 Playwright CLI + skill。
-- Codex 完整 `config.toml` 不作为仓库事实源，只提供安全示例模板和托管 MCP 片段。
-- skills 使用 `skills/shared/<skill-name>/` 作为事实源，工具目录只放入口源文件；只有两个分发目标：Claude Code 专属的 `~/.claude/skills/`（它不读 `.agents/`），以及 Codex / OpenCode / Grok 共用的 `~/.agents/skills/`。
-- skill rendered 包通过 `render-skills.ps1` 为每个已登记全局 skill 生成，不应手工作为长期事实源编辑。
-- `global-context-thread` 是“脉络”轻量结构化事实层：context-thread 只负责代码结构关系，非代码复杂工作流仍由 `.Ai-config` 任务卡关系索引承接；没有可用索引或 MCP 工具时回退到普通文件读取。
-- `scripts/sync-context-thread-runtime.ps1` 负责把 `tools/context-thread-engine/` 的构建产物和生产依赖分发到 `C:\Users\sx200\.ai-config-hub\mcp\context-thread\`；`scripts/context-thread.ps1` 是面向人类和脚本的轻量 wrapper，默认调用该用户级 runtime，不要求 npm 全局安装 `context-thread`。
-- `.Ai-config/CURRENT.md` 是项目级 AI 接手入口和多任务状态总览，不是完整日志或完成记录；具体任务事实保存在 `.Ai-config/tasks/*.md`，未确认或有风险的任务不得直接丢弃。
-- `project-ai-config-hub` 的 rendered skill 包会带托管标记，便于 `sync-skills.ps1` 区分历史安装和本仓库产物。
-- `.codex\skills` 已退役：Codex 当前官方路径是 `.agents\skills`，历史兼容副本不再渲染或同步。
-- 所有 `sync*.ps1 -Apply` 在写入前自动运行完整预检，并只允许把目标解析到当前或显式 `-UserHome` 内部。
-- 用户级部署先写入 `~/.ai-config-hub/staging/<pipeline>/<operation-id>/`，验证后再切换；原目标备份到 `~/.ai-config-hub/backups/<pipeline>/<operation-id>/`。同一管线中途失败时回滚本次已更新目标，历史备份保留。
+- 新增长期协作规则：先判断是否能写成通用规则；不能共享的部分进入明确的客户端 adapter。
+- 新增可复用能力：创建一个自包含 Agent Skill 包；不要拆成 shared 正文和多份客户端 SKILL.md。
+- 新增客户端：先核实其发现行为，只添加需要的路径或语法 adapter；不要默认增加用户级部署目标、MCP profile 或 runtime。
+- 使用 `.Ai-config/`：只记录状态、路径索引和项目结构数据，不复制规则或 Skill 内容。
+- 用户级部署：只有明确需要时才运行同步脚本；本体修改完成不要求 Apply。

@@ -1,120 +1,62 @@
-# 官方路径和兼容边界
+# 官方发现路径
 
-最后核验时间：2026-07-30
+最后核验：2026-10-15。以下列的是客户端发现行为，不是 Agent Skills 格式规定的路径。格式兼容不代表客户端会自动扫描目录。
+
+本机当日版本快照：Claude Code `2.1.296`、Codex `0.162.0`、OpenCode `1.18.11`。版本号会变化；变更路径策略前重新查官方文档。
 
 ## Claude Code
 
-常用 skill 位置：
+规则入口：项目目录链中的 `CLAUDE.md`；Claude Code `2.1.277+` 也支持 `AGENTS.md`。若目录链中存在 `CLAUDE.md` / `CLAUDE.local.md`，不能假定 `AGENTS.md` 也会作为 fallback 被加载。
+
+Skills 发现位置：
 
 ```text
-~/.claude/skills/<skill-name>/SKILL.md
-.claude/skills/<skill-name>/SKILL.md
-<plugin>/skills/<skill-name>/SKILL.md
+~/.claude/skills/<name>/SKILL.md
+.claude/skills/<name>/SKILL.md
+<plugin>/skills/<name>/SKILL.md
 ```
 
-含义：
+Claude Code 不自动扫描 `.agents/skills/`。在 Claude 与其他客户端间共享包时，将同一完整包导出到 Claude 发现目录。
 
-- `~/.claude/skills`：用户级 / 全局 skill。
-- `.claude/skills`：项目级 skill 的 Claude Code 发现入口。
-- plugin 内 `skills/`：可分发插件中的 skill。
-
-对 `project-ai-config-hub` 创建或修复的目标项目，`.claude/skills/<skill-name>/SKILL.md` 只是工具入口；项目级 skill 的 canonical 事实源应在 `.Ai-config/skills/<skill-name>/`。
+官方资料：[memory and `AGENTS.md`](https://code.claude.com/docs/en/memory)、[skills](https://code.claude.com/docs/en/skills)。
 
 ## Codex
 
-当前官方作者路径：
+规则使用项目目录链中的 `AGENTS.md`，并支持 `AGENTS.override.md` 等更具体入口。Skills 发现位置：
 
 ```text
-$HOME/.agents/skills/<skill-name>/SKILL.md
-.agents/skills/<skill-name>/SKILL.md
-<plugin>/skills/<skill-name>/SKILL.md
+~/.agents/skills/<name>/SKILL.md
+.agents/skills/<name>/SKILL.md
+<plugin>/skills/<name>/SKILL.md
 ```
 
-含义：
+`.agents/skills/` 是 Codex 的发现路径，不是 Agent Skills 规范的一部分。`~/.codex/skills/` 不是当前官方默认路径。
 
-- `$HOME/.agents/skills`：用户级 / 全局 skill。
-- `.agents/skills`：项目级 skill 的 Codex 发现入口。
-- plugin 内 `skills/`：可分发插件中的 skill。
-
-对 `project-ai-config-hub` 创建或修复的目标项目，`.agents/skills/<skill-name>/SKILL.md` 只是工具入口；项目级 skill 的 canonical 事实源应在 `.Ai-config/skills/<skill-name>/`。
-
-## Grok Build
-
-官方路径（本机 `~/.grok/docs/user-guide`）：
-
-```text
-~/.grok/AGENTS.md
-~/.grok/skills/<skill-name>/SKILL.md
-~/.grok/config.toml
-.grok/skills/<skill-name>/SKILL.md
-.grok/config.toml
-AGENTS.md / Claude.md / CLAUDE.md   # 项目目录链指令文件
-```
-
-含义：
-
-- `~/.grok/skills`：用户级 / 全局 skill（Hub 原生分发目标）。
-- `.grok/skills`：项目级 skill 的 Grok 发现入口。
-- `~/.grok/config.toml` / `.grok/config.toml`：MCP 等；项目级只贡献 mcp/plugins/permission。
-- 项目规则优先用仓库根 `AGENTS.md`（及兼容的 `CLAUDE.md`），不强制 `.grok/rules`。
-
-对 `project-ai-config-hub` 创建或修复的目标项目，`.grok/skills/<skill-name>/SKILL.md` 只是工具入口；canonical 事实源仍在 `.Ai-config/skills/<skill-name>/`。Grok 还会扫描 `.agents/skills` 与（compat 开启时）`.claude/skills`，但 Hub 主路径是 `.grok/skills`，不要把 Claude/Codex 目录当作 Grok 唯一入口。
-
-全局 Grok surface 与 compat 策略见仓库 `docs/grok-build-surface.md` 与 `docs/decisions/0001-grok-first-class-target.md`。
+官方资料：[AGENTS.md](https://developers.openai.com/codex/guides/agents-md/)、[skills](https://developers.openai.com/codex/skills/)。
 
 ## OpenCode
 
-官方配置和 skill 发现路径：
+规则入口包括项目 `AGENTS.md`、`.opencode/AGENTS.md` 和用户级 `~/.config/opencode/AGENTS.md`。Skills 支持项目/用户级原生目录，也扫描兼容目录：
 
 ```text
-~/.config/opencode/opencode.json
-~/.config/opencode/AGENTS.md
-~/.config/opencode/skills/<skill-name>/SKILL.md
-.opencode/skills/<skill-name>/SKILL.md
-opencode.json
+.opencode/skills/<name>/SKILL.md
+~/.config/opencode/skills/<name>/SKILL.md
+.agents/skills/<name>/SKILL.md
+~/.agents/skills/<name>/SKILL.md
+.claude/skills/<name>/SKILL.md
+~/.claude/skills/<name>/SKILL.md
 ```
 
-含义：
+因此 OpenCode 可能同时发现多个来源。本机 `1.18.11` 的公开文档没有给出可依赖的同名覆盖优先级；不要把未核验版本的实现顺序当作合并契约。共享包只保留一个内容源，并按需使用单一发现路径。新主版本文档若定义了不同的确定性 precedence，仍需按目标版本复核。
 
-- `~/.config/opencode/opencode.json`：用户级 provider、model、permission、tools、MCP 和其他运行配置。
-- `~/.config/opencode/AGENTS.md`：用户级 OpenCode 指令入口。
-- `~/.config/opencode/skills`：用户级原生 skill 发现目录。
-- `.opencode/skills`：项目级原生 skill 发现目录；项目配置也可通过根目录 `opencode.json` 覆盖全局设置。
-- OpenCode 还会发现 `~/.claude/skills`、`~/.agents/skills` 以及对应项目级兼容目录。Hub 以 `.agents/skills` 作为 Codex / OpenCode 共用入口，不再生成 `~/.config/opencode/skills` 或 `.opencode/skills` 副本，以避免同名 skill 多源。
+OpenCode 官方文档要求各来源的 Skill 名称唯一，并提供 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` 关闭 `.claude/skills/` 兼容扫描。若项目同时导出 `.agents/skills/` 和 `.claude/skills/`，OpenCode 可能从两处看到同名完整包；应在启动 OpenCode 的环境中使用该开关，或确保它只暴露一个发现根。开关行为和路径以目标 OpenCode 版本文档为准；本机快照为 `1.18.11`，不要外推为其他主版本的保证。
 
-MCP 只写入 OpenCode `opencode.json` 的 `mcp` 节；不要把 Claude Code 的 `.claude.json` 或 Codex 的 `config.toml` 当作 OpenCode MCP 事实源。
+官方资料：[rules](https://opencode.ai/docs/rules/)、[skills](https://opencode.ai/docs/skills/)。
 
-对 `project-ai-config-hub` 创建或修复的目标项目，`.agents/skills/<skill-name>/SKILL.md` 同时作为 Codex 和 OpenCode 工具入口；既有 `.opencode/skills` 只作为迁移来源，canonical 事实源仍在 `.Ai-config/skills/<skill-name>/`。
+## Grok Build（本机验证）
 
-## 历史兼容路径
+本机 `~/.grok/docs/user-guide` 与 `grok inspect --json` 实测显示，当前安装可从各层 `.agents/skills/` 发现 Skills，也支持 `.grok/skills/`。这是本机版本证据，不代表公开开放规范或其他版本的保证；行为变化时重新检查本机文档和实际发现结果。
 
-部分既有项目或本机环境可能存在：
+## 本仓库的包约定
 
-```text
-.codex/skills/<skill-name>/SKILL.md
-C:\Users\sx200\.codex\skills\<skill-name>\SKILL.md
-```
-
-这些路径可以用于兼容已有项目或当前本机实测环境，但不能写成当前 Codex 官方作者路径。新项目默认应生成 `.agents/skills`，并在启用 Grok 时同时生成 `.grok/skills`。历史 `.codex/skills/<skill-name>/SKILL.md` 也只是兼容入口，不作为长期事实源。
-
-## Symlink / 软链接
-
-Codex 官方文档说明支持 symlinked skill folders。Claude Code / Grok 侧和 Windows 权限行为不应在未实测前假设等价。
-
-本项目 v1 默认采用实体化复制：
-
-- 本仓库维护的全局 managed skill 共享源保存在 `skills/shared/`。
-- 渲染后复制到 `skills/rendered/`。
-- 同步时复制到真实全局 skill 目录。
-
-这样更容易审计、备份和回滚。
-
-## 目标项目的 canonical 事实源
-
-上述 Claude Code / Codex / Grok / OpenCode 路径是工具发现路径，不等于项目级 skill 的事实源路径。由 `project-ai-config-hub` 创建或修复的普通目标项目中，项目级 skill 的 durable 规则、workflow、checklists、references 和 templates 应统一维护在：
-
-```text
-.Ai-config/skills/<skill-name>/
-```
-
-工具入口可以引用这个目录，但不要把完整规则散落在 `.claude/skills`、`.agents/skills`、`.grok/skills`、`.opencode/skills`、`.codex/skills`、README、docs 或脚本说明里。本仓库自身的 `skills/shared/<skill-name>/` 是全局 managed skill 分发源，是和目标项目项目级 skill 不同的管线。
+本仓库将完整包源保存在 `skills/shared/<name>/`。`render-skills.ps1` 将相同文件导出到 `skills/rendered/claude-code/` 和 `skills/rendered/codex/`，分别对应 `.claude/skills/` 与 `.agents/skills/`。这些是仓库的 source/export 约定，不是客户端规定的事实源布局。

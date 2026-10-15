@@ -10,28 +10,14 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 
 $Manifest = Import-PowerShellDataFile -LiteralPath $ManifestPath
 $Failed = $false
-$SkillDefinitions = if ($null -ne $Manifest.Skills.Definitions -and @($Manifest.Skills.Definitions).Count -gt 0) {
-    @($Manifest.Skills.Definitions)
-}
-else {
-    @($Manifest.Skills.Names | ForEach-Object {
-        [pscustomobject]@{
-            Name = [string]$_
-            Role = 'domain'
-            Activation = 'legacy'
-            ExclusiveWith = @()
-            HandoffTo = @()
-            Exclusions = @()
-        }
-    })
-}
+$SkillNames = @($Manifest.Skills.Names | ForEach-Object { [string]$_ })
 
 function Fail($Message) {
     Write-Output "ERROR: $Message"
     $script:Failed = $true
 }
 
-function Test-Frontmatter($Path, $SkillName, $RequireWhenToUse) {
+function Test-Frontmatter($Path, $SkillName) {
     $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $Path
     if ($content -notmatch '(?s)^---\s*\r?\n(.+?)\r?\n---') {
         Fail "Missing YAML frontmatter: $Path"
@@ -42,29 +28,25 @@ function Test-Frontmatter($Path, $SkillName, $RequireWhenToUse) {
     if ($frontmatter -notmatch "(?m)^name:\s*$([regex]::Escape($SkillName))\s*$") {
         Fail "Missing expected name in frontmatter: $Path"
     }
-    if ($frontmatter -notmatch '(?m)^description:\s*.{20,}$') {
+    if ($SkillName -notmatch '^[a-z0-9]+(?:-[a-z0-9]+)*$' -or $SkillName.Length -gt 64) {
+        Fail "Skill name does not match the portable package convention: $SkillName"
+    }
+
+    $descriptionMatch = [regex]::Match($frontmatter, '(?m)^description:\s*(?<value>.+)$')
+    if (-not $descriptionMatch.Success -or $descriptionMatch.Groups['value'].Value.Trim().Length -lt 20) {
         Fail "Missing useful description in frontmatter: $Path"
     }
-    if ($RequireWhenToUse -and $frontmatter -notmatch '(?m)^when_to_use:\s*.{10,}$') {
-        Fail "Missing when_to_use in Claude frontmatter: $Path"
+    elseif ($descriptionMatch.Groups['value'].Value.Trim().Length -gt 1024) {
+        Fail "Skill description exceeds the portable package limit: $Path"
     }
-    if (-not $RequireWhenToUse) {
-        $exclusionMarkers = @(
-            ([string]::Concat([char[]]@(0x4E0D, 0x4F7F, 0x7528))),
-            ([string]::Concat([char[]]@(0x4E0D, 0x5E94))),
-            ([string]::Concat([char[]]@(0x4E0D, 0x4E3B, 0x5BFC))),
-            ([string]::Concat([char[]]@(0x4E0D, 0x8FDB, 0x5165))),
-            ([string]::Concat([char[]]@(0x4E0D, 0x542F, 0x7528)))
-        )
-        $hasExclusion = $false
-        foreach ($marker in $exclusionMarkers) {
-            if ($frontmatter.Contains($marker)) {
-                $hasExclusion = $true
-                break
+
+    $allowedFields = @('name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools')
+    foreach ($line in ($frontmatter -split "`r?`n")) {
+        if ($line -match '^([A-Za-z][A-Za-z0-9_-]*):') {
+            $field = [string]$Matches[1]
+            if ($allowedFields -notcontains $field) {
+                Fail "Non-portable top-level frontmatter field '$field' in $Path"
             }
-        }
-        if (-not $hasExclusion) {
-            Fail "Codex description must include a key exclusion boundary: $Path"
         }
     }
 
@@ -118,47 +100,9 @@ function Test-PackageReferences($PackageRoot) {
     }
 }
 
-function Test-SkillRoutingContract {
-    $allowedRoles = @('domain', 'reasoning-mode', 'tool-router')
-    $allowedActivations = @('deliverable', 'explicit-visible-or-implicit-silent', 'conditional', 'explicit-design-first')
-    $byName = @{}
-
-    foreach ($definition in $SkillDefinitions) {
-        $name = [string]$definition.Name
-        if ([string]::IsNullOrWhiteSpace($name)) {
-            Fail 'Skill definition is missing Name'
-            continue
-        }
-        if ($byName.ContainsKey($name)) {
-            Fail "Duplicate skill definition: $name"
-            continue
-        }
-        $byName[$name] = $definition
-        if ($allowedRoles -notcontains [string]$definition.Role) {
-            Fail "Invalid skill role for $name`: $($definition.Role)"
-        }
-        if ($allowedActivations -notcontains [string]$definition.Activation) {
-            Fail "Invalid skill activation for $name`: $($definition.Activation)"
-        }
-        if (@($definition.Exclusions).Count -eq 0) {
-            Fail "Skill routing definition must include exclusions: $name"
-        }
-    }
-
-    foreach ($definition in $SkillDefinitions) {
-        $name = [string]$definition.Name
-        foreach ($relatedName in @($definition.ExclusiveWith) + @($definition.HandoffTo)) {
-            if (-not $byName.ContainsKey([string]$relatedName)) {
-                Fail "Skill routing for $name references unknown skill: $relatedName"
-            }
-        }
-        foreach ($exclusiveName in @($definition.ExclusiveWith)) {
-            if (@($byName[[string]$exclusiveName].ExclusiveWith) -notcontains $name) {
-                Fail "Skill ExclusiveWith must be symmetric: $name <-> $exclusiveName"
-            }
-        }
-    }
-
+function Test-SkillRouteFixtures {
+    $knownSkills = @{}
+    foreach ($skillName in $SkillNames) { $knownSkills[$skillName] = $true }
     $routePath = Join-Path $Root 'skills\evals\routes.json'
     if (-not (Test-Path -LiteralPath $routePath -PathType Leaf)) {
         Fail "Missing skill route fixtures: $routePath"
@@ -176,7 +120,7 @@ function Test-SkillRoutingContract {
             }
             else { $caseIds[[string]$case.id] = $true }
             foreach ($skillName in @($case.primary) + @($case.allowedSecondary) + @($case.forbidden)) {
-                if ($null -ne $skillName -and -not [string]::IsNullOrWhiteSpace([string]$skillName) -and -not $byName.ContainsKey([string]$skillName)) {
+                if ($null -ne $skillName -and -not [string]::IsNullOrWhiteSpace([string]$skillName) -and -not $knownSkills.ContainsKey([string]$skillName)) {
                     Fail "Skill route fixture $($case.id) references unknown skill: $skillName"
                 }
             }
@@ -210,9 +154,7 @@ function Test-ThinkingPartnerEvals {
     }
 
     $thinkingSource = Get-AiConfigHubScanFiles -Paths @(
-        (Join-Path $Root 'skills\shared\global-thinking-partner'),
-        (Join-Path $Root 'skills\claude-code\global-thinking-partner'),
-        (Join-Path $Root 'skills\codex\global-thinking-partner')
+        (Join-Path $Root 'skills\shared\global-thinking-partner')
     ) -Root $Root
     $forbidden = @(
         ([string]::Concat([char[]]@(0x56FA, 0x5B9A, 0x56DB, 0x4E2A, 0x955C, 0x5934))),
@@ -231,16 +173,23 @@ function Test-ThinkingPartnerEvals {
 }
 
 & (Join-Path $PSScriptRoot 'render-skills.ps1') -Check
-Test-SkillRoutingContract
+Test-SkillRouteFixtures
 Test-ThinkingPartnerEvals
 
-foreach ($skillDefinition in $SkillDefinitions) {
-    $skillName = [string]$skillDefinition.Name
-    $sharedRoot = Join-Path $Root "skills\shared\$skillName"
-    if (-not (Test-Path -LiteralPath $sharedRoot -PathType Container)) {
-        Fail "Missing shared skill source: $sharedRoot"
+foreach ($skillName in $SkillNames) {
+    $packageRoot = Join-Path $Root "skills\shared\$skillName"
+    if (-not (Test-Path -LiteralPath $packageRoot -PathType Container)) {
+        Fail "Missing canonical skill package: $packageRoot"
         continue
     }
+
+    $sourceSkillFile = Join-Path $packageRoot 'SKILL.md'
+    if (-not (Test-Path -LiteralPath $sourceSkillFile -PathType Leaf)) {
+        Fail "Missing canonical SKILL.md: $sourceSkillFile"
+        continue
+    }
+    Test-Frontmatter $sourceSkillFile $skillName
+    Test-PackageReferences $packageRoot
 
     foreach ($target in $Manifest.Skills.Targets) {
         $rootPath = Join-Path (Join-Path $Root ([string]$target.RenderedRoot)) ([string]$skillName)
@@ -255,8 +204,7 @@ foreach ($skillDefinition in $SkillDefinitions) {
             continue
         }
 
-        Test-Frontmatter $skillFile $skillName ([bool]$target.RequireWhenToUse)
-        Test-PackageReferences $rootPath
+        Test-Frontmatter $skillFile $skillName
     }
 }
 

@@ -5,18 +5,19 @@
 本目录是 `{{skill_name}}` 的项目级 canonical 事实源，路径应为：
 
 ```text
-.Ai-config/skills/{{skill_name}}/
+.agents/skills/{{skill_name}}/
 ```
 
-工具专属入口只作为发现和路由入口，不承载长期规则：
+`SKILL.md` 是该完整包的标准入口，承载用途、触发条件和核心指令；workflow 与支持资源可放在同一包内：
 
 ```text
 .claude/skills/{{skill_name}}/SKILL.md
 .agents/skills/{{skill_name}}/SKILL.md
-.grok/skills/{{skill_name}}/SKILL.md
 ```
 
-其中 `.agents/skills` 同时供 Codex 和 OpenCode 发现。
+`.agents/skills/` 同时是部分客户端支持的发现路径。Agent Skills 格式本身不规定该路径；Claude Code 需要时，从同一个完整包导出到 `.claude/skills/`。其他 adapter 只在目标客户端确实需要且经版本核实时添加。
+
+OpenCode 也会扫描 `.claude/skills/` 兼容目录。若同时保留 `.agents/skills/` 与 `.claude/skills/` 导出，应在启动 OpenCode 的环境设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`；该开关需按目标版本重新核验。
 
 如需历史 Codex 兼容，可额外维护：
 
