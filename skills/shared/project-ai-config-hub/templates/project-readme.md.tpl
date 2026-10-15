@@ -17,7 +17,7 @@
 
 `.agents/skills/` 同时是部分客户端支持的发现路径。Agent Skills 格式本身不规定该路径；Claude Code 需要时，从同一个完整包导出到 `.claude/skills/`。其他 adapter 只在目标客户端确实需要且经版本核实时添加。
 
-OpenCode 也会扫描 `.claude/skills/` 兼容目录。若同时保留 `.agents/skills/` 与 `.claude/skills/` 导出，应在启动 OpenCode 的环境设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`；该开关需按目标版本重新核验。
+OpenCode 也会扫描 `.claude/skills/` 兼容目录。若同时保留 `.agents/skills/` 与 `.claude/skills/` 导出，应确保运行环境只暴露一个发现根；目标版本若提供关闭兼容扫描的开关，先按该版本文档核验后再由 adapter 配置。
 
 如需历史 Codex 兼容，可额外维护：
 

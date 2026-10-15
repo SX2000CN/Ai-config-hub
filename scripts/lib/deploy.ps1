@@ -378,14 +378,24 @@ function Assert-AiConfigHubNodeVersion {
 function Invoke-AiConfigHubPreflight {
     param(
         [Parameter(Mandatory = $true)][string]$Root,
-        [Parameter(Mandatory = $true)][string]$UserHome
+        [Parameter(Mandatory = $true)][string]$UserHome,
+        [ValidateSet('Content', 'Full')]
+        [string]$Mode = 'Full'
     )
 
-    $checkAll = Join-Path $Root 'scripts\check-all.ps1'
-    $parameters = @{ UserHome = $UserHome }
-    & $checkAll @parameters
-    if ($LASTEXITCODE -ne 0) {
-        throw "Full preflight failed with exit code $LASTEXITCODE."
+    $checkScriptName = if ($Mode -eq 'Content') { 'check-content.ps1' } else { 'check-all.ps1' }
+    $checkScript = Join-Path $Root "scripts\$checkScriptName"
+    if (-not (Test-Path -LiteralPath $checkScript -PathType Leaf)) {
+        throw "Missing $Mode preflight script: $checkScript"
+    }
+
+    $parameters = @{}
+    if ($Mode -eq 'Full') {
+        $parameters.UserHome = $UserHome
+    }
+    & $checkScript @parameters
+    if (-not $?) {
+        throw "$Mode preflight failed."
     }
 }
 

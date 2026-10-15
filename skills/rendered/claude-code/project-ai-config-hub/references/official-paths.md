@@ -6,7 +6,7 @@
 
 ## Claude Code
 
-规则入口：项目目录链中的 `CLAUDE.md`；Claude Code `2.1.277+` 也支持 `AGENTS.md`。若目录链中存在 `CLAUDE.md` / `CLAUDE.local.md`，不能假定 `AGENTS.md` 也会作为 fallback 被加载。
+规则入口：项目目录链中的 `CLAUDE.md`；Claude Code `2.1.277+` 可直接读取 `AGENTS.md`，但仅在工作目录及其上级不存在 `CLAUDE.md` / `CLAUDE.local.md` 时默认读取。仓库存在这些 `CLAUDE.md` 文件时，不会自动把 `AGENTS.md` 当作 fallback；如需同时读取，必须显式配置或由 `CLAUDE.md` 导入。
 
 Skills 发现位置：
 
@@ -16,7 +16,7 @@ Skills 发现位置：
 <plugin>/skills/<name>/SKILL.md
 ```
 
-Claude Code 不自动扫描 `.agents/skills/`。在 Claude 与其他客户端间共享包时，将同一完整包导出到 Claude 发现目录。
+Claude Code 不自动扫描 `.agents/skills/`，官方说明也明确不读取 `.agents/` 目录下的配置文件。在 Claude 与其他客户端间共享包时，将同一完整包导出到 Claude 的 `.claude/skills/` 发现目录。
 
 官方资料：[memory and `AGENTS.md`](https://code.claude.com/docs/en/memory)、[skills](https://code.claude.com/docs/en/skills)。
 
@@ -47,9 +47,9 @@ Claude Code 不自动扫描 `.agents/skills/`。在 Claude 与其他客户端间
 ~/.claude/skills/<name>/SKILL.md
 ```
 
-因此 OpenCode 可能同时发现多个来源。本机 `1.18.11` 的公开文档没有给出可依赖的同名覆盖优先级；不要把未核验版本的实现顺序当作合并契约。共享包只保留一个内容源，并按需使用单一发现路径。新主版本文档若定义了不同的确定性 precedence，仍需按目标版本复核。
+因此 OpenCode 可能同时发现多个来源。官方文档要求所有来源的 Skill 名称唯一，但没有给出可依赖的同名覆盖优先级；不要把实现顺序当作合并契约。共享包只保留一个内容源，并按需让运行环境暴露单一发现路径；新主版本文档若定义了不同的确定性 precedence，仍需按目标版本复核。
 
-OpenCode 官方文档要求各来源的 Skill 名称唯一，并提供 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` 关闭 `.claude/skills/` 兼容扫描。若项目同时导出 `.agents/skills/` 和 `.claude/skills/`，OpenCode 可能从两处看到同名完整包；应在启动 OpenCode 的环境中使用该开关，或确保它只暴露一个发现根。开关行为和路径以目标 OpenCode 版本文档为准；本机快照为 `1.18.11`，不要外推为其他主版本的保证。
+若项目同时导出 `.agents/skills/` 和 `.claude/skills/`，OpenCode 可能从两处看到同名完整包。当前仓库只把 `.agents/skills/` 作为 OpenCode adapter；不要把 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` 等人工环境变量写成跨版本标准。目标版本若提供关闭兼容扫描的开关，应在 adapter 层显式配置并重新核验；否则确保运行环境只暴露一个发现根。
 
 官方资料：[rules](https://opencode.ai/docs/rules/)、[skills](https://opencode.ai/docs/skills/)。
 

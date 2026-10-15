@@ -22,10 +22,10 @@
 
 修改已有项目级 skill 时，先确认 canonical 事实源位置：
 
-1. 已在 `.agents/skills/<skill-name>/`：直接修改，再同步入口和 registry。
-2. Skill 内容还在 `.claude/skills/`、`.grok/skills/`、`.opencode/skills/`、`.codex/skills/`、项目 README、docs、脚本说明或旧版 `docs/ai/`：这些位置视为迁移来源；迁入 `.agents/skills/<skill-name>/` 完整包前，先保留来源并核实迁移不会丢失文件或语义。
-3. 已有 `.agents/skills/<skill-name>/` 时直接维护该完整包。其他发现目录应导出同一完整包；不要把 `.agents/skills/` 本身降格为薄入口。
+1. 已记录项目自己的 canonical source：直接修改，再同步入口和 registry。
+2. Skill 内容还在 `.claude/skills/`、`.grok/skills/`、`.opencode/skills/`、`.codex/skills/`、`.agents/skills/`、项目 README、docs、脚本说明或旧版 `docs/ai/`：这些位置先视为迁移来源或发现 adapter；迁入项目 canonical source 的完整包前，先保留来源并核实迁移不会丢失文件或语义。
+3. 已有唯一 canonical 完整包时直接维护该包。其他发现目录应导出同一完整包；不要把某个客户端发现目录误称为 Agent Skills 标准。
 4. 项目级通用规则仍放在 `AGENTS.md`、`CLAUDE.md` 或目标客户端规则入口，不因 Skill 单源化而搬进 Skill 包。
 5. 迁移会覆盖、删除、改名或改变非空旧事实源时，先给计划并等待确认。
 
-迁移后只保留一个完整包；需要多个发现目录时导出同一包。不要把项目规则复制成不同的工具专属版本，也不要把目标项目主 README 写成固定 agent 接手入口。
+迁移后只保留一个 canonical 完整包；需要多个发现目录时导出同一包。不要把项目规则复制成不同的工具专属版本，也不要把目标项目主 README 写成固定 agent 接手入口。

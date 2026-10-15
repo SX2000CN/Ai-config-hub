@@ -31,6 +31,8 @@
     }
 
     Skills = @{
+        # Names identify canonical packages under skills\shared\<name>\; this manifest
+        # records adapters and deployment cleanup only, never a second Skill content source.
         Names = @(
             'project-ai-config-hub'
             'global-frontend-design'
@@ -41,7 +43,9 @@
         Retired = @(
             'pencil-design-workflow'
         )
-        # OpenCode and Grok both discover ~/.agents/skills, so their native skill copies are redundant.
+        # Legacy deployment cleanup only; these entries are not Skill content sources.
+        # OpenCode also scans .agents/skills and .claude/skills, so exposing both roots
+        # can produce duplicate names; keep one discovery root visible per runtime.
         RetiredTargets = @(
             @{
                 Name = 'OpenCode'
@@ -72,12 +76,14 @@
         )
         Targets = @(
             @{
+                # Claude Code discovers project Skills under .claude/skills, not .agents/skills.
                 Name = 'ClaudeCode'
                 RenderedRoot = 'skills\rendered\claude-code'
                 UserRelativeRoot = '.claude\skills'
             }
             @{
-                # Codex and OpenCode discover ~/.agents/skills; this is a path adapter, not a format standard.
+                # Codex and OpenCode can discover .agents/skills; this is a path adapter,
+                # not an Agent Skills format or cross-client discovery guarantee.
                 Name = 'AgentsSkills'
                 RenderedRoot = 'skills\rendered\codex'
                 UserRelativeRoot = '.agents\skills'

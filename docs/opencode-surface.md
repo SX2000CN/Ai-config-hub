@@ -11,9 +11,9 @@
 ~/.claude/skills/<skill-name>/SKILL.md  # OpenCode 也会扫描 Claude 兼容目录
 ```
 
-OpenCode 官方同时扫描 `.agents/skills` 和 `.claude/skills`，并要求不同来源的 Skill 名称唯一。Hub 只同步自身管理的 `.agents/skills`；若 Claude 也安装了同名完整包，OpenCode 会看到两个来源。OpenCode 文档当前提供 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` 关闭 Claude Skills 兼容扫描；必须在启动 OpenCode 的进程环境中设置，且升级版本后重新核实该行为。本机文档快照为 OpenCode `1.18.11`。没有该环境控制时，应确保 OpenCode 会话只暴露一个包含这些 Skill 的发现根。
+OpenCode 官方同时扫描 `.agents/skills` 和 `.claude/skills`，并要求不同来源的 Skill 名称唯一。Hub 只同步自身管理的 `.agents/skills`；若 Claude 也安装了同名完整包，OpenCode 会看到两个来源。当前公开文档没有给出可依赖的同名覆盖优先级或跨版本环境变量契约；目标版本若提供关闭 Claude 兼容扫描的开关，应由 adapter 按版本核验后配置。本机文档快照为 OpenCode `1.18.11`。否则应确保 OpenCode 会话只暴露一个包含这些 Skill 的发现根。
 
-规则由 `scripts/sync.ps1` 同步，skill 由 `scripts/sync-skills.ps1` 同步到 Codex/OpenCode 共用的 `.agents/skills` 发现目录，MCP 由 `scripts/sync-opencode-mcp.ps1` 合并。Hub 不再同步 `~/.config/opencode/skills` 原生副本；已存在的 Hub 托管副本会按 marker 安全退役。OpenCode 的 `opencode.json` 同时包含 provider、model、权限和 MCP，因此 MCP 脚本只拥有 `mcp` 节，不覆盖其他配置。
+规则由 `scripts/sync.ps1` 同步，skill 由 `scripts/sync-skills.ps1` 从共享完整包导出到 Codex/OpenCode 共用的 `.agents/skills` 发现目录，MCP 由 `scripts/sync-opencode-mcp.ps1` 合并。`.agents/skills` 只是 OpenCode 的一个发现路径，不是内容事实源；Hub 不再同步 `~/.config/opencode/skills` 原生副本。已存在的 Hub 托管副本会按 marker 安全退役。OpenCode 的 `opencode.json` 同时包含 provider、model、权限和 MCP，因此 MCP 脚本只拥有 `mcp` 节，不覆盖其他配置。
 
 ## MCP 能力
 

@@ -4,7 +4,7 @@
 
 Agent Skills 规定 skill 包的结构和 `SKILL.md` 格式，不规定客户端发现目录。`.agents/skills/` 是 Codex 与 OpenCode 等客户端支持的发现路径，不是万能配置标准；Claude Code 使用自己的 skill 目录。路径差异由 adapter 处理，包内的规则与资源保持同一份。
 
-OpenCode 还会扫描 `.claude/skills/` 兼容目录；当同一个完整包同时导出到 `.agents/skills/` 与 `.claude/skills/` 时，OpenCode 会看到两个同名来源。启用 OpenCode 的环境需按版本设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`，或保证它只扫描一个发现根。
+OpenCode 还会扫描 `.claude/skills/` 兼容目录；当同一个完整包同时导出到 `.agents/skills/` 与 `.claude/skills/` 时，OpenCode 会看到两个同名来源。当前仓库只把 `.agents/skills/` 作为 OpenCode adapter；目标版本若提供关闭兼容扫描的开关，可在 adapter 层按版本配置并重新核验，否则保证它只扫描一个发现根。
 
 设计依据见 [AI 配置设计](docs/ai-config-design.md) 和 [架构说明](docs/architecture.md)。
 
@@ -33,17 +33,25 @@ OpenCode 还会扫描 `.claude/skills/` 兼容目录；当同一个完整包同�
 修改共享规则或 skill 包后，先运行对应的只读检查：
 
 ```powershell
+.\scripts\check-content.ps1
+```
+
+`check-content.ps1` 是普通规则或 Skill 修改的默认入口，只检查仓库内配置本体、规则与 Skill 导出、引用和敏感内容，并运行 `git diff --check`。它不要求 MCP/runtime 依赖、用户级配置、hooks、doctor 或用户目录写入。需要定位单条管线问题时，再运行对应的细分命令：
+
+```powershell
 .\scripts\render.ps1 -Check
 .\scripts\check.ps1
 .\scripts\render-skills.ps1 -Check
 .\scripts\check-skills.ps1
 ```
 
-跨管线修改再运行完整预检：
+跨管线或部署集成修改再运行显式的完整预检：
 
 ```powershell
 .\scripts\check-all.ps1
 ```
+
+CI 的 push / pull request 只运行内容本体门禁；需要运行包含 MCP、runtime、hooks 和同步 dry-run 的完整集成预检时，手动触发 `Validate` workflow。
 
 `render*.ps1` 可更新仓库内导出物；`sync*.ps1` 默认 dry-run。同步用户级配置或 runtime 是单独的本机运维动作，不是修改配置本体的完成条件。
 

@@ -22,12 +22,12 @@ description: ai-config-hub 的项目级分身；用于初始化、创建、修�
 
 - 按需用 `.Ai-config/` 保存项目状态与索引；不要把完整中枢当作所有项目的默认负担。
 - `CURRENT.md` 必须保持薄仪表盘；超限或塞满 runbook/changelog 时先 hygiene 再继续。
-- 项目级 Agent Skill 的完整标准包默认放在 `.agents/skills/<skill-name>/`；这是本 skill 采用的项目约定，不是 Agent Skills 规范规定的发现路径。Codex 和 OpenCode 可从该位置发现；Claude Code 使用 `.claude/skills/<skill-name>/` adapter。OpenCode 也会扫描 `.claude/skills/`，所以同包双路径导出时，OpenCode 环境应设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` 并按版本复核。不要把 durable skill 内容放进 `.Ai-config/`。
+- 项目级 Agent Skill 必须维护在目标项目自己的唯一 canonical source；`.agents/skills/<skill-name>/` 只是本 skill 采用的可选发现 adapter，不是 Agent Skills 规范规定的内容源或路径。Codex 和 OpenCode 是否发现它要按目标版本核验；Claude Code 使用 `.claude/skills/<skill-name>/` adapter。OpenCode 也会扫描 `.claude/skills/`，所以同包双路径导出时必须避免两个发现根同时暴露同名包；目标版本若提供关闭兼容扫描的开关，应在 adapter 层核验后配置。不要把 durable skill 内容放进 `.Ai-config/`。
 - `.Ai-config/skills-registry.md` 只登记包路径、发现 adapter 和状态，不复制 Skill 内容。
 - 若发现 skill 事实散落在 README、docs、脚本说明、工具入口或旧版 `docs/ai` 中，应先做事实源收敛计划，再继续修改 skill。
 - 反触发：只是读取状态、普通代码/文档任务恰好提到 `.Ai-config` 路径、局部任务或一次性问答时，不使用完整 audit/repair 流程。
 - 级联边界：本 skill 不自动拉起 context-thread、思维伙伴或同步流程；确需跨域时回到主任务路由判断主次。
-- 旧版 `docs/ai/` 只作为迁移来源；新项目规则落在 `AGENTS.md` 或相应客户端规则入口，skill 包落在 `.agents/skills/`。
+- 旧版 `docs/ai/` 只作为迁移来源；新项目规则落在 `AGENTS.md` 或相应客户端规则入口，skill 包落在项目 canonical source，再按需导出到 `.agents/skills/` 等发现路径。
 - 已退役的 `pencil-design-workflow` 等全局能力：清理项目入口与 registry 引用，不把 Pencil 当作设计先行依赖。
 - 只有存在项目级 skill 时，才用 `.Ai-config/skills-registry.md` 记录清单、事实源、入口和状态。
 - 只有确有项目级可复用 workflow 时，才生成各工具发现路径所需的 adapter；若客户端接受同一标准包，adapter 应复制完整包而不是另写一份规则。

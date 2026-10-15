@@ -2,12 +2,13 @@
 
 本文只记录选择本机部署 adapter 时使用的规则、Skill、MCP 和 runtime 同步流程。它不是配置本体的维护入口。托管目标统一登记在 `config/managed-assets.psd1`；各 MCP JSON 是当前本机 adapter 的 server 配置源。所有同步脚本默认只 dry-run，只有显式 `-Apply` 才写入真实用户目录。
 
+普通规则或 Skill 修改先使用仓库内的 `scripts/check-content.ps1`；它不要求 runtime、MCP、用户级配置或同步 dry-run。只有需要核对单条部署管线时，才按下文运行对应的 sync dry-run；跨管线或准备用户级部署时再运行 `scripts/check-all.ps1`。
+
 ## 分层验证与全局同步前总检查
 
 先按本次改动影响的管线做最小相关验证：
 
-- 只改全局规则：运行 `render.ps1`、`check.ps1`、`sync.ps1` dry-run。
-- 只改 skills：运行 `render-skills.ps1`、`check-skills.ps1`、`sync-skills.ps1` dry-run。
+- 只改全局规则或 Skills：先运行 `check-content.ps1`；需要定位单条内容管线时，再运行对应的 render/check。准备本机部署时才运行 `sync.ps1` 或 `sync-skills.ps1` dry-run。
 - 只改 MCP 配置片段：运行 `render-mcp.ps1`、`check-mcp.ps1`、`sync-mcp.ps1` dry-run。
 - 只改 context-thread runtime：运行引擎测试和 `sync-context-thread-runtime.ps1` dry-run。
 - 只改 local-webfetch runtime：运行两个入口的 `node --check`、`npm test --prefix tools/local-webfetch` 和 `sync-local-webfetch-runtime.ps1` dry-run。
@@ -27,7 +28,7 @@
 - 三套 runtime、规则、skills 和五个 MCP profile 的用户级 dry-run。
 - 高置信度敏感信息检查、禁止 `@latest` 检查和 `git diff --check`。
 
-确认输出中的 `would update` / `missing target` 与本次预期一致后，才考虑后续 `-Apply`。所有 `sync*.ps1 -Apply` 都会在首次用户级写入前自动再次运行该完整预检。
+确认输出中的 `would update` / `missing target` 与本次预期一致后，才考虑后续 `-Apply`。规则和 Skill 的 `-Apply` 会在首次用户级写入前自动运行内容本体预检；MCP、runtime 和 guard 的 `-Apply` 继续运行完整集成预检。
 
 render 脚本也可以单独做非写入一致性检查：
 
@@ -81,7 +82,7 @@ render 脚本也可以单独做非写入一致性检查：
 .\scripts\sync.ps1 -Apply
 ```
 
-`sync.ps1 -Apply` 会先运行完整预检，再按上述事务机制更新：
+`sync.ps1 -Apply` 会先运行内容本体预检，再按上述事务机制更新规则。它不会因为可选 MCP/runtime 集成预检失败而阻断规则同步；需要验证完整部署链时单独运行 `check-all.ps1`。
 
 - `rules/rendered/CLAUDE.md` → `C:\Users\sx200\.claude\CLAUDE.md`
 - `rules/rendered/AGENTS.md` → `C:\Users\sx200\.codex\AGENTS.md`
@@ -124,10 +125,12 @@ render 脚本也可以单独做非写入一致性检查：
 .\scripts\sync-skills.ps1 -Apply
 ```
 
+`sync-skills.ps1 -Apply` 会先运行内容本体预检，再按上述事务机制更新 Skill。它不会因为可选 MCP/runtime 集成预检失败而阻断 Skill 同步；需要验证完整部署链时单独运行 `check-all.ps1`。
+
 当前仓库内导出对应两种发现路径：
 
 - `skills/rendered/claude-code/<skill-name>/` → `C:\Users\sx200\.claude\skills\<skill-name>\`
-- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（供支持该路径的客户端使用）
+- `skills/rendered/codex/<skill-name>/` → `C:\Users\sx200\.agents\skills\<skill-name>\`（供支持该发现路径的客户端使用；该目录不是共享内容源）
 
 已退役目标由 manifest 的 `RetiredTargets` 清理，只在 marker 匹配时删除：`~/.codex/skills/`、`~/.config/opencode/skills/`、`~/.grok/skills/`。
 
@@ -135,7 +138,7 @@ render 脚本也可以单独做非写入一致性检查：
 
 - 不要直接编辑 `skills/rendered/` 作为长期源头；只修改 `skills/shared/<name>/` 完整包。
 - `.codex\skills` 已退役：Codex 当前读取 `~/.agents/skills`。
-- OpenCode 官方同时发现 `~/.agents/skills` 和 `~/.claude/skills` 兼容目录；Hub 只同步前者，不生成也不同步 `~/.config/opencode/skills` 原生副本。若 Claude 目录中存在同名包，启动 OpenCode 时设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`，或确保 OpenCode 只暴露一个发现根；旧托管副本只在 marker 匹配时退役。
+- OpenCode 官方同时发现 `~/.agents/skills` 和 `~/.claude/skills` 兼容目录；Hub 只同步前者，不生成也不同步 `~/.config/opencode/skills` 原生副本。若 Claude 目录中存在同名包，应确保 OpenCode 只暴露一个发现根；目标版本若提供关闭兼容扫描的开关，可在 adapter 层核验后使用，不把人工环境变量当作跨版本标准。旧托管副本只在 marker 匹配时退役。
 - Grok 会扫描每一层的 `.agents/skills`，因此不再维护 `~/.grok/skills` 原生副本；Grok 侧的 `compat.claude.skills` 由 managed block 关闭，避免重复载入 Claude 副本。
 - 当前渲染产物会带有 `<!-- ai-config-hub-managed: <skill-name> -->` 标记。
 - `sync-skills.ps1 -Apply` 只覆盖带对应 `ai-config-hub-managed` 标记的托管目录；同名但无标记的目录视为用户资产并拒绝覆盖，历史安装需先显式迁移（Grok 自带 bundled skills 无此 marker，不会被覆盖）。

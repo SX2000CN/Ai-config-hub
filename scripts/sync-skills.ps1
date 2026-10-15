@@ -31,7 +31,7 @@ foreach ($definition in $TargetDefinitions) {
 }
 
 if ($Apply) {
-    Invoke-AiConfigHubPreflight $Root $ResolvedUserHome
+    Invoke-AiConfigHubPreflight -Root $Root -UserHome $ResolvedUserHome -Mode Content
 }
 
 $RetiredSkillNames = @()

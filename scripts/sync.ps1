@@ -28,7 +28,7 @@ foreach ($item in $Targets) {
 }
 
 if ($Apply) {
-    Invoke-AiConfigHubPreflight $Root $ResolvedUserHome
+    Invoke-AiConfigHubPreflight -Root $Root -UserHome $ResolvedUserHome -Mode Content
 }
 
 $Changes = New-Object System.Collections.Generic.List[object]

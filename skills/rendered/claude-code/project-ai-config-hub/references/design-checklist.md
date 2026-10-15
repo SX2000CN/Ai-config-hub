@@ -22,10 +22,10 @@
 - 任务卡目录位于 `.Ai-config/tasks/`，任务说明位于 `.Ai-config/tasks/README.md`，但不是所有项目的必需文件。
 - `.Ai-config/archive/` 仅作为可选长期整理目录，不是日常关闭任务的必需步骤。
 - 项目级 skill 清单位于 `.Ai-config/skills-registry.md`，只在存在项目级 skill 或用户要求登记时创建。
-- 项目级完整 Skill 包默认位于 `.agents/skills/<skill-name>/`，这是目录约定而非格式规范要求；只在确有可复用工作流时创建。
+- 项目级完整 Skill 包必须有一个项目自己的 canonical source；`.agents/skills/<skill-name>/` 只是可能的发现 adapter，不是格式规范要求；只在确有可复用工作流时创建。
 - 项目已有目录、README、docs、脚本说明、旧版 `docs/ai/` 或失效入口可作为 Skill 内容迁移来源或支持性引用，不得维护冲突的长期 Skill 内容；项目规则仍由规则入口承载。
-- `.agents/skills/<skill-name>/` 是完整 Skill 包；其发现行为由客户端决定。
-- OpenCode 会同时扫描 `.agents/skills/` 与 `.claude/skills/`；同时适配 Codex、Claude Code 和 OpenCode 时，必须避免 OpenCode 看见同名重复包，或按当前版本文档关闭 Claude Skills 兼容扫描。
+- canonical source 中的 `<skill-name>/` 是完整 Skill 包；`.agents/skills/<skill-name>/` 与 `.claude/skills/<skill-name>/` 是按客户端需要导出的发现路径，其发现行为由客户端决定。
+- OpenCode 会同时扫描 `.agents/skills/` 与 `.claude/skills/`；同时适配 Codex、Claude Code 和 OpenCode 时，必须避免 OpenCode 看见同名重复包。目标版本若提供关闭 Claude Skills 兼容扫描的开关，先按该版本文档核验后再配置，不能把人工环境变量当作跨版本标准。
 - Claude Code 需要 `.claude/skills/<skill-name>/` 时，导出相同完整包，不维护另一份 Skill 正文。
 - 其他客户端只有在不发现现有目录时才添加对应 adapter。
 - `.Ai-config/skills-registry.md` 只索引完整包和所需 adapter。
@@ -64,7 +64,7 @@
 ## 实施后
 
 - frontmatter 有稳定 `name` 和清晰 `description`。
-- `.agents/skills/<skill-name>/SKILL.md` 和 package resources 符合 Agent Skills 格式且可解析。
+- canonical Skill 包及其各发现 adapter 中的 `SKILL.md` 和 package resources 符合 Agent Skills 格式且逐文件一致。
 - 不存在多个互相冲突的事实源；非 canonical 完整规则已标记为迁移来源、支持性引用或兼容入口。
 - `.Ai-config/skills-registry.md` 的包路径指向唯一完整包；不得把 README、docs 或 adapter 导出登记为另一份长期事实源。
 - `.Ai-config/CURRENT.md` 已按需创建或刷新；若没有创建，原因是任务没有持续接手价值。

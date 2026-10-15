@@ -11,11 +11,11 @@
 - 最小可用层：`AGENTS.md` 或 `CLAUDE.md` 加一段项目规则，适合小脚本、demo、一次性工具。
 - 接手状态层：`.Ai-config/CURRENT.md`，适合长期项目或经常跨会话继续的项目。
 - 任务卡层：`.Ai-config/tasks/`，只在任务会跨天、中断、多 AI 接手、等待确认、阻塞或有残留风险时使用。
-- Skill 层：项目级完整 Agent Skill 包默认放在 `.agents/skills/<skill-name>/`。这是项目目录约定，不是格式规范指定的发现路径；Codex 与 OpenCode 可从该位置发现。Claude 使用 `.claude/skills/<skill-name>/` 的同包导出；OpenCode 也会扫描这个兼容目录，双路径导出时应在 OpenCode 进程环境关闭该兼容扫描，见 `references/official-paths.md`。
+- Skill 层：项目级完整 Agent Skill 包必须收敛到目标项目自己的 canonical source；`.agents/skills/<skill-name>/` 可以作为项目约定的发现 adapter，但不是格式规范指定的内容源或路径。Codex 与 OpenCode 是否发现它要按目标版本核验。Claude 使用 `.claude/skills/<skill-name>/` 的同包导出；OpenCode 也会扫描这个兼容目录，双路径导出时应确保运行环境只暴露一个发现根，或按目标版本文档核验并配置其兼容扫描开关，见 `references/official-paths.md`。
 
 默认先建立足够轻的机制。只有用户要求、项目复杂度需要，或已有状态必须保留时，才升级到下一层。不要因为目标项目已经存在 `.Ai-config/`、任务卡或 skill 目录，就把普通业务任务升级成中枢审计；本 skill 也不自动拉起脉络、思维伙伴或同步流程，确需跨域时回到主任务路由判断主次。
 
-项目级 Skill 内容必须收敛到一个完整包：标准 `SKILL.md`、触发说明、workflow、checklist、references 和 templates 同处 `.agents/skills/<skill-name>/`。项目规则仍由 `AGENTS.md`、`CLAUDE.md` 或客户端规则入口承载，不要为了单源化把所有项目规则塞进 Skill。`.Ai-config/skills-registry.md` 只登记包路径和 adapter。若其他发现目录曾存有不同内容，应先将 Skill 内容迁入唯一包，再将同一包导出到所需路径；使用 OpenCode 的目标还要避免该包从 `.agents/` 和 `.claude/` 同时进入发现集合。
+项目级 Skill 内容必须收敛到一个完整包：标准 `SKILL.md`、触发说明、workflow、checklist、references 和 templates 同处项目自己的 canonical source。需要 `.agents/skills/<skill-name>/` 时，将该完整包导出到发现路径；不要把发现目录误当成 Agent Skills 标准。项目规则仍由 `AGENTS.md`、`CLAUDE.md` 或客户端规则入口承载，不要为了单源化把所有项目规则塞进 Skill。`.Ai-config/skills-registry.md` 只登记包路径和 adapter。若其他发现目录曾存有不同内容，应先将 Skill 内容迁入唯一包，再将同一包导出到所需路径；使用 OpenCode 的目标还要避免该包从 `.agents/` 和 `.claude/` 同时进入发现集合。
 
 ## 1. 识别当前项目
 
@@ -24,7 +24,7 @@
 - `AGENTS.md` / `AGENTS.override.md` / `CLAUDE.md` / `opencode.json`
 - `README.md`、`docs/`、`CHANGELOG.md`
 - `.Ai-config/`
-- Skill 包目录 `.agents/skills/`；检查其完整包与 `SKILL.md`。
+- 项目记录的 Skill canonical source，以及需要核验的 `.agents/skills/` / `.claude/skills/` adapter。
 - 客户端发现目录 `.claude/skills/`、`.grok/skills/`、`.opencode/skills/`：只在目标客户端确实需要时检查；发现路径不等于新的内容事实源。
 
 再按项目类型补充查看工程入口，例如 `package.json`、`pyproject.toml`、`Cargo.toml`、`go.mod`、`Makefile`。
@@ -51,7 +51,7 @@
 ### audit + repair 必做清单（更新项目配置）
 
 1. 读 `.Ai-config/CURRENT.md` 与活动任务卡；按 `references/current-hygiene.md` 做 CURRENT 健康检查并修复膨胀/禁区/双写不一致。
-2. 检查项目级 Skill 是否是 `.agents/skills/` 下的完整标准包；需要 Claude 时检查导出包是否一致。
+2. 检查项目级 Skill 是否只有一个 canonical 完整包；需要 Claude 或其他客户端时检查导出 adapter 是否一致。
 3. 检查并清理已退役全局能力残留：如项目内 `pencil-design-workflow` 入口、registry 中的 pencil 行、过时 Pencil 说明；不要删除用户业务设计稿文件，除非用户明确要求。
 4. 检查 registry、任务卡状态与 CURRENT 三区是否一致。
 5. 低风险修复直接做；覆盖、删除非空事实源、写全局目录前先确认。
@@ -103,7 +103,7 @@
 
 ## 4. 选择事实源和状态文件
 
-完整形态的默认状态文件和 canonical 事实源：
+完整形态的默认状态文件和 Skill canonical source 记录：
 
 ```text
 .Ai-config/
@@ -112,10 +112,10 @@
 .Ai-config/tasks/README.md
 .Ai-config/archive/
 .Ai-config/skills-registry.md
-.agents/skills/<skill-name>/
+<project-canonical-skill-source>/<skill-name>/
 ```
 
-其中 `.agents/skills/<skill-name>/` 是本项目约定的完整 Skill 包目录，Codex/OpenCode 可直接发现它。Agent Skills 格式本身不规定这个路径。`.Ai-config/skills-registry.md` 只索引该包和 Claude 等客户端的导出位置。
+其中 `<project-canonical-skill-source>/<skill-name>/` 是目标项目记录的唯一完整 Skill 包位置；`.agents/skills/<skill-name>/` 与 `.claude/skills/<skill-name>/` 只是可能的客户端发现 adapter。Agent Skills 格式本身不规定这些路径。`.Ai-config/skills-registry.md` 只索引 canonical 包和各客户端导出位置。
 
 `.Ai-config/CURRENT.md` 是 AI 接手入口和多任务状态总览；具体任务事实保存在 `.Ai-config/tasks/*.md`。它不是完整日志、日报或完成记录。
 
@@ -123,7 +123,7 @@
 
 ## 5. 生成工具入口
 
-仅为目标客户端尚未扫描的发现路径生成同包 adapter。默认保留一个 `.agents/skills/` 完整包；Claude Code 需要单独发现路径时，复制同一完整包：
+仅为目标客户端尚未扫描的发现路径生成同包 adapter。目标项目保留一个 canonical 完整包；Claude Code 需要单独发现路径时，复制同一完整包：
 
 ```text
 .claude/skills/<skill-name>/SKILL.md

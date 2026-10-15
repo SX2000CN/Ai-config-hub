@@ -40,6 +40,10 @@ function Test-Frontmatter($Path, $SkillName) {
         Fail "Skill description exceeds the portable package limit: $Path"
     }
 
+    if ($frontmatter -match '(?m)^when_to_use\s*:') {
+        Fail "Non-standard when_to_use frontmatter is not allowed in portable skill packages: $Path"
+    }
+
     $allowedFields = @('name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools')
     foreach ($line in ($frontmatter -split "`r?`n")) {
         if ($line -match '^([A-Za-z][A-Za-z0-9_-]*):') {
@@ -208,7 +212,15 @@ foreach ($skillName in $SkillNames) {
     }
 }
 
-$skillScanFiles = Get-AiConfigHubScanFiles -Paths @((Join-Path $Root 'skills')) -Root $Root
+# Validate only the maintained package source, generated exports, and eval
+# fixtures. Historical client-entry directories under skills\ are migration
+# candidates and must not participate in canonical content validation.
+$skillScanPaths = @(
+    (Join-Path $Root 'skills\shared'),
+    (Join-Path $Root 'skills\rendered'),
+    (Join-Path $Root 'skills\evals')
+)
+$skillScanFiles = Get-AiConfigHubScanFiles -Paths $skillScanPaths -Root $Root
 foreach ($file in $skillScanFiles) {
     $content = Get-Content -Raw -Encoding UTF8 -LiteralPath $file.FullName
     if ($content -match '\{\{[^}]+\}\}' -and $file.Extension -ne '.tpl') {
@@ -230,10 +242,7 @@ foreach ($file in $skillScanFiles) {
     }
 }
 
-$sensitiveFiles = Get-AiConfigHubScanFiles -Paths @(
-    (Join-Path $Root 'skills'),
-    (Join-Path $Root 'scripts')
-) -Root $Root
+$sensitiveFiles = Get-AiConfigHubScanFiles -Paths $skillScanPaths -Root $Root
 Test-AiConfigHubSensitiveContent -Files $sensitiveFiles -Fail ${function:Fail}
 
 if ($Failed) {

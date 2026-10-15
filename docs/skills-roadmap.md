@@ -4,7 +4,7 @@
 
 ## 已实现
 
-- `project-ai-config-hub`：按项目复杂度维护项目状态与配置索引；项目级完整 skill 包默认位于 `.agents/skills/<name>/`，`.Ai-config` registry 只引用包和 adapter。
+- `project-ai-config-hub`：按项目复杂度维护项目状态与配置索引；项目级完整包由项目自己的 canonical source 维护，`.agents/skills/<name>/` 只是可选发现路径，`.Ai-config` registry 只引用包和 adapter。
 - `global-frontend-design`：前端设计领域 skill，包含 Design Read、产品/营销双轨、VARIANCE / MOTION / DENSITY、signature 和工程约束。
 - `global-thinking-partner`：可组合 reasoning mode；显式请求时多轮探索，隐式触发时静默做健全性检查。
 - `global-context-thread`：仅在结构化关系检索能减少搜索成本时路由到 context-thread 或 `.Ai-config` 关系索引。
@@ -16,10 +16,10 @@
 - `skills/shared/<name>/`：完整 package source。
 - `skills/rendered/claude-code/`：Claude Code 路径的导出。
 - `skills/rendered/codex/`：`.agents/skills/` 路径的导出。
-- `skills/claude-code/`、`skills/codex/`：未接入新 renderer 的旧入口源，保留为清理候选。
+- `skills/claude-code/`、`skills/codex/`：未接入新 renderer 的旧入口目录，保留为迁移/清理候选，不是事实源。
 - `skills/evals/`：行为与路由样例，不负责自动发现或运行时调度。
 
-Agent Skills 规范不指定发现路径。新增客户端时先核实其当前官方 discovery 行为，再决定是否需要 adapter；不要因为它能读取 `SKILL.md` 就默认它会扫描 `.agents/skills/`。OpenCode 会同时扫描 `.agents/skills/` 和 `.claude/skills/`，因此多客户端导出可能形成重复发现；目标环境必须关闭其中一个发现根，或确保 OpenCode 看不到同名重复包。
+Agent Skills 规范不指定发现路径。新增客户端时先核实其当前官方 discovery 行为，再决定是否需要 adapter；不要因为它能读取 `SKILL.md` 就默认它会扫描 `.agents/skills/`。Claude Code 不会因为存在 `.agents/` 就自动读取其中的 Skills，仍需 `.claude/skills/` adapter。OpenCode 会同时扫描 `.agents/skills/` 和 `.claude/skills/`，因此多客户端导出可能形成重复发现；目标环境必须关闭其中一个发现根，或确保 OpenCode 看不到同名重复包。
 
 ## 后续
 

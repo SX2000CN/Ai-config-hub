@@ -79,6 +79,7 @@ function New-TestRepository($Path) {
         Copy-TestItem $Path $relativePath
     }
     Copy-Item -LiteralPath (Join-Path $FixtureRoot 'check-all-pass.ps1') -Destination (Join-Path $Path 'scripts\check-all.ps1') -Force
+    Copy-Item -LiteralPath (Join-Path $FixtureRoot 'check-content-pass.ps1') -Destination (Join-Path $Path 'scripts\check-content.ps1') -Force
     $contextRuntimeRoot = Join-Path $Path 'tools\context-thread-engine'
     Write-Utf8NoBom (Join-Path $contextRuntimeRoot 'package.json') '{"name":"@ai-config-hub/context-thread","version":"0.9.6"}'
     Write-Utf8NoBom (Join-Path $contextRuntimeRoot 'package-lock.json') '{"lockfileVersion":3,"packages":{"":{"name":"@ai-config-hub/context-thread","version":"0.9.6"}}}'
@@ -772,7 +773,7 @@ function Copy-AiConfigHubStagedFile {
     Assert-Equal 'planned version' (Get-Content -Raw -Encoding UTF8 -LiteralPath $raceCodexTarget) 'A later rule target changed despite transaction rejection'
 
     $preflightHomes = @(Get-Content -LiteralPath $env:AI_CONFIG_HUB_TEST_PREFLIGHT_LOG | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    Assert-True ($preflightHomes.Count -ge 6) 'Expected every Apply test to run its preflight'
+    Assert-True ($preflightHomes.Count -ge 4) 'Expected every full Apply test to run its preflight'
     foreach ($preflightHome in $preflightHomes) {
         $resolvedPreflightHome = [System.IO.Path]::GetFullPath($preflightHome)
         Assert-True $resolvedPreflightHome.StartsWith(([System.IO.Path]::GetFullPath($tempRoot) + [System.IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase) 'An Apply preflight escaped the temporary test root'

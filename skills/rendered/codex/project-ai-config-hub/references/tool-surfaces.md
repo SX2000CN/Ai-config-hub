@@ -23,7 +23,8 @@
 ## OpenCode
 
 - 指令使用 `AGENTS.md`、`.opencode/AGENTS.md` 或用户级 `~/.config/opencode/AGENTS.md`。
-- 它可扫描 `.agents/skills/`、`.claude/skills/` 及 OpenCode 原生目录。为了避免同名多源，Hub 仅导出到 `.agents/skills/`，不额外创建 OpenCode skill 副本。
+- 它可扫描 `.agents/skills/`、`.claude/skills/` 及 OpenCode 原生目录；同一名称从多个根出现时存在重复发现风险，公开文档不承诺覆盖优先级。为了避免同名多源，Hub 仅导出到 `.agents/skills/`，不额外创建 OpenCode skill 副本。
+- 不要把 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` 等人工环境变量当作跨版本标准；目标版本若支持关闭兼容扫描，应由 adapter 显式配置并重新核验。
 - providers、model、tools、permission、MCP、plugins 和 instructions 属于 `opencode.json`，不可混写到标准 Skill 包中。
 
 ## 本机专属配置

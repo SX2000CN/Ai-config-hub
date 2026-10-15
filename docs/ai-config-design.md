@@ -9,6 +9,7 @@
 - 让 `.Ai-config/` 保持为项目状态、registry 和索引层。
 - 仅在确有需要时维护客户端 adapter 和本机部署脚本。
 - 通过对源包的结构检查和 adapter 导出检查发现内容分叉。
+- 让普通规则或 Skill 修改可以在不依赖 MCP/runtime 或用户目录的情况下完成仓库内验证。
 
 ## 术语与所有权
 
@@ -30,13 +31,13 @@ Adapter 负责把本体放入客户端识别的位置或语法中，不承载第
 |---|---|---|
 | Claude Code | `.claude/skills/` | Claude 专用发现目录；从相同完整包导出 |
 | Codex | `.agents/skills/` | 客户端支持的发现目录 |
-| OpenCode | `.agents/skills/` 和 `.claude/skills/` 兼容扫描 | 同名包会重复发现；需要在启动环境设置 `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1`，或避免让 OpenCode 看见同一包的两个来源 |
+| OpenCode | `.agents/skills/` 和 `.claude/skills/` 兼容扫描 | 同名包会重复发现；让目标版本只暴露一个发现根。若版本提供关闭兼容扫描的开关，在 adapter 层核验后使用，不把人工环境变量当作跨版本标准 |
 
 `.agents/skills/` 是路径约定，不是 Agent Skills 规范要求；Claude Code 不会因此自动读取该目录。其他规则、MCP 和 hooks 的发现/配置语法也需分别适配。
 
 ### `.Ai-config/` 状态与索引
 
-`.Ai-config/` 保存当前任务状态、任务卡、配置 registry 和项目结构索引。`CURRENT.md` 是跨会话状态入口；任务卡是需要接手的工作事实；`skills-registry.md` 只指向包和 adapter。可复用 Skill 内容不放入 `.Ai-config/skills/`。
+`.Ai-config/` 保存当前任务状态、任务卡、配置 registry 和项目结构索引。`CURRENT.md` 是跨会话状态入口；任务卡是需要接手的工作事实；`skills-registry.md` 只指向包和 adapter。可复用 Skill 内容不放入 `.Ai-config/skills/`，也不把 `.Ai-config/` 当作通用内容源。
 
 context-thread 数据库是项目代码结构的索引缓存。它帮助定位文件与关系，不决定协作规则，也不取代当前源文件或用户提供的现场。
 
@@ -56,7 +57,11 @@ rules/rendered/ skills/rendered/     仓库内生成的客户端导出
 tool-configs/ tools/ scripts/        可选 MCP/runtime 与交付工具
 ```
 
-`skills/claude-code/` 和 `skills/codex/` 是没有被新渲染流程消费的旧入口源，暂保留为迁移/清理候选。不要在其中维护内容。历史任务卡、归档文档和 rendered 文件保留其历史语义，不作为新事实源。
+`skills/claude-code/` 和 `skills/codex/` 是没有被新渲染流程消费的旧入口目录，暂保留为迁移/清理候选，不是 Skill 内容事实源。不要在其中维护内容。历史任务卡、归档文档和 rendered 文件保留其历史语义，不作为新事实源。
+
+## 验证边界
+
+普通规则或 Skill 修改先运行 `scripts/check-content.ps1`。该入口覆盖共享规则 render/check、规则 hygiene、Skill render/check、包结构与引用/export 一致性、必要的敏感内容检查和 `git diff --check`；它不要求 MCP/runtime、用户级配置、hooks、doctor 或用户目录同步。规则和 Skill 的用户级 Apply 只运行该内容 preflight；跨管线或部署集成才运行 `scripts/check-all.ps1`，并按其结果单独记录 runtime、MCP 和 dry-run 状态。
 
 ## 维护规则
 
